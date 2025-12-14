@@ -8,27 +8,40 @@ import (
 	"thai-festival-backend/ws"
 )
 
-// ControllerFactory creates a controller (allows injecting hub that is shared)
-type ControllerFactory func() *controllers.RoomController
+/*
+RegisterRoutes
+- รวม REST + WebSocket routes ทั้งหมด
+- ใช้ RoomController ตัวเดียว (แชร์ DB + Hub)
+*/
+func RegisterRoutes(
+	r *gin.Engine,
+	db *sql.DB,
+	hub *ws.Hub,
+) {
 
-// RegisterRoutes registers all routes and passes DB and hub to controllers
-func RegisterRoutes(r *gin.Engine, db *sql.DB, hub *ws.Hub, factory ControllerFactory) {
-	// health
+	// =========================
+	// Health Check
+	// =========================
 	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "backend is running"})
+		c.JSON(200, gin.H{
+			"status": "backend is running",
+		})
 	})
 
-	// create a controller instance using factory
-	ctrl := factory()
+	// =========================
+	// Controller
+	// =========================
+	roomCtrl := controllers.NewRoomController(db, hub)
 
-	// REST endpoints
-	r.POST("/rooms", ctrl.CreateRoom)
-	r.POST("/rooms/join", ctrl.JoinRoom)
-	r.GET("/rooms/:code", ctrl.GetRoom)
+	// =========================
+	// Room REST API
+	// =========================
+	r.POST("/rooms", roomCtrl.CreateRoom)     // Host สร้างห้อง
+	r.POST("/rooms/join", roomCtrl.JoinRoom)  // Player เข้าห้อง
+	r.GET("/rooms/:code", roomCtrl.GetRoom)   // ดึงรายชื่อผู้เล่นใน Lobby
 
-	// score endpoint
-	r.POST("/rooms/:code/score", ctrl.PostScore)
-
-	// websocket hub endpoint (lobby)
-	r.GET("/ws/:room_code", ctrl.ServeWs)
+	// =========================
+	// WebSocket (Lobby realtime)
+	// =========================
+	r.GET("/ws/:room_code", roomCtrl.ServeWs)
 }

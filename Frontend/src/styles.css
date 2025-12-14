@@ -1,71 +1,114 @@
 :root{
   --accent:#ff7a00;
   --btn-green:#6cdb7b;
+  --bg-panel: rgba(255,255,255,0.88);
+  --bg-white:#ffffff;
+  --text-dark:#222;
+  --text-muted:#666;
+  --shadow-soft:0 6px 18px rgba(0,0,0,0.18);
+  --shadow-strong:0 10px 30px rgba(0,0,0,0.35);
 }
 
-*{box-sizing:border-box}
-body,html,#root{height:100%;margin:0;font-family:kanit, Arial, sans-serif}
-
-.home-root {
-  width: 100vw;
-  height: 100vh;
-  background-image: url('/assets/backgroundHome.png');
-  background-size: cover;
-  background-position: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+*{
+  box-sizing:border-box;
 }
 
-.panel {
-  background: rgba(255,255,255,0.85);
-  padding: 20px;
-  border-radius: 8px;
-  max-width: 360px;
-  width: 90%;
+html, body, #root{
+  height:100%;
+  margin:0;
+  font-family:'Kanit', Arial, sans-serif;
+  background:#000;
+  color:var(--text-dark);
+}
+
+/* =========================
+   HOME PAGE
+========================= */
+
+.home-root{
+  width:100vw;
+  height:100vh;
+  background-image:url("./assets/backgroundHome.png");
+  background-size:cover;
+  background-position:center;
+  background-repeat:no-repeat;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.panel{
+  background:var(--bg-panel);
+  padding:22px 20px;
+  border-radius:14px;
+  max-width:360px;
+  width:90%;
+  text-align:center;
+  box-shadow:var(--shadow-strong);
+  backdrop-filter: blur(2px);
 }
 
 /* ชื่อเกม */
 .title{
-  font-size:48px;
+  font-size:46px;
   margin:6px 0 18px;
-  text-shadow: 0 4px 6px rgba(0,0,0,0.6);
+  color:#fff;
+  letter-spacing:1px;
+  text-shadow:0 4px 8px rgba(0,0,0,0.7);
 }
 
 /* ช่องกรอกชื่อ */
 .name-input{
-  width:70%;
+  width:80%;
   padding:14px 18px;
   border-radius:28px;
   border:none;
-  font-size:20px;
+  font-size:18px;
   margin:10px 0 18px;
   outline:none;
+  text-align:center;
+  box-shadow:var(--shadow-soft);
 }
 
 /* role buttons */
-.role-row{display:flex;gap:18px;justify-content:center;margin:0 0 12px}
+.role-row{
+  display:flex;
+  gap:16px;
+  justify-content:center;
+  margin-bottom:12px;
+}
+
 .role-btn{
-  border-radius:18px;
-  padding:10px 28px;
+  border-radius:22px;
+  padding:10px 26px;
   background:var(--accent);
   border:none;
-  color:white;
+  color:#fff;
   font-weight:600;
   cursor:pointer;
   box-shadow:0 6px 0 rgba(0,0,0,0.25);
-  transform:translateY(0);
+  transition:all .15s ease;
 }
-.role-btn.active{ box-shadow:0 10px 0 rgba(0,0,0,0.35); transform:translateY(-2px);}
 
-/* input รหัสห้อง (player) */
+.role-btn:hover{
+  filter:brightness(1.08);
+}
+
+.role-btn.active{
+  box-shadow:0 10px 0 rgba(0,0,0,0.35);
+  transform:translateY(-2px);
+}
+
+/* input รหัสห้อง */
 .room-input{
-  width:60%;
+  width:70%;
   padding:10px 12px;
   margin-top:12px;
-  border-radius:12px;
+  border-radius:16px;
   border:none;
   font-size:16px;
+  text-align:center;
+  box-shadow:var(--shadow-soft);
 }
 
 /* ปุ่มตกลง */
@@ -75,17 +118,144 @@ body,html,#root{height:100%;margin:0;font-family:kanit, Arial, sans-serif}
   color:#fff;
   border:none;
   padding:14px 30px;
-  border-radius:24px;
-  font-size:22px;
+  border-radius:28px;
+  font-size:20px;
   cursor:pointer;
   box-shadow:0 6px 0 rgba(0,0,0,0.25);
-}
-/* ปรับจุด focus สำหรับมือถือ */
-@media (max-width: 600px) {
-  .home-root { 
-    background-position: center top; /* โฟกัสบริเวณบน */
-  }
-  .panel { width: 90%; padding: 18px; }
-  .title { font-size: 36px; }
+  transition:all .15s ease;
 }
 
+.confirm-btn:hover{
+  filter:brightness(1.08);
+}
+
+.confirm-btn:active{
+  transform:translateY(2px);
+  box-shadow:0 3px 0 rgba(0,0,0,0.25);
+}
+
+/* =========================
+   LOBBY PAGE
+========================= */
+
+.lobby-root{
+  min-height:100vh;
+  padding:24px 16px;
+  background:linear-gradient(180deg,#ffefd8,#ffd6a0);
+}
+
+.lobby-title{
+  font-size:28px;
+  margin-bottom:12px;
+  text-align:center;
+}
+
+.lobby-sub{
+  text-align:center;
+  font-size:14px;
+  color:var(--text-muted);
+  margin-bottom:18px;
+}
+
+.player-list{
+  list-style:none;
+  padding:0;
+  max-width:440px;
+  margin:0 auto;
+}
+
+.player-list li{
+  background:var(--bg-white);
+  margin:10px 0;
+  padding:12px 16px;
+  border-radius:12px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  box-shadow:var(--shadow-soft);
+  font-size:16px;
+}
+
+.player-left{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.player-name{
+  font-weight:600;
+}
+
+.player-score{
+  font-weight:600;
+}
+
+.player-muted{
+  font-size:13px;
+  color:var(--text-muted);
+}
+
+.start-btn{
+  display:block;
+  margin:24px auto 0;
+  padding:14px 28px;
+  font-size:18px;
+  background:var(--btn-green);
+  color:#fff;
+  border:none;
+  border-radius:28px;
+  cursor:pointer;
+  box-shadow:0 6px 0 rgba(0,0,0,0.25);
+  transition:all .15s ease;
+}
+
+.start-btn:hover{
+  filter:brightness(1.08);
+}
+
+.start-btn:active{
+  transform:translateY(2px);
+  box-shadow:0 3px 0 rgba(0,0,0,0.25);
+}
+
+/* =========================
+   LOG / EVENT
+========================= */
+
+.event-log{
+  max-width:440px;
+  margin:24px auto 0;
+  font-size:13px;
+  color:var(--text-muted);
+}
+
+.event-log li{
+  margin:4px 0;
+}
+
+/* =========================
+   RESPONSIVE
+========================= */
+
+@media (max-width:600px){
+  .home-root{
+    background-position:center top;
+  }
+
+  .panel{
+    padding:18px;
+  }
+
+  .title{
+    font-size:34px;
+  }
+
+  .name-input{
+    width:90%;
+    font-size:16px;
+  }
+
+  .player-list li{
+    font-size:15px;
+  }
+}
