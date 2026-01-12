@@ -1,73 +1,110 @@
 /**
- * createRoomSocket
- * - รองรับ reconnect
- * - มี heartbeat (ping)
- * - safe JSON handling
- * - ใช้กับ Gin + Gorilla WebSocket ได้ตรง ๆ
+ * createRoomSocket (PRODUCTION FINAL)
+ *
+ * ✅ reconnect-safe
+ * ✅ heartbeat (text ping)
+ * ✅ player_id support
+ * ✅ Gin + Gorilla WS compatible
+ * ✅ no double-close / no leak
  */
+
 export function createRoomSocket(roomCode, onMessage, options = {}) {
   const {
+    playerId = null,
     urlBase =
       window.location.protocol === "https:"
-        ? "wss://" + window.location.host
+        ? `wss://${window.location.host}`
         : "ws://localhost:8080",
     reconnectDelay = 2000,
-    heartbeatInterval = 15000,
-    debug = true,
+    heartbeatInterval = 30000,
+    debug = false,
   } = options;
 
   let ws = null;
   let heartbeatTimer = null;
   let reconnectTimer = null;
+
   let shouldReconnect = true;
+  let manuallyClosed = false;
+  let connecting = false;
+  let destroyed = false;
 
   /* =========================
      CONNECT
   ========================= */
   const connect = () => {
-    if (debug) console.log("🔌 WS connecting...");
+    if (connecting || ws || destroyed) return;
 
-    ws = new WebSocket(`${urlBase}/ws/${roomCode}`);
+    connecting = true;
+    manuallyClosed = false;
+
+    let url = `${urlBase}/ws/${roomCode}`;
+    if (playerId) {
+      url += `?player_id=${encodeURIComponent(playerId)}`;
+    }
+
+    debug && console.log("🔌 WS connecting:", url);
+
+    try {
+      ws = new WebSocket(url);
+    } catch (err) {
+      connecting = false;
+      debug && console.error("❌ WS create failed:", err);
+      scheduleReconnect();
+      return;
+    }
 
     ws.onopen = () => {
-      if (debug) console.log("✅ WS connected");
+      connecting = false;
+      debug && console.log("✅ WS connected:", roomCode);
       startHeartbeat();
     };
 
     ws.onmessage = (event) => {
       if (!event?.data) return;
 
+      // backend pong อาจเป็น binary / empty
+      if (event.data === "pong") return;
+
       try {
-        const data = JSON.parse(event.data);
+        const data =
+          typeof event.data === "string"
+            ? JSON.parse(event.data)
+            : null;
 
-        // ignore pong / ping echo if backend sends back
-        if (data.type === "pong") return;
+        if (data?.type) {
+          onMessage?.(data);
+        }
+      } catch {
+        debug && console.warn("⚠️ WS non-JSON:", event.data);
+      }
+    };
 
-        onMessage && onMessage(data);
-      } catch (err) {
-        console.error("❌ WS JSON parse error:", err, event.data);
+    ws.onclose = () => {
+      debug && console.log("❌ WS closed:", roomCode);
+      cleanup(false);
+
+      if (!manuallyClosed && shouldReconnect && !destroyed) {
+        scheduleReconnect();
       }
     };
 
     ws.onerror = (err) => {
-      console.error("❌ WS error:", err);
+      debug && console.error("❌ WS error:", err);
     };
+  };
 
-    ws.onclose = (ev) => {
-      if (debug)
-        console.warn(
-          `⚠️ WS closed (code=${ev.code}, reason=${ev.reason})`
-        );
+  /* =========================
+     RECONNECT
+  ========================= */
+  const scheduleReconnect = () => {
+    if (reconnectTimer || destroyed || !shouldReconnect) return;
 
-      stopHeartbeat();
-
-      if (shouldReconnect) {
-        reconnectTimer = setTimeout(() => {
-          if (debug) console.log("🔄 WS reconnecting...");
-          connect();
-        }, reconnectDelay);
-      }
-    };
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      ws = null;
+      connect();
+    }, reconnectDelay);
   };
 
   /* =========================
@@ -75,14 +112,12 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
   ========================= */
   const startHeartbeat = () => {
     stopHeartbeat();
+
     heartbeatTimer = setInterval(() => {
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(
-          JSON.stringify({
-            type: "ping",
-            ts: Date.now(),
-          })
-        );
+      if (ws?.readyState === WebSocket.OPEN) {
+        try {
+          ws.send("ping"); // backend update last_seen_at
+        } catch {}
       }
     }, heartbeatInterval);
   };
@@ -92,40 +127,56 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
       clearInterval(heartbeatTimer);
       heartbeatTimer = null;
     }
+  };
+
+  /* =========================
+     CLEANUP (internal)
+  ========================= */
+  const cleanup = (closeSocket = true) => {
+    stopHeartbeat();
+
     if (reconnectTimer) {
       clearTimeout(reconnectTimer);
       reconnectTimer = null;
     }
+
+    if (closeSocket && ws) {
+      try {
+        ws.close();
+      } catch {}
+    }
+
+    ws = null;
+    connecting = false;
   };
 
   /* =========================
      PUBLIC API
   ========================= */
-  const send = (data) => {
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      if (debug) console.warn("⚠️ WS not open, send skipped");
-      return;
-    }
-
-    try {
-      ws.send(JSON.stringify(data));
-    } catch (err) {
-      console.error("❌ WS send error:", err);
-    }
-  };
-
-  const close = () => {
-    shouldReconnect = false;
-    stopHeartbeat();
-    ws && ws.close();
-  };
-
-  // auto connect
   connect();
 
   return {
-    send,
-    close,
+    send(data) {
+      if (ws?.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify(data));
+      }
+    },
+
+    close() {
+      destroyed = true;
+      shouldReconnect = false;
+      manuallyClosed = true;
+      cleanup(true);
+    },
+
+    reconnect() {
+      destroyed = false;
+      shouldReconnect = true;
+      manuallyClosed = false;
+      cleanup(true);
+      connect();
+    },
+
     get ready() {
       return ws?.readyState === WebSocket.OPEN;
     },

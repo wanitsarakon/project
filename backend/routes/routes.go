@@ -2,46 +2,79 @@ package routes
 
 import (
 	"database/sql"
+	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"thai-festival-backend/controllers"
 	"thai-festival-backend/ws"
+
+	"github.com/gin-gonic/gin"
 )
 
-/*
-RegisterRoutes
-- รวม REST + WebSocket routes ทั้งหมด
-- ใช้ RoomController ตัวเดียว (แชร์ DB + Hub)
-*/
+/* =========================
+   REGISTER ROUTES
+========================= */
 func RegisterRoutes(
 	r *gin.Engine,
 	db *sql.DB,
 	hub *ws.Hub,
 ) {
 
-	// =========================
-	// Health Check
-	// =========================
+	/* =========================
+	   HEALTH CHECK
+	========================= */
 	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{
+		c.JSON(http.StatusOK, gin.H{
 			"status": "backend is running",
 		})
 	})
 
-	// =========================
-	// Controller
-	// =========================
+	/* =========================
+	   CONTROLLERS
+	========================= */
 	roomCtrl := controllers.NewRoomController(db, hub)
+	roundCtrl := controllers.NewRoundController(db, hub)
 
-	// =========================
-	// Room REST API
-	// =========================
-	r.POST("/rooms", roomCtrl.CreateRoom)     // Host สร้างห้อง
-	r.POST("/rooms/join", roomCtrl.JoinRoom)  // Player เข้าห้อง
-	r.GET("/rooms/:code", roomCtrl.GetRoom)   // ดึงรายชื่อผู้เล่นใน Lobby
+	/* =========================
+	   ROOM FLOW
+	========================= */
+	r.POST("/rooms", roomCtrl.CreateRoom)
+	r.GET("/rooms", roomCtrl.ListRooms)
+	r.GET("/rooms/:code", roomCtrl.GetRoom)
+	r.POST("/rooms/join", roomCtrl.JoinRoom)
 
-	// =========================
-	// WebSocket (Lobby realtime)
-	// =========================
+	// ▶ Host เริ่มเกม (เริ่ม game อย่างเดียว)
+	r.POST("/rooms/:code/start", roomCtrl.StartGame)
+
+	// 🏁 จบเกม
+	r.POST("/rooms/:code/end", roomCtrl.EndGame)
+
+	/* =========================
+	   ROUND ENGINE
+	========================= */
+	// 🔥 internal use (frontend ไม่เรียกตรง)
+	r.POST("/rooms/:code/round/start", roundCtrl.StartRound)
+	r.POST("/rounds/:roundID/submit", roundCtrl.SubmitScore)
+	r.POST("/rounds/:roundID/end", roundCtrl.EndRound)
+
+	/* =========================
+	   WEBSOCKET
+	========================= */
+
+	// 🌍 global realtime
+	r.GET("/ws/global", func(c *gin.Context) {
+		c.Set("room_code", "global")
+		roomCtrl.ServeWs(c)
+	})
+
+	// 🏟 room realtime
 	r.GET("/ws/:room_code", roomCtrl.ServeWs)
+
+	/* =========================
+	   FALLBACK
+	========================= */
+	r.NoRoute(func(c *gin.Context) {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "route not found",
+		})
+	})
 }

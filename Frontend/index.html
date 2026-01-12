@@ -1,12 +1,90 @@
 <!doctype html>
-<html>
+<html lang="th">
   <head>
+    <!-- =========================
+         BASIC META
+    ========================= -->
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>เกมงานวัด</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+
+    <title>🎪 เกมงานวัด</title>
+    <meta
+      name="description"
+      content="เว็บมินิเกมงานวัดไทย เล่นได้หลายคนแบบเรียลไทม์ สนุกเหมือนยกงานวัดมาไว้บนเว็บ!"
+    />
+    <meta name="theme-color" content="#ff7a00" />
+
+    <!-- =========================
+         SEO / OPEN GRAPH
+    ========================= -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="🎪 เกมงานวัด" />
+    <meta
+      property="og:description"
+      content="มินิเกมงานวัดไทย เล่นฟรีหลายคนแบบเรียลไทม์"
+    />
+    <!-- ใส่รูปจริงตอน deploy -->
+    <!-- <meta property="og:image" content="/og-image.png" /> -->
+    <meta property="og:locale" content="th_TH" />
+
+    <!-- =========================
+         FAVICON / ICONS
+    ========================= -->
+    <!-- เพิ่มไฟล์จริงภายหลัง -->
+    <!--
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    -->
+
+    <!-- =========================
+         GOOGLE FONT
+    ========================= -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- =========================
+         MOBILE / IOS SAFE
+    ========================= -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="apple-mobile-web-app-title" content="เกมงานวัด" />
+
+    <!-- =========================
+         PWA (OPTIONAL)
+    ========================= -->
+    <!-- เปิดใช้เมื่อมี manifest -->
+    <!-- <link rel="manifest" href="/manifest.json" /> -->
   </head>
+
   <body>
+    <!-- =========================
+         NO SCRIPT
+    ========================= -->
+    <noscript>
+      <div style="padding:16px;text-align:center;font-family:sans-serif">
+        ⚠️ เว็บไซต์นี้ต้องเปิดใช้งาน JavaScript
+      </div>
+    </noscript>
+
+    <!-- =========================
+         ROOT
+    ========================= -->
     <div id="root"></div>
+
+    <!-- =========================
+         VITE ENTRY
+    ========================= -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

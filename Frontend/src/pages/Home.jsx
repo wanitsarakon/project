@@ -1,132 +1,125 @@
-import React, { useState } from "react";
-// ถ้าคุณ import styles แบบ global ใน main.jsx แล้ว ไม่จำเป็นต้อง import ที่นี่อีก
-// import "../styles.css";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
-export default function Home({ onEnter }) {
+export default function Home({ onSelect }) {
   const [name, setName] = useState("");
-  const [role, setRole] = useState("player"); // default player
-  const [roomInput, setRoomInput] = useState("");
+  const [role, setRole] = useState(null); // "host" | "player"
   const [loading, setLoading] = useState(false);
 
-  const apiBase = "http://localhost:8080";
+  const inputRef = useRef(null);
 
-  const handleOk = async () => {
-    if (!name.trim()) {
+  /* =========================
+     Lifecycle
+  ========================= */
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  /* =========================
+     Helpers
+  ========================= */
+  const normalizeName = (value) =>
+    value.replace(/\s+/g, " ").trim();
+
+  /* =========================
+     Submit
+  ========================= */
+  const handleConfirm = useCallback(async () => {
+    if (loading) return;
+
+    const normalizedName = normalizeName(name);
+
+    if (!normalizedName) {
       alert("กรุณากรอกชื่อ");
       return;
     }
 
-    setLoading(true);
+    if (normalizedName.length > 20) {
+      alert("ชื่อยาวเกินไป (ไม่เกิน 20 ตัวอักษร)");
+      return;
+    }
+
+    if (!role) {
+      alert("กรุณาเลือก Host หรือ Player");
+      return;
+    }
+
     try {
-      if (role === "host") {
-        const res = await fetch(`${apiBase}/rooms`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: "ซุ้มงานวัด",
-            mode: "team", // หรือ "solo"
-            host_name: name,
-            max_players: 8,
-          }),
-        });
-
-        // พยายาม parse JSON แต่ถ้าไม่ใช่ JSON ให้ fallback
-        let data;
-        try {
-          data = await res.json();
-        } catch {
-          data = {};
-        }
-
-        if (!res.ok) {
-          alert("สร้างห้องไม่สำเร็จ: " + (data.error || res.status));
-          return;
-        }
-
-        // ถ้า backend ส่ง room_code
-        const roomCode = data.room_code || data.room || "";
-        onEnter("host", name, roomCode, { id: data.host_id || null, name });
-      } else {
-        if (!roomInput.trim()) {
-          alert("กรุณากรอกรหัสห้องเพื่อเข้าร่วม");
-          return;
-        }
-
-        const res = await fetch(`${apiBase}/rooms/join`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, room_code: roomInput.trim() }),
-        });
-
-        let data;
-        try {
-          data = await res.json();
-        } catch {
-          data = {};
-        }
-
-        if (!res.ok) {
-          alert("เข้าห้องไม่สำเร็จ: " + (data.error || res.status));
-          return;
-        }
-
-        onEnter("player", name, roomInput.trim(), { id: data.player_id, name });
-      }
-    } catch (e) {
-      console.error(e);
-      alert("ไม่สามารถติดต่อเซิร์ฟเวอร์ได้");
+      setLoading(true);
+      // ส่งให้ parent ควบคุม flow ต่อ (API / route / WS)
+      await onSelect(role, normalizedName);
     } finally {
       setLoading(false);
     }
-  };
+  }, [loading, name, role, onSelect]);
 
+  /* =========================
+     Keyboard
+  ========================= */
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Enter") {
+        handleConfirm();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [handleConfirm]);
+
+  /* =========================
+     UI
+  ========================= */
   return (
     <div className="home-root">
       <div className="panel">
-        <h1 className="title">เกมงานวัด</h1>
+        <h1 className="title">🎪 เกมงานวัด</h1>
 
+        {/* Name */}
         <input
+          ref={inputRef}
           className="name-input"
           placeholder="ชื่อของคุณ"
           value={name}
+          maxLength={20}
           onChange={(e) => setName(e.target.value)}
+          disabled={loading}
         />
 
+        {/* Role selection */}
         <div className="role-row">
           <button
+            type="button"
             className={`role-btn ${role === "host" ? "active" : ""}`}
             onClick={() => setRole("host")}
-            type="button"
             disabled={loading}
           >
-            Host
+            🧑‍💼 Host
           </button>
+
           <button
+            type="button"
             className={`role-btn ${role === "player" ? "active" : ""}`}
             onClick={() => setRole("player")}
-            type="button"
             disabled={loading}
           >
-            Player
+            🎮 Player
           </button>
         </div>
 
-        {role === "player" && (
-          <input
-            className="room-input"
-            placeholder="กรอกรหัสห้อง (ถ้ามี)"
-            value={roomInput}
-            onChange={(e) => setRoomInput(e.target.value)}
-            disabled={loading}
-          />
+        {/* Hint */}
+        {!role && !loading && (
+          <p className="hint-text">
+            👆 กรุณาเลือกบทบาทก่อน
+          </p>
         )}
 
+        {/* Confirm */}
         <button
           className="confirm-btn"
-          onClick={handleOk}
+          onClick={handleConfirm}
           disabled={loading}
+          style={{ marginTop: 16 }}
         >
-          {loading ? "กำลังประมวลผล..." : "ตกลง"}
+          {loading ? "⏳ กำลังดำเนินการ..." : "ตกลง"}
         </button>
       </div>
     </div>

@@ -1,211 +1,305 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createRoomSocket } from "../websocket/wsClient";
+import SummaryPage from "./SummaryPage";
 
-export default function Lobby({ roomCode, player, isHost }) {
+export default function Lobby({ roomCode, player, onLeave }) {
   const [players, setPlayers] = useState([]);
   const [logs, setLogs] = useState([]);
+  const [gameStarted, setGameStarted] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const [summary, setSummary] = useState(null); // 🏆 END GAME
+
   const wsRef = useRef(null);
+  const mountedRef = useRef(false);
+  const leavingRef = useRef(false); // ⛔ กัน reconnect หลังออก
 
   /* =========================
-     Helper: log
+     Helper: log (SAFE)
   ========================= */
-  const addLog = (type, text) => {
+  const addLog = useCallback((type, text) => {
+    if (!mountedRef.current) return;
     setLogs((prev) => [
       ...prev,
-      {
-        type,
-        text,
-        ts: new Date().toLocaleTimeString(),
-      },
+      { type, text, ts: new Date().toLocaleTimeString() },
     ]);
-  };
+  }, []);
 
   /* =========================
-     Load initial room state
+     Load room state (REST)
   ========================= */
-  useEffect(() => {
-    fetch(`http://localhost:8080/rooms/${roomCode}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.players) {
-          setPlayers(
-            data.players.map((p) => ({
-              id: p.id,
-              name: p.name,
-              team: p.team || null,
-              total_score: p.score ?? p.total_score ?? 0,
-              connected: true,
-              isHost: p.isHost || false,
+  const loadRoom = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `http://localhost:8080/rooms/${roomCode}`
+      );
+      if (!res.ok) throw new Error();
+
+      const data = await res.json();
+      if (!mountedRef.current) return;
+
+      setGameStarted(
+        data.status === "started" || data.status === "playing"
+      );
+
+      if (Array.isArray(data.players)) {
+        setPlayers(
+          data.players.map((p) => ({
+            id: p.id,
+            name: p.name,
+            isHost: p.isHost ?? p.is_host ?? false,
+            connected: p.connected ?? true,
+            total_score: p.score ?? p.total_score ?? 0,
+          }))
+        );
+      }
+    } catch {
+      addLog("error", "❌ โหลดข้อมูลห้องไม่สำเร็จ");
+    }
+  }, [roomCode, addLog]);
+
+  /* =========================
+     WS handler (CORE)
+  ========================= */
+  const handleMessage = useCallback(
+    (msg) => {
+      if (!mountedRef.current || !msg?.type) return;
+
+      switch (msg.type) {
+        case "player_join":
+          setPlayers((prev) => {
+            const exists = prev.find((p) => p.id === msg.player_id);
+            if (exists) {
+              return prev.map((p) =>
+                p.id === msg.player_id
+                  ? { ...p, connected: true }
+                  : p
+              );
+            }
+            return [
+              ...prev,
+              {
+                id: msg.player_id,
+                name: msg.name,
+                connected: true,
+                total_score: 0,
+                isHost: false,
+              },
+            ];
+          });
+          addLog("player", `${msg.name} เข้าร่วมห้อง`);
+          break;
+
+        case "player_disconnect":
+          setPlayers((prev) =>
+            prev.map((p) =>
+              p.id === msg.player_id
+                ? { ...p, connected: false }
+                : p
+            )
+          );
+          addLog("system", "ผู้เล่นหลุดการเชื่อมต่อ");
+          break;
+
+        case "host_transfer":
+          setPlayers((prev) =>
+            prev.map((p) => ({
+              ...p,
+              isHost: p.id === msg.player_id,
             }))
           );
-        }
-      })
-      .catch(() => {
-        addLog("error", "ไม่สามารถโหลดข้อมูลห้องได้");
-      });
-  }, [roomCode]);
+          addLog("system", "👑 Host ถูกโอนสิทธิ์");
+          break;
+
+        case "room_start":
+        case "game_start":
+          setGameStarted(true);
+          addLog("system", "🎮 เกมเริ่มแล้ว!");
+          break;
+
+        case "score_update":
+          setPlayers((prev) =>
+            prev.map((p) =>
+              p.id === msg.player_id
+                ? {
+                    ...p,
+                    total_score:
+                      p.total_score + (msg.score || 0),
+                  }
+                : p
+            )
+          );
+          break;
+
+        /* 🏆 END GAME */
+        case "game_summary":
+          setSummary(msg.results || []);
+          addLog("system", "🏆 เกมจบแล้ว");
+          break;
+
+        default:
+          break;
+      }
+    },
+    [addLog]
+  );
 
   /* =========================
-     WebSocket
+     Mount / Unmount
   ========================= */
   useEffect(() => {
+    mountedRef.current = true;
+    leavingRef.current = false;
+    loadRoom();
+
+    return () => {
+      mountedRef.current = false;
+    };
+  }, [loadRoom]);
+
+  /* =========================
+     WebSocket (SAFE)
+  ========================= */
+  useEffect(() => {
+    if (!player?.id || leavingRef.current) return;
+
+    wsRef.current?.close();
+
     wsRef.current = createRoomSocket(
       roomCode,
       handleMessage,
-      { debug: true }
+      {
+        playerId: player.id,
+        debug: false,
+      }
     );
-
-    addLog("system", "กำลังเชื่อมต่อ WebSocket...");
 
     return () => {
       wsRef.current?.close();
-      addLog("system", "ปิดการเชื่อมต่อ WebSocket");
+      wsRef.current = null;
     };
-    // eslint-disable-next-line
-  }, [roomCode]);
+  }, [roomCode, player.id, handleMessage]);
 
   /* =========================
-     Handle WS messages
+     Host check
   ========================= */
-  const handleMessage = (msg) => {
-    console.log("WS message:", msg);
-
-    switch (msg.type) {
-      case "player_join": {
-        const id = msg.player_id ?? msg.id;
-        if (!id) return;
-
-        setPlayers((prev) => {
-          if (prev.find((p) => p.id === id)) return prev;
-          return [
-            ...prev,
-            {
-              id,
-              name: msg.name || "Unknown",
-              team: msg.team || null,
-              total_score: 0,
-              connected: true,
-              isHost: false,
-            },
-          ];
-        });
-
-        addLog("player", `${msg.name} เข้าร่วมห้อง`);
-        break;
-      }
-
-      case "score_update": {
-        if (!msg.player_id) return;
-
-        setPlayers((prev) =>
-          prev.map((p) =>
-            p.id === msg.player_id
-              ? {
-                  ...p,
-                  total_score:
-                    (p.total_score || 0) + (msg.score || 0),
-                }
-              : p
-          )
-        );
-
-        addLog(
-          "score",
-          `ผู้เล่น ${msg.player_id} ได้ +${msg.score} คะแนน`
-        );
-        break;
-      }
-
-      case "player_disconnect": {
-        if (!msg.player_id) return;
-
-        setPlayers((prev) =>
-          prev.map((p) =>
-            p.id === msg.player_id
-              ? { ...p, connected: false }
-              : p
-          )
-        );
-
-        addLog("system", `ผู้เล่น ${msg.player_id} หลุดการเชื่อมต่อ`);
-        break;
-      }
-
-      case "room_start": {
-        addLog("system", "🎮 เกมเริ่มแล้ว!");
-        break;
-      }
-
-      default:
-        addLog("unknown", JSON.stringify(msg));
-    }
-  };
+  const isMeHost = players.some(
+    (p) => p.id === player.id && p.isHost
+  );
 
   /* =========================
-     Host action
+     Start game (HOST)
   ========================= */
   const startGame = async () => {
+    if (!isMeHost || gameStarted || starting) return;
+
+    setStarting(true);
     try {
-      await fetch(`http://localhost:8080/rooms/${roomCode}/start`, {
-        method: "POST",
-      });
-      addLog("system", "Host กดเริ่มเกม");
+      const res = await fetch(
+        `http://localhost:8080/rooms/${roomCode}/start`,
+        { method: "POST" }
+      );
+      if (!res.ok) throw new Error();
+
+      addLog("system", "▶ Host เริ่มเกม");
     } catch {
-      addLog("error", "เริ่มเกมไม่สำเร็จ");
+      alert("❌ เริ่มเกมไม่สำเร็จ");
+    } finally {
+      if (mountedRef.current) setStarting(false);
     }
   };
 
   /* =========================
-     UI
+     Leave room (CLEAN)
+  ========================= */
+  const leaveRoom = () => {
+    leavingRef.current = true;
+
+    wsRef.current?.close();
+    wsRef.current = null;
+
+    setPlayers([]);
+    setLogs([]);
+    setSummary(null);
+
+    onLeave();
+  };
+
+  /* =========================
+     SUMMARY PAGE
+  ========================= */
+  if (summary) {
+    return (
+      <SummaryPage
+        roomCode={roomCode}
+        player={player}
+        results={summary}
+        isHost={isMeHost}
+        onExit={leaveRoom}
+      />
+    );
+  }
+
+  /* =========================
+     LOBBY UI
   ========================= */
   return (
-    <div style={{ padding: 20, maxWidth: 600, margin: "0 auto" }}>
+    <div className="lobby-root">
       <h2>🎪 Lobby ห้อง {roomCode}</h2>
 
-      <div style={{ marginBottom: 12 }}>
-        คุณ: <b>{player?.name}</b> {isHost && "(Host)"}
+      <div>
+        คุณ: <b>{player.name}</b> {isMeHost && "(Host)"}
       </div>
 
-      <h3>👥 ผู้เล่น ({players.length})</h3>
+      {gameStarted && (
+        <div style={{ color: "#c0392b", marginTop: 6 }}>
+          🎮 เกมเริ่มแล้ว
+        </div>
+      )}
+
+      <h3>👥 ผู้เล่น</h3>
+
       <ul>
         {players.map((p) => (
           <li key={p.id}>
-            {p.connected ? "🟢" : "🔴"}{" "}
-            <b>{p.name}</b>
-            {p.isHost && " ⭐"}
-            {p.team && ` (${p.team})`} — คะแนน: {p.total_score}
+            {p.connected ? "🟢" : "🔴"} <b>{p.name}</b>
+            {p.isHost && " ⭐"} — {p.total_score} คะแนน
           </li>
         ))}
       </ul>
 
-      {isHost && (
+      {isMeHost && (
         <button
+          className="start-btn"
           onClick={startGame}
-          style={{
-            marginTop: 20,
-            padding: "12px 24px",
-            fontSize: 16,
-            background: "#28a745",
-            color: "#fff",
-            border: "none",
-            borderRadius: 8,
-            cursor: "pointer",
-          }}
+          disabled={gameStarted || starting}
         >
-          ▶ Start Game
+          {starting ? "⏳ กำลังเริ่ม..." : "▶ Start Game"}
         </button>
       )}
 
-      <hr style={{ margin: "20px 0" }} />
+      <hr />
 
-      <h4>📡 Event Log (Realtime)</h4>
-      <ul style={{ fontSize: 13, color: "#555" }}>
+      <h4>📡 Event Log</h4>
+      <ul style={{ fontSize: 13 }}>
         {logs.map((l, i) => (
           <li key={i}>
-            [{l.ts}] [{l.type}] {l.text}
+            [{l.ts}] {l.text}
           </li>
         ))}
       </ul>
+
+      <button
+        onClick={leaveRoom}
+        style={{
+          marginTop: 16,
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          color: "#555",
+        }}
+      >
+        ← ย้อนกลับ
+      </button>
     </div>
   );
 }
