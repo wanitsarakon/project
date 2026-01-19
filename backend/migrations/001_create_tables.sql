@@ -1,7 +1,7 @@
 -- =========================================
--- INITIAL SCHEMA
+-- FINAL SCHEMA (PRODUCTION)
 -- Thai Festival Game System
--- Production-aligned with Backend
+-- Backend-aligned (v5.5)
 -- =========================================
 
 BEGIN;
@@ -14,23 +14,27 @@ CREATE TABLE IF NOT EXISTS rooms (
 
   code VARCHAR(8) UNIQUE NOT NULL,
   name TEXT NOT NULL,
-  mode VARCHAR(10) NOT NULL CHECK (mode IN ('solo','team')),
+  mode VARCHAR(10) NOT NULL
+    CHECK (mode IN ('solo','team')),
 
   prize TEXT,
-  max_players INT NOT NULL DEFAULT 8 CHECK (max_players > 0),
+  max_players INT NOT NULL DEFAULT 8
+    CHECK (max_players > 0),
 
-  host_player_id INT,                    -- 🔑 host ปัจจุบัน
-  room_password TEXT,                    -- 🔒 NULL = public
+  host_player_id INT,                -- ⭐ FK (see below)
+  room_password TEXT,                -- NULL = public
 
   status VARCHAR(20) NOT NULL DEFAULT 'waiting'
-    CHECK (status IN ('waiting','playing','ended')),
+    CHECK (status IN ('waiting','playing','finished')),
 
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- indexes
-CREATE UNIQUE INDEX IF NOT EXISTS idx_rooms_code ON rooms(code);
-CREATE INDEX IF NOT EXISTS idx_rooms_status ON rooms(status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_rooms_code
+  ON rooms(code);
+
+CREATE INDEX IF NOT EXISTS idx_rooms_status
+  ON rooms(status);
 
 -- =========================
 -- PLAYERS
@@ -45,24 +49,45 @@ CREATE TABLE IF NOT EXISTS players (
   name TEXT NOT NULL,
 
   is_host BOOLEAN NOT NULL DEFAULT false,
-  team VARCHAR(20) CHECK (team IN ('red','blue')),
+  team VARCHAR(20)
+    CHECK (team IN ('red','blue')),
 
-  total_score INT NOT NULL DEFAULT 0 CHECK (total_score >= 0),
+  total_score INT NOT NULL DEFAULT 0
+    CHECK (total_score >= 0),
 
   connected BOOLEAN NOT NULL DEFAULT true,
   last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-  -- ❗ กันชื่อซ้ำในห้องเดียว
-  CONSTRAINT uq_players_room_name UNIQUE (room_id, name)
+  CONSTRAINT uq_players_room_name
+    UNIQUE (room_id, name)
 );
 
--- indexes
-CREATE INDEX IF NOT EXISTS idx_players_roomid ON players(room_id);
-CREATE INDEX IF NOT EXISTS idx_players_connected ON players(connected);
-CREATE INDEX IF NOT EXISTS idx_players_last_seen ON players(last_seen_at);
-CREATE INDEX IF NOT EXISTS idx_players_room_connected ON players(room_id, connected);
+CREATE INDEX IF NOT EXISTS idx_players_roomid
+  ON players(room_id);
+
+CREATE INDEX IF NOT EXISTS idx_players_connected
+  ON players(connected);
+
+CREATE INDEX IF NOT EXISTS idx_players_room_connected
+  ON players(room_id, connected);
+
+CREATE INDEX IF NOT EXISTS idx_players_last_seen
+  ON players(last_seen_at);
+
+-- =========================
+-- ⭐ FK: rooms.host_player_id → players.id
+-- (ทำหลัง players เพื่อเลี่ยง circular issue)
+-- =========================
+ALTER TABLE rooms
+  ADD CONSTRAINT fk_rooms_host_player
+  FOREIGN KEY (host_player_id)
+  REFERENCES players(id)
+  ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_rooms_host_player
+  ON rooms(host_player_id);
 
 -- =========================
 -- ROUNDS
@@ -74,23 +99,27 @@ CREATE TABLE IF NOT EXISTS rounds (
     REFERENCES rooms(id)
     ON DELETE CASCADE,
 
-  -- 🔑 0-based index (ตรง backend)
-  round_index INT NOT NULL CHECK (round_index >= 0),
+  -- 1-based index (ตรง backend)
+  round_index INT NOT NULL
+    CHECK (round_index >= 1),
 
   game_key VARCHAR(50) NOT NULL,
 
-  status VARCHAR(20) NOT NULL DEFAULT 'active'
-    CHECK (status IN ('active','ended')),
+  status VARCHAR(20) NOT NULL DEFAULT 'playing'
+    CHECK (status IN ('playing','finished')),
 
-  started_at TIMESTAMPTZ,
+  started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   ended_at TIMESTAMPTZ,
 
-  -- ❗ ห้องเดียว ห้ามมี round_index ซ้ำ
-  CONSTRAINT uq_round_room_index UNIQUE (room_id, round_index)
+  CONSTRAINT uq_round_room_index
+    UNIQUE (room_id, round_index)
 );
 
-CREATE INDEX IF NOT EXISTS idx_rounds_roomid ON rounds(room_id);
-CREATE INDEX IF NOT EXISTS idx_rounds_status ON rounds(status);
+CREATE INDEX IF NOT EXISTS idx_rounds_roomid
+  ON rounds(room_id);
+
+CREATE INDEX IF NOT EXISTS idx_rounds_status
+  ON rounds(status);
 
 -- =========================
 -- MINI GAME RESULTS
@@ -107,17 +136,25 @@ CREATE TABLE IF NOT EXISTS mini_game_results (
     ON DELETE CASCADE,
 
   game_key VARCHAR(50) NOT NULL,
-  score INT NOT NULL DEFAULT 0 CHECK (score >= 0),
 
-  meta JSONB,
+  score INT NOT NULL DEFAULT 0
+    CHECK (score >= 0),
+
+  meta JSONB,                         -- extra game data
 
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
-  -- ❗ 1 player ส่งผลได้ครั้งเดียวต่อรอบ
-  CONSTRAINT uq_result_round_player UNIQUE (round_id, player_id)
+  CONSTRAINT uq_result_round_player
+    UNIQUE (round_id, player_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_results_round ON mini_game_results(round_id);
-CREATE INDEX IF NOT EXISTS idx_results_player ON mini_game_results(player_id);
+CREATE INDEX IF NOT EXISTS idx_results_round
+  ON mini_game_results(round_id);
+
+CREATE INDEX IF NOT EXISTS idx_results_player
+  ON mini_game_results(player_id);
+
+CREATE INDEX IF NOT EXISTS idx_results_game_key
+  ON mini_game_results(game_key);
 
 COMMIT;

@@ -35,16 +35,24 @@ var GameSequence = []string{
 }
 
 /* =========================
-   START ROUND
+   START ROUND (SAFE)
 ========================= */
 func (rc *RoundController) StartRound(c *gin.Context) {
 	code := c.Param("code")
 
+	tx, err := rc.DB.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
+		return
+	}
+	defer tx.Rollback()
+
 	/* ===== find room ===== */
 	var roomID int
 	var roomStatus string
-	if err := rc.DB.QueryRow(`
+	if err := tx.QueryRow(`
 		SELECT id, status FROM rooms WHERE code=$1
+		FOR UPDATE
 	`, code).Scan(&roomID, &roomStatus); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "room not found"})
 		return
@@ -55,8 +63,8 @@ func (rc *RoundController) StartRound(c *gin.Context) {
 		return
 	}
 
-	/* ===== close previous round (safety) ===== */
-	_, _ = rc.DB.Exec(`
+	/* ===== close previous round ===== */
+	_, _ = tx.Exec(`
 		UPDATE rounds
 		SET status='finished', ended_at=NOW()
 		WHERE room_id=$1 AND status='playing'
@@ -64,7 +72,7 @@ func (rc *RoundController) StartRound(c *gin.Context) {
 
 	/* ===== next round index (1-based) ===== */
 	var nextRound int
-	_ = rc.DB.QueryRow(`
+	_ = tx.QueryRow(`
 		SELECT COALESCE(MAX(round_index),0) + 1
 		FROM rounds
 		WHERE room_id=$1
@@ -79,7 +87,7 @@ func (rc *RoundController) StartRound(c *gin.Context) {
 
 	/* ===== create round ===== */
 	var roundID int
-	if err := rc.DB.QueryRow(`
+	if err := tx.QueryRow(`
 		INSERT INTO rounds
 			(room_id, round_index, game_key, status, started_at)
 		VALUES ($1,$2,$3,'playing',NOW())
@@ -89,15 +97,20 @@ func (rc *RoundController) StartRound(c *gin.Context) {
 		return
 	}
 
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "commit failed"})
+		return
+	}
+
 	/* ===== broadcast ===== */
 	rc.Hub.Broadcast <- &ws.Message{
 		Room: code,
 		Data: ws.MustJSON(gin.H{
-			"type":        "round_start",
-			"round":       nextRound,
-			"round_id":    roundID,
-			"game_key":    gameKey,
-			"duration":    60,
+			"type":     "round_start",
+			"round":    nextRound,
+			"round_id": roundID,
+			"game_key": gameKey,
+			"duration": 60,
 		}),
 	}
 
@@ -110,7 +123,7 @@ func (rc *RoundController) StartRound(c *gin.Context) {
 }
 
 /* =========================
-   SUBMIT SCORE
+   SUBMIT SCORE (SAFE)
 ========================= */
 func (rc *RoundController) SubmitScore(c *gin.Context) {
 	roundID, _ := strconv.Atoi(c.Param("roundID"))
@@ -126,23 +139,46 @@ func (rc *RoundController) SubmitScore(c *gin.Context) {
 		return
 	}
 
+	tx, err := rc.DB.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
+		return
+	}
+	defer tx.Rollback()
+
 	/* ===== validate round ===== */
 	var status, gameKey, roomCode string
-	err := rc.DB.QueryRow(`
-		SELECT r.status, r.game_key, rooms.code
+	var roomID int
+	err = tx.QueryRow(`
+		SELECT r.status, r.game_key, rooms.code, rooms.id
 		FROM rounds r
 		JOIN rooms ON rooms.id=r.room_id
 		WHERE r.id=$1
-	`, roundID).Scan(&status, &gameKey, &roomCode)
+		FOR UPDATE
+	`, roundID).Scan(&status, &gameKey, &roomCode, &roomID)
 
 	if err != nil || status != "playing" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "round not active"})
 		return
 	}
 
+	/* ===== validate player in room ===== */
+	var valid bool
+	_ = tx.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1 FROM players
+			WHERE id=$1 AND room_id=$2 AND connected=true
+		)
+	`, req.PlayerID, roomID).Scan(&valid)
+
+	if !valid {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid player"})
+		return
+	}
+
 	/* ===== prevent duplicate submit ===== */
 	var exists bool
-	_ = rc.DB.QueryRow(`
+	_ = tx.QueryRow(`
 		SELECT EXISTS(
 			SELECT 1 FROM mini_game_results
 			WHERE round_id=$1 AND player_id=$2
@@ -155,7 +191,7 @@ func (rc *RoundController) SubmitScore(c *gin.Context) {
 	}
 
 	/* ===== save score ===== */
-	if _, err := rc.DB.Exec(`
+	if _, err := tx.Exec(`
 		INSERT INTO mini_game_results
 			(round_id, player_id, game_key, score, meta)
 		VALUES ($1,$2,$3,$4,$5)
@@ -165,11 +201,16 @@ func (rc *RoundController) SubmitScore(c *gin.Context) {
 	}
 
 	/* ===== update total score ===== */
-	_, _ = rc.DB.Exec(`
+	_, _ = tx.Exec(`
 		UPDATE players
 		SET total_score = total_score + $1
 		WHERE id=$2
 	`, req.Score, req.PlayerID)
+
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "commit failed"})
+		return
+	}
 
 	/* ===== realtime update ===== */
 	rc.Hub.Broadcast <- &ws.Message{
@@ -185,10 +226,18 @@ func (rc *RoundController) SubmitScore(c *gin.Context) {
 }
 
 /* =========================
-   END ROUND
+   END ROUND (WITH BROADCAST)
 ========================= */
 func (rc *RoundController) EndRound(c *gin.Context) {
 	roundID := c.Param("roundID")
+
+	var roomCode string
+	_ = rc.DB.QueryRow(`
+		SELECT rooms.code
+		FROM rounds
+		JOIN rooms ON rooms.id=rounds.room_id
+		WHERE rounds.id=$1
+	`, roundID).Scan(&roomCode)
 
 	_, err := rc.DB.Exec(`
 		UPDATE rounds
@@ -199,6 +248,14 @@ func (rc *RoundController) EndRound(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "end round failed"})
 		return
+	}
+
+	rc.Hub.Broadcast <- &ws.Message{
+		Room: roomCode,
+		Data: ws.MustJSON(gin.H{
+			"type":     "round_end",
+			"round_id": roundID,
+		}),
 	}
 
 	c.JSON(http.StatusOK, gin.H{"ok": true})

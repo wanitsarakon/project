@@ -11,7 +11,7 @@ import (
 )
 
 /* =========================
-   REGISTER ROUTES
+   REGISTER ROUTES (FINAL)
 ========================= */
 func RegisterRoutes(
 	r *gin.Engine,
@@ -19,12 +19,20 @@ func RegisterRoutes(
 	hub *ws.Hub,
 ) {
 
+	// =========================
+	// SAFETY GUARD
+	// =========================
+	if r == nil || db == nil || hub == nil {
+		panic("❌ RegisterRoutes: nil dependency")
+	}
+
 	/* =========================
 	   HEALTH CHECK
 	========================= */
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"status": "backend is running",
+			"status": "ok",
+			"service": "thai-festival-backend",
 		})
 	})
 
@@ -36,45 +44,55 @@ func RegisterRoutes(
 
 	/* =========================
 	   ROOM FLOW
+	   /rooms/*
 	========================= */
-	r.POST("/rooms", roomCtrl.CreateRoom)
-	r.GET("/rooms", roomCtrl.ListRooms)
-	r.GET("/rooms/:code", roomCtrl.GetRoom)
-	r.POST("/rooms/join", roomCtrl.JoinRoom)
+	room := r.Group("/rooms")
+	{
+		// 📋 public
+		room.POST("", roomCtrl.CreateRoom)
+		room.GET("", roomCtrl.ListRooms)
+		room.GET("/:code", roomCtrl.GetRoom)
+		room.POST("/join", roomCtrl.JoinRoom)
 
-	// ▶ Host เริ่มเกม (เริ่ม game อย่างเดียว)
-	r.POST("/rooms/:code/start", roomCtrl.StartGame)
+		// ▶ host control
+		room.POST("/:code/start", roomCtrl.StartGame)
+		room.POST("/:code/end", roomCtrl.EndGame)
 
-	// 🏁 จบเกม
-	r.POST("/rooms/:code/end", roomCtrl.EndGame)
+		// ⚙ engine / internal
+		room.POST("/:code/round/start", roundCtrl.StartRound)
+	}
 
 	/* =========================
 	   ROUND ENGINE
+	   /rounds/*
 	========================= */
-	// 🔥 internal use (frontend ไม่เรียกตรง)
-	r.POST("/rooms/:code/round/start", roundCtrl.StartRound)
-	r.POST("/rounds/:roundID/submit", roundCtrl.SubmitScore)
-	r.POST("/rounds/:roundID/end", roundCtrl.EndRound)
+	round := r.Group("/rounds")
+	{
+		round.POST("/:round_id/submit", roundCtrl.SubmitScore)
+		round.POST("/:round_id/end", roundCtrl.EndRound)
+	}
 
 	/* =========================
 	   WEBSOCKET
+	   /ws/*
 	========================= */
+	wsGroup := r.Group("/ws")
+	{
+		// 🌍 global realtime (room list / lobby update)
+		wsGroup.GET("/global", roomCtrl.ServeWs)
 
-	// 🌍 global realtime
-	r.GET("/ws/global", func(c *gin.Context) {
-		c.Set("room_code", "global")
-		roomCtrl.ServeWs(c)
-	})
-
-	// 🏟 room realtime
-	r.GET("/ws/:room_code", roomCtrl.ServeWs)
+		// 🏟 room realtime
+		wsGroup.GET("/:room_code", roomCtrl.ServeWs)
+	}
 
 	/* =========================
-	   FALLBACK
+	   FALLBACK (DEBUG FRIENDLY)
 	========================= */
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{
-			"error": "route not found",
+			"error":  "route not found",
+			"method": c.Request.Method,
+			"path":   c.Request.URL.Path,
 		})
 	})
 }

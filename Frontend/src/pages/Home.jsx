@@ -6,19 +6,26 @@ export default function Home({ onSelect }) {
   const [loading, setLoading] = useState(false);
 
   const inputRef = useRef(null);
+  const aliveRef = useRef(true);
 
   /* =========================
      Lifecycle
   ========================= */
   useEffect(() => {
+    aliveRef.current = true;
     inputRef.current?.focus();
+
+    return () => {
+      aliveRef.current = false;
+    };
   }, []);
 
   /* =========================
      Helpers
   ========================= */
-  const normalizeName = (value) =>
-    value.replace(/\s+/g, " ").trim();
+  const normalizeName = useCallback((value) => {
+    return value.replace(/\s+/g, " ").trim();
+  }, []);
 
   /* =========================
      Submit
@@ -45,32 +52,43 @@ export default function Home({ onSelect }) {
 
     try {
       setLoading(true);
-      // ส่งให้ parent ควบคุม flow ต่อ (API / route / WS)
       await onSelect(role, normalizedName);
     } finally {
-      setLoading(false);
+      if (aliveRef.current) {
+        setLoading(false);
+      }
     }
-  }, [loading, name, role, onSelect]);
+  }, [loading, name, role, onSelect, normalizeName]);
 
   /* =========================
      Keyboard
   ========================= */
   useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Enter") {
-        handleConfirm();
+    const onKeyDown = (e) => {
+      if (e.key !== "Enter") return;
+      if (loading) return;
+
+      // ป้องกัน Enter จาก input ที่ไม่ใช่ชื่อ
+      if (
+        document.activeElement &&
+        document.activeElement.tagName === "TEXTAREA"
+      ) {
+        return;
       }
+
+      handleConfirm();
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [handleConfirm]);
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handleConfirm, loading]);
 
   /* =========================
      UI
   ========================= */
   return (
     <div className="home-root">
-      <div className="panel">
+      <div className="panel" role="main">
         <h1 className="title">🎪 เกมงานวัด</h1>
 
         {/* Name */}
@@ -80,8 +98,9 @@ export default function Home({ onSelect }) {
           placeholder="ชื่อของคุณ"
           value={name}
           maxLength={20}
-          onChange={(e) => setName(e.target.value)}
           disabled={loading}
+          aria-label="ชื่อผู้เล่น"
+          onChange={(e) => setName(e.target.value)}
         />
 
         {/* Role selection */}
@@ -89,8 +108,9 @@ export default function Home({ onSelect }) {
           <button
             type="button"
             className={`role-btn ${role === "host" ? "active" : ""}`}
-            onClick={() => setRole("host")}
+            onClick={() => !loading && setRole("host")}
             disabled={loading}
+            aria-pressed={role === "host"}
           >
             🧑‍💼 Host
           </button>
@@ -98,8 +118,9 @@ export default function Home({ onSelect }) {
           <button
             type="button"
             className={`role-btn ${role === "player" ? "active" : ""}`}
-            onClick={() => setRole("player")}
+            onClick={() => !loading && setRole("player")}
             disabled={loading}
+            aria-pressed={role === "player"}
           >
             🎮 Player
           </button>
@@ -107,9 +128,7 @@ export default function Home({ onSelect }) {
 
         {/* Hint */}
         {!role && !loading && (
-          <p className="hint-text">
-            👆 กรุณาเลือกบทบาทก่อน
-          </p>
+          <p className="hint-text">👆 กรุณาเลือกบทบาทก่อน</p>
         )}
 
         {/* Confirm */}

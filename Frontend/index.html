@@ -11,6 +11,7 @@
     />
 
     <title>🎪 เกมงานวัด</title>
+
     <meta
       name="description"
       content="เว็บมินิเกมงานวัดไทย เล่นได้หลายคนแบบเรียลไทม์ สนุกเหมือนยกงานวัดมาไว้บนเว็บ!"
@@ -26,22 +27,21 @@
       property="og:description"
       content="มินิเกมงานวัดไทย เล่นฟรีหลายคนแบบเรียลไทม์"
     />
-    <!-- ใส่รูปจริงตอน deploy -->
+    <!-- ใช้ตอน deploy จริง -->
     <!-- <meta property="og:image" content="/og-image.png" /> -->
     <meta property="og:locale" content="th_TH" />
 
-    <!-- =========================
-         FAVICON / ICONS
-    ========================= -->
-    <!-- เพิ่มไฟล์จริงภายหลัง -->
-    <!--
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    -->
+    <!-- Twitter (optional) -->
+    <meta name="twitter:card" content="summary_large_image" />
 
     <!-- =========================
-         GOOGLE FONT
+         PERFORMANCE / SECURITY
+    ========================= -->
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+
+    <!-- =========================
+         GOOGLE FONT (PERFORMANCE SAFE)
     ========================= -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -51,7 +51,7 @@
     />
 
     <!-- =========================
-         MOBILE / IOS SAFE
+         MOBILE / IOS / KIOSK SAFE
     ========================= -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta
@@ -60,25 +60,45 @@
     />
     <meta name="apple-mobile-web-app-title" content="เกมงานวัด" />
 
+    <!-- ปิด pinch zoom สำหรับ kiosk (เปิดใช้เมื่อจำเป็น) -->
+    <!--
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, user-scalable=no"
+    />
+    -->
+
     <!-- =========================
          PWA (OPTIONAL)
     ========================= -->
-    <!-- เปิดใช้เมื่อมี manifest -->
+    <!-- เปิดเมื่อมี manifest + service worker -->
     <!-- <link rel="manifest" href="/manifest.json" /> -->
   </head>
 
   <body>
     <!-- =========================
-         NO SCRIPT
+         NO SCRIPT FALLBACK
     ========================= -->
     <noscript>
-      <div style="padding:16px;text-align:center;font-family:sans-serif">
+      <div
+        style="
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          padding: 16px;
+          font-family: system-ui, -apple-system, sans-serif;
+          background: #fff3cd;
+          color: #222;
+        "
+      >
         ⚠️ เว็บไซต์นี้ต้องเปิดใช้งาน JavaScript
       </div>
     </noscript>
 
     <!-- =========================
-         ROOT
+         ROOT (React Mount Point)
     ========================= -->
     <div id="root"></div>
 

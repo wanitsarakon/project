@@ -1,28 +1,48 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
 
 const API_BASE =
   import.meta.env.VITE_API_URL || "http://localhost:8080";
 
 export default function Host({ host, onCreateRoom, onBack }) {
+  /* =========================
+     STATE
+  ========================= */
   const [loading, setLoading] = useState(false);
   const [roomCode, setRoomCode] = useState(null);
   const [createdPlayer, setCreatedPlayer] = useState(null);
   const [error, setError] = useState(null);
 
   /* =========================
-     Room settings
+     ROOM SETTINGS
   ========================= */
   const [mode, setMode] = useState("solo"); // solo | team
   const [maxPlayers, setMaxPlayers] = useState(8);
-
-  // 🔒 Private room
   const [isPrivate, setIsPrivate] = useState(false);
   const [password, setPassword] = useState("");
 
+  /* =========================
+     REFS (lifecycle guards)
+  ========================= */
   const passwordRef = useRef(null);
+  const mountedRef = useRef(false);
 
   /* =========================
-     Effects
+     LIFECYCLE
+  ========================= */
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  /* =========================
+     PRIVATE ROOM EFFECT
   ========================= */
   useEffect(() => {
     if (isPrivate) {
@@ -34,14 +54,17 @@ export default function Host({ host, onCreateRoom, onBack }) {
   }, [isPrivate]);
 
   /* =========================
-     Helpers
+     HELPERS
   ========================= */
-  const normalize = (v) => v.replace(/\s+/g, " ").trim();
+  const normalize = useCallback(
+    (v = "") => v.replace(/\s+/g, " ").trim(),
+    []
+  );
 
   /* =========================
-     Create Room
+     CREATE ROOM
   ========================= */
-  const createRoom = async () => {
+  const createRoom = useCallback(async () => {
     if (loading || roomCode) return;
 
     if (!host?.name) {
@@ -82,26 +105,41 @@ export default function Host({ host, onCreateRoom, onBack }) {
         throw new Error("invalid server response");
       }
 
+      if (!mountedRef.current) return;
+
       setRoomCode(data.room_code);
       setCreatedPlayer(data.player);
     } catch (err) {
-      console.error("createRoom error:", err);
-      setError("❌ สร้างห้องไม่สำเร็จ กรุณาลองใหม่");
+      console.error("❌ createRoom error:", err);
+      if (mountedRef.current) {
+        setError("❌ สร้างห้องไม่สำเร็จ กรุณาลองใหม่");
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, [
+    loading,
+    roomCode,
+    host,
+    mode,
+    maxPlayers,
+    isPrivate,
+    password,
+    normalize,
+  ]);
 
   /* =========================
-     Enter Lobby
+     ENTER LOBBY
   ========================= */
-  const enterLobby = () => {
+  const enterLobby = useCallback(() => {
     if (!roomCode || !createdPlayer || loading) return;
     onCreateRoom(roomCode, createdPlayer);
-  };
+  }, [roomCode, createdPlayer, loading, onCreateRoom]);
 
   /* =========================
-     Render
+     UI
   ========================= */
   return (
     <div className="home-root">
@@ -125,19 +163,25 @@ export default function Host({ host, onCreateRoom, onBack }) {
           <>
             {/* Mode */}
             <div style={{ marginBottom: 12 }}>
-              <div style={{ marginBottom: 6 }}>🎮 โหมดการเล่น</div>
+              <div style={{ marginBottom: 6 }}>
+                🎮 โหมดการเล่น
+              </div>
 
               <button
-                className={`role-btn ${mode === "solo" ? "active" : ""}`}
-                onClick={() => setMode("solo")}
+                className={`role-btn ${
+                  mode === "solo" ? "active" : ""
+                }`}
+                onClick={() => !loading && setMode("solo")}
                 disabled={loading}
               >
                 เดี่ยว (Solo)
               </button>
 
               <button
-                className={`role-btn ${mode === "team" ? "active" : ""}`}
-                onClick={() => setMode("team")}
+                className={`role-btn ${
+                  mode === "team" ? "active" : ""
+                }`}
+                onClick={() => !loading && setMode("team")}
                 disabled={loading}
                 style={{ marginLeft: 8 }}
               >
@@ -154,6 +198,7 @@ export default function Host({ host, onCreateRoom, onBack }) {
               <select
                 value={maxPlayers}
                 onChange={(e) =>
+                  !loading &&
                   setMaxPlayers(Number(e.target.value))
                 }
                 disabled={loading}
@@ -173,6 +218,7 @@ export default function Host({ host, onCreateRoom, onBack }) {
                   type="checkbox"
                   checked={isPrivate}
                   onChange={(e) =>
+                    !loading &&
                     setIsPrivate(e.target.checked)
                   }
                   style={{ marginRight: 6 }}
@@ -188,7 +234,9 @@ export default function Host({ host, onCreateRoom, onBack }) {
                 className="room-input"
                 placeholder="ตั้งรหัสห้อง (อย่างน้อย 4 ตัว)"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) =>
+                  !loading && setPassword(e.target.value)
+                }
                 disabled={loading}
               />
             )}
@@ -199,7 +247,9 @@ export default function Host({ host, onCreateRoom, onBack }) {
               disabled={loading}
               style={{ marginTop: 16 }}
             >
-              {loading ? "⏳ กำลังสร้างห้อง..." : "➕ สร้างห้อง"}
+              {loading
+                ? "⏳ กำลังสร้างห้อง..."
+                : "➕ สร้างห้อง"}
             </button>
           </>
         )}
@@ -209,7 +259,7 @@ export default function Host({ host, onCreateRoom, onBack }) {
         ===================== */}
         {roomCode && (
           <div style={{ marginTop: 18, textAlign: "center" }}>
-            <p>🎟 รหัสห้อง</p>
+            <p>🎟 เลขที่ห้อง</p>
 
             <div
               style={{

@@ -44,7 +44,7 @@ func (rc *RoomController) CreateRoom(c *gin.Context) {
 	}
 
 	if req.Name == "" {
-		req.Name = "ซุ้มงานวัด"
+		req.Name = "Thai Festival Room"
 	}
 	if req.Mode != "team" {
 		req.Mode = "solo"
@@ -55,7 +55,11 @@ func (rc *RoomController) CreateRoom(c *gin.Context) {
 
 	code := generateRoomCode()
 
-	tx, _ := rc.DB.Begin()
+	tx, err := rc.DB.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
+		return
+	}
 	defer tx.Rollback()
 
 	var roomID int
@@ -69,13 +73,19 @@ func (rc *RoomController) CreateRoom(c *gin.Context) {
 	}
 
 	var hostID int
-	_ = tx.QueryRow(`
+	if err := tx.QueryRow(`
 		INSERT INTO players (name,room_id,is_host,connected,total_score,last_seen_at)
 		VALUES ($1,$2,true,true,0,NOW())
 		RETURNING id
-	`, req.HostName, roomID).Scan(&hostID)
+	`, req.HostName, roomID).Scan(&hostID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "create host failed"})
+		return
+	}
 
-	_ = tx.Commit()
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "commit failed"})
+		return
+	}
 
 	rc.broadcastGlobal()
 
@@ -98,32 +108,75 @@ func (rc *RoomController) JoinRoom(c *gin.Context) {
 		RoomPassword *string `json:"room_password"`
 	}
 
-	if err := c.ShouldBindJSON(&req); err != nil || req.Name == "" {
+	if err := c.ShouldBindJSON(&req); err != nil || req.Name == "" || req.RoomCode == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
 		return
 	}
 
-	var roomID int
-	if err := rc.DB.QueryRow(`
-		SELECT id FROM rooms
+	tx, err := rc.DB.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
+		return
+	}
+	defer tx.Rollback()
+
+	var roomID, maxPlayers int
+	if err := tx.QueryRow(`
+		SELECT id, max_players
+		FROM rooms
 		WHERE code=$1 AND status='waiting'
-	`, req.RoomCode).Scan(&roomID); err != nil {
+		FOR UPDATE
+	`, req.RoomCode).Scan(&roomID, &maxPlayers); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "room not found"})
 		return
 	}
 
+	var count int
+	_ = tx.QueryRow(`
+		SELECT COUNT(*) FROM players
+		WHERE room_id=$1 AND connected=true
+	`, roomID).Scan(&count)
+
+	if count >= maxPlayers {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "room is full"})
+		return
+	}
+
+	var exists bool
+	_ = tx.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1 FROM players
+			WHERE room_id=$1 AND name=$2 AND connected=true
+		)
+	`, roomID, req.Name).Scan(&exists)
+
+	if exists {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "player already in room"})
+		return
+	}
+
 	var playerID int
-	_ = rc.DB.QueryRow(`
+	if err := tx.QueryRow(`
 		INSERT INTO players (name,room_id,is_host,connected,total_score,last_seen_at)
 		VALUES ($1,$2,false,true,0,NOW())
 		RETURNING id
-	`, req.Name, roomID).Scan(&playerID)
+	`, req.Name, roomID).Scan(&playerID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "join room failed"})
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "commit failed"})
+		return
+	}
 
 	rc.broadcastRoom(req.RoomCode, gin.H{
 		"type":      "player_join",
 		"player_id": playerID,
 		"name":      req.Name,
 	})
+
+	rc.broadcastGlobal()
 
 	c.JSON(http.StatusOK, gin.H{"player_id": playerID})
 }
@@ -162,7 +215,7 @@ func (rc *RoomController) ListRooms(c *gin.Context) {
 }
 
 /* =========================
-   GET ROOM (Lobby)
+   GET ROOM
 ========================= */
 func (rc *RoomController) GetRoom(c *gin.Context) {
 	code := c.Param("code")
@@ -204,12 +257,56 @@ func (rc *RoomController) GetRoom(c *gin.Context) {
 func (rc *RoomController) StartGame(c *gin.Context) {
 	code := c.Param("code")
 
-	_, _ = rc.DB.Exec(`
+	res, _ := rc.DB.Exec(`
 		UPDATE rooms SET status='playing'
 		WHERE code=$1 AND status='waiting'
 	`, code)
 
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "cannot start game"})
+		return
+	}
+
 	rc.broadcastRoom(code, gin.H{"type": "game_start"})
+	c.JSON(http.StatusOK, gin.H{"ok": true})
+}
+
+/* =========================
+   UPDATE SCORE
+========================= */
+func (rc *RoomController) UpdateScore(c *gin.Context) {
+	code := c.Param("code")
+
+	var req struct {
+		PlayerID int `json:"player_id"`
+		Score    int `json:"score"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil || req.PlayerID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	_, err := rc.DB.Exec(`
+		UPDATE players
+		SET total_score = total_score + $1,
+		    last_seen_at = NOW()
+		WHERE id=$2
+		  AND room_id=(SELECT id FROM rooms WHERE code=$3)
+	`, req.Score, req.PlayerID, code)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "score update failed"})
+		return
+	}
+
+	rc.broadcastRoom(code, gin.H{
+		"type":      "score_update",
+		"player_id": req.PlayerID,
+		"score":     req.Score,
+	})
+
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
@@ -224,7 +321,36 @@ func (rc *RoomController) EndGame(c *gin.Context) {
 		WHERE code=$1
 	`, code)
 
-	rc.broadcastRoom(code, gin.H{"type": "game_summary"})
+	rows, _ := rc.DB.Query(`
+		SELECT id, name, total_score
+		FROM players
+		WHERE room_id=(SELECT id FROM rooms WHERE code=$1)
+		ORDER BY total_score DESC
+	`, code)
+	defer rows.Close()
+
+	var results []gin.H
+	rank := 1
+	for rows.Next() {
+		var id, score int
+		var name string
+		_ = rows.Scan(&id, &name, &score)
+
+		results = append(results, gin.H{
+			"player_id": id,
+			"name":      name,
+			"score":     score,
+			"rank":      rank,
+		})
+		rank++
+	}
+
+	rc.broadcastRoom(code, gin.H{
+		"type":    "game_summary",
+		"results": results,
+	})
+
+	rc.broadcastGlobal()
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
@@ -242,6 +368,14 @@ func (rc *RoomController) ServeWs(c *gin.Context) {
 	conn, err := up.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		return
+	}
+
+	if playerID > 0 {
+		_, _ = rc.DB.Exec(`
+			UPDATE players
+			SET connected=true, last_seen_at=NOW()
+			WHERE id=$1
+		`, playerID)
 	}
 
 	ws.NewClient(rc.Hub, conn, room, playerID)

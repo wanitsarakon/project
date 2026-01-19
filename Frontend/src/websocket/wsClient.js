@@ -1,11 +1,12 @@
 /**
- * createRoomSocket (PRODUCTION FINAL)
+ * createRoomSocket (ULTRA HARDENED – PRODUCTION FINAL++)
  *
  * ✅ reconnect-safe
- * ✅ heartbeat (text ping)
- * ✅ player_id support
- * ✅ Gin + Gorilla WS compatible
- * ✅ no double-close / no leak
+ * ✅ heartbeat-safe (Gin + Gorilla WS)
+ * ✅ React / Phaser unmount-safe
+ * ✅ StrictMode-safe
+ * ✅ race-condition proof
+ * ✅ no zombie socket
  */
 
 export function createRoomSocket(roomCode, onMessage, options = {}) {
@@ -20,103 +21,140 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
     debug = false,
   } = options;
 
+  /* =========================
+     INTERNAL STATE
+  ========================= */
   let ws = null;
   let heartbeatTimer = null;
   let reconnectTimer = null;
 
-  let shouldReconnect = true;
-  let manuallyClosed = false;
   let connecting = false;
   let destroyed = false;
+
+  // 🔐 instance guard (StrictMode / race safe)
+  let instanceId = 0;
+  let activeInstanceId = 0;
 
   /* =========================
      CONNECT
   ========================= */
   const connect = () => {
-    if (connecting || ws || destroyed) return;
+    if (connecting || destroyed) return;
 
     connecting = true;
-    manuallyClosed = false;
+    instanceId += 1;
+
+    const myInstanceId = instanceId;
+    activeInstanceId = myInstanceId;
 
     let url = `${urlBase}/ws/${roomCode}`;
-    if (playerId) {
+    if (playerId != null) {
       url += `?player_id=${encodeURIComponent(playerId)}`;
     }
 
     debug && console.log("🔌 WS connecting:", url);
 
+    let socket;
     try {
-      ws = new WebSocket(url);
+      socket = new WebSocket(url);
     } catch (err) {
       connecting = false;
       debug && console.error("❌ WS create failed:", err);
-      scheduleReconnect();
+      scheduleReconnect(myInstanceId);
       return;
     }
 
-    ws.onopen = () => {
+    ws = socket;
+
+    /* ---------- OPEN ---------- */
+    socket.onopen = () => {
+      if (destroyed || myInstanceId !== activeInstanceId) {
+        safeClose(socket);
+        return;
+      }
+
       connecting = false;
       debug && console.log("✅ WS connected:", roomCode);
-      startHeartbeat();
+      startHeartbeat(myInstanceId);
     };
 
-    ws.onmessage = (event) => {
-      if (!event?.data) return;
-
-      // backend pong อาจเป็น binary / empty
-      if (event.data === "pong") return;
+    /* ---------- MESSAGE ---------- */
+    socket.onmessage = (event) => {
+      if (
+        destroyed ||
+        myInstanceId !== activeInstanceId ||
+        typeof event?.data !== "string"
+      )
+        return;
 
       try {
-        const data =
-          typeof event.data === "string"
-            ? JSON.parse(event.data)
-            : null;
-
+        const data = JSON.parse(event.data);
         if (data?.type) {
           onMessage?.(data);
         }
       } catch {
-        debug && console.warn("⚠️ WS non-JSON:", event.data);
+        // ignore non-JSON (ping frame from backend)
       }
     };
 
-    ws.onclose = () => {
+    /* ---------- ERROR ---------- */
+    socket.onerror = (err) => {
+      debug && console.error("❌ WS error:", err);
+      // let onclose handle reconnect
+    };
+
+    /* ---------- CLOSE ---------- */
+    socket.onclose = () => {
+      if (myInstanceId !== activeInstanceId) return;
+
       debug && console.log("❌ WS closed:", roomCode);
       cleanup(false);
 
-      if (!manuallyClosed && shouldReconnect && !destroyed) {
-        scheduleReconnect();
+      if (!destroyed) {
+        scheduleReconnect(myInstanceId);
       }
-    };
-
-    ws.onerror = (err) => {
-      debug && console.error("❌ WS error:", err);
     };
   };
 
   /* =========================
      RECONNECT
   ========================= */
-  const scheduleReconnect = () => {
-    if (reconnectTimer || destroyed || !shouldReconnect) return;
+  const scheduleReconnect = (fromInstance) => {
+    if (
+      destroyed ||
+      reconnectTimer ||
+      fromInstance !== activeInstanceId
+    )
+      return;
 
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null;
-      ws = null;
-      connect();
+
+      if (!destroyed && fromInstance === activeInstanceId) {
+        connect();
+      }
     }, reconnectDelay);
   };
 
   /* =========================
-     HEARTBEAT
+     HEARTBEAT (TEXT PING)
+     - backend updates last_seen_at
   ========================= */
-  const startHeartbeat = () => {
+  const startHeartbeat = (fromInstance) => {
     stopHeartbeat();
 
     heartbeatTimer = setInterval(() => {
+      if (
+        destroyed ||
+        fromInstance !== activeInstanceId
+      ) {
+        stopHeartbeat();
+        return;
+      }
+
       if (ws?.readyState === WebSocket.OPEN) {
         try {
-          ws.send("ping"); // backend update last_seen_at
+          ws.send("ping"); // backend readPump handles this
         } catch {}
       }
     }, heartbeatInterval);
@@ -130,7 +168,7 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
   };
 
   /* =========================
-     CLEANUP (internal)
+     CLEANUP (HARD)
   ========================= */
   const cleanup = (closeSocket = true) => {
     stopHeartbeat();
@@ -141,38 +179,53 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
     }
 
     if (closeSocket && ws) {
-      try {
-        ws.close();
-      } catch {}
+      safeClose(ws);
     }
 
     ws = null;
     connecting = false;
   };
 
+  const safeClose = (socket) => {
+    try {
+      socket.onopen = null;
+      socket.onmessage = null;
+      socket.onerror = null;
+      socket.onclose = null;
+      socket.close();
+    } catch {}
+  };
+
   /* =========================
-     PUBLIC API
+     INIT
   ========================= */
   connect();
 
+  /* =========================
+     PUBLIC API
+  ========================= */
   return {
     send(data) {
-      if (ws?.readyState === WebSocket.OPEN) {
+      if (
+        destroyed ||
+        ws?.readyState !== WebSocket.OPEN
+      )
+        return;
+
+      try {
         ws.send(JSON.stringify(data));
-      }
+      } catch {}
     },
 
     close() {
+      if (destroyed) return;
       destroyed = true;
-      shouldReconnect = false;
-      manuallyClosed = true;
+      activeInstanceId = -1; // 🔒 block reconnect forever
       cleanup(true);
     },
 
     reconnect() {
-      destroyed = false;
-      shouldReconnect = true;
-      manuallyClosed = false;
+      if (destroyed) return;
       cleanup(true);
       connect();
     },

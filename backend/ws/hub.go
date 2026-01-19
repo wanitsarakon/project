@@ -3,6 +3,7 @@ package ws
 import (
 	"database/sql"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -21,11 +22,12 @@ type Message struct {
    CLIENT
 ========================= */
 type Client struct {
-	Hub        *Hub
-	Conn       *websocket.Conn
-	Room       string
-	PlayerID   int
-	Send       chan []byte
+	Hub      *Hub
+	Conn     *websocket.Conn
+	Room     string
+	PlayerID int
+	Send     chan []byte
+
 	disconnect sync.Once
 }
 
@@ -64,10 +66,11 @@ func (h *Hub) Run() {
 		case c := <-h.Register:
 			h.mu.Lock()
 			h.Clients[c] = true
+			count := len(h.Clients)
 			h.mu.Unlock()
 
 			log.Printf("✅ WS register room=%s player=%d clients=%d",
-				c.Room, c.PlayerID, len(h.Clients))
+				c.Room, c.PlayerID, count)
 
 		case c := <-h.Unregister:
 			h.removeClient(c)
@@ -75,10 +78,11 @@ func (h *Hub) Run() {
 		case msg := <-h.Broadcast:
 			h.mu.Lock()
 			for c := range h.Clients {
-				if c.Room == msg.Room || c.Room == "global" {
+				if msg.Room == "global" || c.Room == msg.Room {
 					select {
 					case c.Send <- msg.Data:
 					default:
+						// slow or dead client → remove async
 						go h.removeClient(c)
 					}
 				}
@@ -89,43 +93,49 @@ func (h *Hub) Run() {
 }
 
 /* =========================
-   REMOVE CLIENT (SAFE)
+   REMOVE CLIENT (ABSOLUTELY SAFE)
 ========================= */
 func (h *Hub) removeClient(c *Client) {
-	h.mu.Lock()
-	if _, ok := h.Clients[c]; !ok {
-		h.mu.Unlock()
-		return
-	}
-	delete(h.Clients, c)
-	h.mu.Unlock()
-
 	c.disconnect.Do(func() {
+
+		h.mu.Lock()
+		if _, ok := h.Clients[c]; !ok {
+			h.mu.Unlock()
+			return
+		}
+		delete(h.Clients, c)
+		count := len(h.Clients)
+		h.mu.Unlock()
+
 		c.onDisconnect()
+
+		// close send channel safely
 		close(c.Send)
+
+		// close socket
 		_ = c.Conn.Close()
 
 		log.Printf("❌ WS unregister room=%s player=%d clients=%d",
-			c.Room, c.PlayerID, len(h.Clients))
+			c.Room, c.PlayerID, count)
 	})
 }
 
 /* =========================
-   DISCONNECT LOGIC
+   DISCONNECT LOGIC (ONCE)
 ========================= */
 func (c *Client) onDisconnect() {
 	if c.PlayerID == 0 || c.Hub.DB == nil {
 		return
 	}
 
-	// mark disconnected
+	// mark offline
 	_, _ = c.Hub.DB.Exec(`
 		UPDATE players
 		SET connected=false
 		WHERE id=$1
 	`, c.PlayerID)
 
-	// notify room
+	// notify room (non-blocking)
 	select {
 	case c.Hub.Broadcast <- &Message{
 		Room: c.Room,
@@ -141,13 +151,28 @@ func (c *Client) onDisconnect() {
 /* =========================
    NEW CLIENT
 ========================= */
-func NewClient(hub *Hub, conn *websocket.Conn, room string, playerID int) *Client {
+func NewClient(
+	hub *Hub,
+	conn *websocket.Conn,
+	room string,
+	playerID int,
+) *Client {
+
 	c := &Client{
 		Hub:      hub,
 		Conn:     conn,
 		Room:     room,
 		PlayerID: playerID,
 		Send:     make(chan []byte, 256),
+	}
+
+	// mark connected
+	if playerID > 0 && hub.DB != nil {
+		_, _ = hub.DB.Exec(`
+			UPDATE players
+			SET connected=true, last_seen_at=NOW()
+			WHERE id=$1
+		`, playerID)
 	}
 
 	hub.Register <- c
@@ -159,18 +184,18 @@ func NewClient(hub *Hub, conn *websocket.Conn, room string, playerID int) *Clien
 }
 
 /* =========================
-   READ PUMP (HEARTBEAT)
+   READ PUMP (HEARTBEAT SAFE)
 ========================= */
 func (c *Client) readPump() {
 	defer func() {
 		c.Hub.Unregister <- c
 	}()
 
-	c.Conn.SetReadLimit(1024)
-	_ = c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+	c.Conn.SetReadLimit(2048)
+	_ = c.Conn.SetReadDeadline(time.Now().Add(90 * time.Second))
 
 	c.Conn.SetPongHandler(func(string) error {
-		_ = c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
+		_ = c.Conn.SetReadDeadline(time.Now().Add(90 * time.Second))
 		return nil
 	})
 
@@ -180,19 +205,25 @@ func (c *Client) readPump() {
 			return
 		}
 
-		// heartbeat
-		if string(msg) == "ping" && c.PlayerID > 0 {
+		// heartbeat update
+		if c.PlayerID > 0 && c.Hub.DB != nil {
 			_, _ = c.Hub.DB.Exec(`
 				UPDATE players
 				SET last_seen_at=NOW()
 				WHERE id=$1
 			`, c.PlayerID)
 		}
+
+		// ignore text ping
+		text := strings.TrimSpace(strings.ToLower(string(msg)))
+		if text == "ping" {
+			continue
+		}
 	}
 }
 
 /* =========================
-   WRITE PUMP
+   WRITE PUMP (SAFE)
 ========================= */
 func (c *Client) writePump() {
 	ticker := time.NewTicker(30 * time.Second)
@@ -205,15 +236,22 @@ func (c *Client) writePump() {
 			if !ok {
 				return
 			}
+
 			_ = c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-			if err := c.Conn.WriteMessage(websocket.TextMessage, msg); err != nil {
+			if err := c.Conn.WriteMessage(
+				websocket.TextMessage,
+				msg,
+			); err != nil {
 				c.Hub.Unregister <- c
 				return
 			}
 
 		case <-ticker.C:
 			_ = c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+			if err := c.Conn.WriteMessage(
+				websocket.PingMessage,
+				nil,
+			); err != nil {
 				c.Hub.Unregister <- c
 				return
 			}

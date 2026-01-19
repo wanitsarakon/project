@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
 
 /**
  * SummaryPage
@@ -6,7 +12,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
  * props:
  * - roomCode
  * - player        { id, name }
- * - results       [{ player_id, name, score, rank, prize }]
+ * - results       [{ player_id, name, score | total_score, rank?, prize? }]
  * - isHost
  * - onExit        () => void
  */
@@ -18,71 +24,96 @@ export default function SummaryPage({
   isHost = false,
   onExit,
 }) {
-  const [countdown, setCountdown] = useState(15); // ⏳ ควรตรง backend
+  /* =========================
+     STATE / REFS
+  ========================= */
+  const [countdown, setCountdown] = useState(15); // ⏳ UX default
   const exitingRef = useRef(false);
+  const mountedRef = useRef(false);
   const timerRef = useRef(null);
 
   /* =========================
-     Normalize + Sort results
+     NORMALIZE + SORT RESULTS
   ========================= */
   const sortedResults = useMemo(() => {
-    if (!Array.isArray(results) || results.length === 0) return [];
+    if (!Array.isArray(results) || results.length === 0) {
+      return [];
+    }
 
-    // ถ้า backend ไม่ส่ง rank → sort ตาม score
-    const hasRank = results.every((r) => r.rank != null);
-
-    const list = [...results].map((r) => ({
+    const list = results.map((r) => ({
       player_id: r.player_id,
       name: r.name || "ผู้เล่น",
       score: r.score ?? r.total_score ?? 0,
-      rank: r.rank,
-      prize: r.prize,
+      rank: r.rank ?? null,
+      prize: r.prize ?? null,
     }));
 
+    const hasRank = list.every(
+      (r) => typeof r.rank === "number"
+    );
+
     if (hasRank) {
-      return list.sort((a, b) => a.rank - b.rank);
+      return [...list].sort((a, b) => a.rank - b.rank);
     }
 
-    return list
+    // fallback: sort by score desc
+    return [...list]
       .sort((a, b) => b.score - a.score)
-      .map((r, i) => ({ ...r, rank: i + 1 }));
+      .map((r, i) => ({
+        ...r,
+        rank: i + 1,
+      }));
   }, [results]);
 
   /* =========================
-     Auto countdown
+     EXIT (SAFE, ONCE)
+  ========================= */
+  const triggerExit = useCallback(() => {
+    if (exitingRef.current) return;
+    exitingRef.current = true;
+
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    onExit?.();
+  }, [onExit]);
+
+  /* =========================
+     COUNTDOWN TIMER
   ========================= */
   useEffect(() => {
+    mountedRef.current = true;
+
     timerRef.current = setInterval(() => {
-      setCountdown((c) => {
-        if (c <= 1) {
+      setCountdown((prev) => {
+        if (prev <= 1) {
           triggerExit();
           return 0;
         }
-        return c - 1;
+        return prev - 1;
       });
     }, 1000);
 
     return () => {
-      clearInterval(timerRef.current);
+      mountedRef.current = false;
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
     };
-    // eslint-disable-next-line
-  }, []);
+  }, [triggerExit]);
 
   /* =========================
-     Exit (ONCE)
+     HELPERS
   ========================= */
-  const triggerExit = () => {
-    if (exitingRef.current) return;
-    exitingRef.current = true;
-
-    clearInterval(timerRef.current);
-    onExit?.();
-  };
-
-  /* =========================
-     Helpers
-  ========================= */
-  const isMe = (r) => r.player_id === player?.id;
+  const isMe = useCallback(
+    (r) =>
+      player?.id != null &&
+      r.player_id === player.id,
+    [player]
+  );
 
   const rankEmoji = (rank) => {
     if (rank === 1) return "🥇";
@@ -97,7 +128,9 @@ export default function SummaryPage({
   return (
     <div className="summary-root">
       <div className="panel">
-        <h2 style={{ marginBottom: 4 }}>🏆 สรุปผลการแข่งขัน</h2>
+        <h2 style={{ marginBottom: 4 }}>
+          🏆 สรุปผลการแข่งขัน
+        </h2>
 
         <div style={{ fontSize: 13, color: "#666" }}>
           ห้อง {roomCode}
@@ -125,12 +158,21 @@ export default function SummaryPage({
                     padding: "10px 12px",
                     borderRadius: 10,
                     background: me ? "#fff3cd" : "#fff",
-                    boxShadow: "0 2px 6px rgba(0,0,0,0.15)",
-                    border: me ? "2px solid #f1c40f" : "none",
+                    boxShadow:
+                      "0 2px 6px rgba(0,0,0,0.15)",
+                    border: me
+                      ? "2px solid #f1c40f"
+                      : "none",
                   }}
                 >
-                  <div style={{ fontSize: 16, fontWeight: "bold" }}>
-                    {rankEmoji(r.rank)} อันดับ {r.rank} — {r.name}
+                  <div
+                    style={{
+                      fontSize: 16,
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {rankEmoji(r.rank)} อันดับ {r.rank} —{" "}
+                    {r.name}
                     {me && " (คุณ)"}
                   </div>
 
@@ -139,7 +181,12 @@ export default function SummaryPage({
                   </div>
 
                   {r.prize && (
-                    <div style={{ fontSize: 13, marginTop: 4 }}>
+                    <div
+                      style={{
+                        fontSize: 13,
+                        marginTop: 4,
+                      }}
+                    >
                       🎁 {r.prize}
                     </div>
                   )}

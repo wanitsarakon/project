@@ -1,87 +1,65 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useRef } from "react";
+
 import Home from "./pages/Home";
 import Host from "./pages/Host";
 import RoomList from "./pages/RoomList";
 import Lobby from "./pages/Lobby";
+import FestivalMap from "./pages/FestivalMap";
+import Game from "./pages/Game";
 
 /*
-view:
+VIEWS:
 - home
 - host
 - roomlist
 - lobby
+- festival-map
+- game
 */
-
-const STORAGE_KEY = "thai-festival-session";
-const ENABLE_RESTORE_SESSION = false; // เปิดเฉพาะ production
 
 export default function App() {
   const [view, setView] = useState("home");
+
+  /**
+   * session = ข้อมูลที่ต้องอยู่ตลอด lifecycle ของ "ห้อง"
+   * ❗ ห้ามล้างตอนเข้า game / festival-map
+   * ❗ ล้างเฉพาะตอนออกจากห้องจริง ๆ
+   */
   const [session, setSession] = useState(null);
-  // session shape:
-  // {
-  //   player: { id?, name },
-  //   roomCode?,
-  //   isHost
-  // }
 
   /* =========================
-     Restore session (OPTIONAL)
+     NAV HELPERS
   ========================= */
-  useEffect(() => {
-    if (!ENABLE_RESTORE_SESSION) {
-      localStorage.removeItem(STORAGE_KEY);
-      return;
-    }
 
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (!saved) return;
-
-    try {
-      const parsed = JSON.parse(saved);
-      if (parsed?.player?.id && parsed?.roomCode) {
-        setSession(parsed);
-        setView("lobby");
-      }
-    } catch {
-      localStorage.removeItem(STORAGE_KEY);
-    }
-  }, []);
-
-  /* =========================
-     Persist session
-  ========================= */
-  useEffect(() => {
-    if (session) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
-    }
-  }, [session]);
-
-  /* =========================
-     Navigation helpers
-  ========================= */
   const goHome = () => {
     setSession(null);
     setView("home");
   };
 
   const goLobby = (roomCode, playerWithId, isHost) => {
-    if (!playerWithId?.id) {
-      console.error("❌ player.id missing");
+    if (!roomCode || !playerWithId?.id) {
+      console.error("❌ Invalid lobby data", {
+        roomCode,
+        playerWithId,
+      });
+      goHome();
       return;
     }
 
     setSession({
-      player: playerWithId,
       roomCode,
+      player: playerWithId,
       isHost,
     });
+
     setView("lobby");
   };
 
-  const leaveLobby = () => {
+  /**
+   * ❌ ใช้เฉพาะ “ออกจากห้อง”
+   * ❌ ห้ามใช้ตอนจบเกม
+   */
+  const leaveRoom = () => {
     if (!session?.player) {
       goHome();
       return;
@@ -89,7 +67,7 @@ export default function App() {
 
     const { player, isHost } = session;
 
-    // ออกจากห้อง → ล้าง roomCode แต่เก็บตัวตน
+    // เก็บชื่อไว้ (UX) แต่ล้าง room context
     setSession({
       player: { name: player.name },
       isHost,
@@ -99,10 +77,8 @@ export default function App() {
   };
 
   /* =========================
-     RENDER
+     HOME
   ========================= */
-
-  // 🏠 HOME
   if (view === "home") {
     return (
       <Home
@@ -121,9 +97,11 @@ export default function App() {
     );
   }
 
-  // 🧑‍💼 HOST
+  /* =========================
+     HOST
+  ========================= */
   if (view === "host") {
-    if (!session?.player) return goHome();
+    if (!session?.player) return null;
 
     return (
       <Host
@@ -136,9 +114,11 @@ export default function App() {
     );
   }
 
-  // 🎮 ROOM LIST
+  /* =========================
+     ROOM LIST
+  ========================= */
   if (view === "roomlist") {
-    if (!session?.player) return goHome();
+    if (!session?.player) return null;
 
     return (
       <RoomList
@@ -151,7 +131,9 @@ export default function App() {
     );
   }
 
-  // 🏟 LOBBY
+  /* =========================
+     LOBBY
+  ========================= */
   if (view === "lobby") {
     if (!session?.player?.id || !session?.roomCode) {
       goHome();
@@ -162,10 +144,75 @@ export default function App() {
       <Lobby
         roomCode={session.roomCode}
         player={session.player}
-        onLeave={leaveLobby}
+        onLeave={leaveRoom}
+        /**
+         * ✅ Host กด Start
+         * → ทุกคนไป Festival Map
+         */
+        onStartGame={() => setView("festival-map")}
       />
     );
   }
 
-  return null;
+  /* =========================
+     FESTIVAL MAP (หน้าซุ้มเกม)
+  ========================= */
+  if (view === "festival-map") {
+    if (!session?.player?.id || !session?.roomCode) {
+      goHome();
+      return null;
+    }
+
+    return (
+      <FestivalMap
+        roomCode={session.roomCode}
+        player={session.player}
+        /**
+         * ▶ Host เริ่มเกมถัดไป
+         * → เข้า Mini Game
+         */
+        onEnterGame={() => setView("game")}
+      />
+    );
+  }
+
+  /* =========================
+     GAME (Mini Game จริง)
+  ========================= */
+  if (view === "game") {
+    if (!session?.player?.id || !session?.roomCode) {
+      goHome();
+      return null;
+    }
+
+    return (
+      <Game
+        roomCode={session.roomCode}
+        player={session.player}
+        /**
+         * ⬅ ออกจากเกมเอง
+         * → กลับ Festival Map
+         */
+        onExit={() => setView("festival-map")}
+        /**
+         * 🏁 Mini Game จบ
+         * → กลับ Festival Map
+         */
+        onFinish={(result) => {
+          console.log("🏁 Game finished:", result);
+          setView("festival-map");
+        }}
+      />
+    );
+  }
+
+  /* =========================
+     FALLBACK
+  ========================= */
+  return (
+    <div style={{ padding: 24, textAlign: "center" }}>
+      <p>⚠️ Invalid state</p>
+      <button onClick={goHome}>กลับหน้าแรก</button>
+    </div>
+  );
 }

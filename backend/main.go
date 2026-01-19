@@ -1,10 +1,13 @@
 package main
 
 import (
+	"context"
 	"database/sql"
-	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"thai-festival-backend/routes"
@@ -18,7 +21,7 @@ import (
 func main() {
 
 	/* =========================
-	   Database
+	   DATABASE
 	========================= */
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
@@ -27,10 +30,10 @@ func main() {
 
 	db, err := sql.Open("postgres", dbURL)
 	if err != nil {
-		log.Fatal("❌ Connect DB error:", err)
+		log.Fatal("❌ Open DB error:", err)
 	}
 
-	// 🔧 Connection pool
+	// 🔒 production-safe pool
 	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(10)
 	db.SetConnMaxLifetime(30 * time.Minute)
@@ -39,89 +42,132 @@ func main() {
 		log.Fatal("❌ Cannot ping DB:", err)
 	}
 
-	fmt.Println("✅ Connected to PostgreSQL")
+	log.Println("✅ Connected to PostgreSQL")
 
 	/* =========================
-	   🔥 RESET STALE STATE (SAFE)
+	   RESET STALE STATE (SAFE)
 	========================= */
 	if err := resetStaleState(db); err != nil {
 		log.Println("⚠️ Reset stale state warning:", err)
 	}
 
-	defer func() {
-		_ = db.Close()
-		fmt.Println("🛑 DB closed")
-	}()
-
 	/* =========================
-	   WebSocket Hub
+	   WEBSOCKET HUB
 	========================= */
 	hub := ws.NewHub(db)
 	go hub.Run()
-	fmt.Println("✅ WebSocket Hub running")
-
-	// 🔥 Auto cleanup
-	ws.StartAutoCleanup(db, hub)
-	fmt.Println("🧹 AutoCleanup service running")
+	log.Println("✅ WebSocket Hub running")
 
 	/* =========================
-	   Gin Engine
+	   AUTO CLEANUP (WITH CONTEXT)
+	========================= */
+	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())
+	ws.StartAutoCleanup(cleanupCtx, db, hub)
+	log.Println("🧹 AutoCleanup service running")
+
+	/* =========================
+	   GIN ENGINE
 	========================= */
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.New()
-	r.Use(gin.Logger())
-	r.Use(gin.Recovery())
+	r.Use(gin.Logger(), gin.Recovery())
+
+	_ = r.SetTrustedProxies(nil)
 
 	/* =========================
 	   CORS
 	========================= */
+	allowOrigin := os.Getenv("CORS_ORIGIN")
+	if allowOrigin == "" {
+		allowOrigin = "http://localhost:5173"
+	}
+
 	r.Use(cors.New(cors.Config{
-		AllowOrigins: []string{
-			"http://localhost:5173",
-		},
-		AllowMethods: []string{
-			"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS",
-		},
-		AllowHeaders: []string{
-			"Origin", "Content-Type", "Authorization",
-		},
+		AllowOrigins:     []string{allowOrigin},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
 
 	/* =========================
-	   Routes
+	   ROUTES
 	========================= */
 	routes.RegisterRoutes(r, db, hub)
 
 	/* =========================
-	   Start Server
+	   HTTP SERVER
 	========================= */
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 
-	fmt.Println("🚀 Backend running on port", port)
-	if err := r.Run(":" + port); err != nil {
-		log.Fatal("❌ Server error:", err)
+	srv := &http.Server{
+		Addr:         ":" + port,
+		Handler:      r,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
 	}
+
+	go func() {
+		log.Println("🚀 Backend running on port", port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Println("❌ Server error:", err)
+		}
+	}()
+
+	/* =========================
+	   GRACEFUL SHUTDOWN
+	========================= */
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Println("🛑 Shutting down server...")
+
+	// ✅ 1️⃣ STOP AUTO CLEANUP FIRST (CRITICAL)
+	cleanupCancel()
+
+	shutdownCtx, cancel := context.WithTimeout(
+		context.Background(),
+		10*time.Second,
+	)
+	defer cancel()
+
+	// 2️⃣ stop HTTP (stop new requests / WS)
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Println("⚠️ HTTP shutdown error:", err)
+	}
+
+	// 3️⃣ close DB (NO goroutine uses it now)
+	if err := db.Close(); err != nil {
+		log.Println("⚠️ DB close error:", err)
+	}
+
+	log.Println("✅ Server stopped cleanly")
 }
 
 /* =========================
-   RESET STALE STATE (SAFE)
-   - ใช้เฉพาะตอน restart
-   - ไม่เตะผู้เล่นที่ยัง fresh
+   RESET STALE STATE (TX SAFE)
 ========================= */
 func resetStaleState(db *sql.DB) error {
-	tx, err := db.Begin()
+
+	ctx, cancel := context.WithTimeout(
+		context.Background(),
+		5*time.Second,
+	)
+	defer cancel()
+
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	// mark stale player offline (> 2 นาที)
-	if _, err := tx.Exec(`
+	// 1️⃣ mark stale players offline
+	if _, err := tx.ExecContext(ctx, `
 		UPDATE players
 		SET connected = false
 		WHERE connected = true
@@ -130,8 +176,8 @@ func resetStaleState(db *sql.DB) error {
 		return err
 	}
 
-	// reset ห้องที่เล่นอยู่แต่ไม่มี player online
-	if _, err := tx.Exec(`
+	// 2️⃣ reset broken rooms
+	if _, err := tx.ExecContext(ctx, `
 		UPDATE rooms r
 		SET status = 'waiting'
 		WHERE status = 'playing'
