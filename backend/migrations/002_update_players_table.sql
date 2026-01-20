@@ -7,41 +7,44 @@
 
 BEGIN;
 
--- =========================
+-- =====================================================
 -- 🔥 HEARTBEAT / RECONNECT
--- =========================
--- เก็บเวลาล่าสุดที่ client ยัง online
--- (เผื่อ schema เก่าที่ยังไม่มี)
+-- =====================================================
+
+-- last_seen_at (เผื่อ schema เก่ามาก)
 ALTER TABLE players
 ADD COLUMN IF NOT EXISTS last_seen_at TIMESTAMPTZ
 NOT NULL DEFAULT NOW();
 
--- =========================
--- 🔍 INDEXES (CRITICAL)
--- =========================
+-- =====================================================
+-- 🔍 INDEXES (CRITICAL – USED BY BACKEND)
+-- =====================================================
 
--- ใช้กับ AutoCleanup + heartbeat
+-- heartbeat cleanup
 CREATE INDEX IF NOT EXISTS idx_players_last_seen
 ON players(last_seen_at);
 
--- เช็ค online/offline เร็ว
+-- online/offline check
 CREATE INDEX IF NOT EXISTS idx_players_connected
 ON players(connected);
 
--- ใช้ตอน query ห้อง + host transfer
+-- room + connected lookup (used everywhere)
 CREATE INDEX IF NOT EXISTS idx_players_room_connected
 ON players(room_id, connected);
 
--- =========================
--- 👑 HOST TRANSFER SUPPORT
--- =========================
+-- host lookup / transfer
+CREATE INDEX IF NOT EXISTS idx_players_room_host
+ON players(room_id, is_host);
 
--- เผื่อ schema เก่าที่ยังไม่มี
+-- =====================================================
+-- 👑 HOST TRANSFER SUPPORT
+-- =====================================================
+
+-- rooms.host_player_id (canonical host)
 ALTER TABLE rooms
 ADD COLUMN IF NOT EXISTS host_player_id INT;
 
 -- sync host_player_id จาก players.is_host
--- (เฉพาะกรณีที่ยังเป็น NULL)
 UPDATE rooms r
 SET host_player_id = p.id
 FROM players p
@@ -49,19 +52,21 @@ WHERE p.room_id = r.id
   AND p.is_host = true
   AND r.host_player_id IS NULL;
 
--- =========================
--- 🧹 RESET STALE STATE (SAFE)
--- ใช้ตอน deploy / restart server
--- =========================
+-- (optional but recommended) index host_player_id
+CREATE INDEX IF NOT EXISTS idx_rooms_host_player
+ON rooms(host_player_id);
 
--- 1️⃣ mark player stale (> 2 นาที) เป็น offline
+-- =====================================================
+-- 🧹 RESET STALE STATE (SAFE FOR DEPLOY / RESTART)
+-- =====================================================
+
+-- 1️⃣ mark stale players (> 2 นาที) offline
 UPDATE players
 SET connected = false
 WHERE connected = true
   AND last_seen_at < NOW() - INTERVAL '2 minutes';
 
--- 2️⃣ reset ห้องที่ค้างผิดปกติ
--- playing แต่ไม่มี player online เลย
+-- 2️⃣ reset rooms stuck in playing state
 UPDATE rooms r
 SET status = 'waiting'
 WHERE r.status = 'playing'

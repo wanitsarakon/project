@@ -9,9 +9,6 @@ import (
 
 /* =========================
    AUTO CLEANUP SERVICE
-   - shutdown-safe
-   - no transaction
-   - no db after close
 ========================= */
 func StartAutoCleanup(
 	ctx context.Context,
@@ -26,8 +23,6 @@ func StartAutoCleanup(
 
 		for {
 			select {
-
-			// ✅ หยุดทันทีตอน shutdown
 			case <-ctx.Done():
 				log.Println("🛑 AutoCleanup stopped")
 				return
@@ -66,7 +61,6 @@ func runCleanupOnce(
 		FROM players p
 		JOIN rooms r ON r.id = p.room_id
 		WHERE p.connected = true
-		  AND r.status != 'playing'
 		  AND p.last_seen_at < NOW() - INTERVAL '60 seconds'
 	`)
 	if err != nil {
@@ -89,12 +83,14 @@ func runCleanupOnce(
 
 		anyChange = true
 
+		/* ---- mark disconnected ---- */
 		_, _ = db.ExecContext(ctx, `
 			UPDATE players
 			SET connected=false
 			WHERE id=$1
 		`, playerID)
 
+		/* ---- notify player disconnect ---- */
 		broadcasts = append(broadcasts, broadcastEvent{
 			room: roomCode,
 			data: MustJSON(map[string]any{
@@ -103,6 +99,18 @@ func runCleanupOnce(
 			}),
 		})
 
+		/* ---- TEAM UPDATE (ส่งทีมใหม่) ---- */
+		teams := fetchTeams(ctx, db, roomID)
+
+		broadcasts = append(broadcasts, broadcastEvent{
+			room: roomCode,
+			data: MustJSON(map[string]any{
+				"type":  "team_update",
+				"teams": teams,
+			}),
+		})
+
+		/* ---- HOST TRANSFER ---- */
 		if !handledRooms[roomID] {
 			if newHostID := transferHost(ctx, db, roomID); newHostID > 0 {
 				broadcasts = append(broadcasts, broadcastEvent{
@@ -131,7 +139,7 @@ func runCleanupOnce(
 	`)
 
 	/* =========================
-	   3️⃣ BROADCAST
+	   3️⃣ BROADCAST EVENTS
 	========================= */
 	for _, b := range broadcasts {
 		select {
@@ -143,6 +151,9 @@ func runCleanupOnce(
 		}
 	}
 
+	/* =========================
+	   4️⃣ GLOBAL ROOM UPDATE
+	========================= */
 	if anyChange {
 		select {
 		case hub.Broadcast <- &Message{
@@ -154,6 +165,44 @@ func runCleanupOnce(
 		default:
 		}
 	}
+}
+
+/* =========================
+   FETCH TEAM MEMBERS
+========================= */
+func fetchTeams(
+	ctx context.Context,
+	db *sql.DB,
+	roomID int,
+) []map[string]any {
+
+	rows, err := db.QueryContext(ctx, `
+		SELECT id, name, team, total_score
+		FROM players
+		WHERE room_id=$1 AND connected=true
+		ORDER BY team, id
+	`, roomID)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	var teams []map[string]any
+	for rows.Next() {
+		var id, score int
+		var name, team sql.NullString
+
+		_ = rows.Scan(&id, &name, &team, &score)
+
+		teams = append(teams, map[string]any{
+			"id":    id,
+			"name":  name.String,
+			"team":  team.String,
+			"score": score,
+		})
+	}
+
+	return teams
 }
 
 /* =========================

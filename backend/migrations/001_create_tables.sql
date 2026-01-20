@@ -6,23 +6,26 @@
 
 BEGIN;
 
--- =========================
+-- =====================================================
 -- ROOMS
--- =========================
+-- =====================================================
 CREATE TABLE IF NOT EXISTS rooms (
   id SERIAL PRIMARY KEY,
 
   code VARCHAR(8) UNIQUE NOT NULL,
   name TEXT NOT NULL,
+
   mode VARCHAR(10) NOT NULL
     CHECK (mode IN ('solo','team')),
 
   prize TEXT,
-  max_players INT NOT NULL DEFAULT 8
-    CHECK (max_players > 0),
 
-  host_player_id INT,                -- ⭐ FK (see below)
-  room_password TEXT,                -- NULL = public
+  max_players INT NOT NULL DEFAULT 8
+    CHECK (max_players > 0 AND max_players <= 100),
+
+  host_player_id INT,              -- FK (added later)
+
+  room_password TEXT,              -- NULL = public
 
   status VARCHAR(20) NOT NULL DEFAULT 'waiting'
     CHECK (status IN ('waiting','playing','finished')),
@@ -36,9 +39,12 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_rooms_code
 CREATE INDEX IF NOT EXISTS idx_rooms_status
   ON rooms(status);
 
--- =========================
+CREATE INDEX IF NOT EXISTS idx_rooms_mode
+  ON rooms(mode);
+
+-- =====================================================
 -- PLAYERS
--- =========================
+-- =====================================================
 CREATE TABLE IF NOT EXISTS players (
   id SERIAL PRIMARY KEY,
 
@@ -49,6 +55,8 @@ CREATE TABLE IF NOT EXISTS players (
   name TEXT NOT NULL,
 
   is_host BOOLEAN NOT NULL DEFAULT false,
+
+  -- team mode (nullable for solo)
   team VARCHAR(20)
     CHECK (team IN ('red','blue')),
 
@@ -76,22 +84,37 @@ CREATE INDEX IF NOT EXISTS idx_players_room_connected
 CREATE INDEX IF NOT EXISTS idx_players_last_seen
   ON players(last_seen_at);
 
--- =========================
+CREATE INDEX IF NOT EXISTS idx_players_room_host
+  ON players(room_id, is_host);
+
+CREATE INDEX IF NOT EXISTS idx_players_team
+  ON players(team);
+
+-- =====================================================
 -- ⭐ FK: rooms.host_player_id → players.id
--- (ทำหลัง players เพื่อเลี่ยง circular issue)
--- =========================
-ALTER TABLE rooms
-  ADD CONSTRAINT fk_rooms_host_player
-  FOREIGN KEY (host_player_id)
-  REFERENCES players(id)
-  ON DELETE SET NULL;
+-- (ทำหลัง players เพื่อเลี่ยง circular dependency)
+-- =====================================================
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.table_constraints
+    WHERE constraint_name = 'fk_rooms_host_player'
+  ) THEN
+    ALTER TABLE rooms
+      ADD CONSTRAINT fk_rooms_host_player
+      FOREIGN KEY (host_player_id)
+      REFERENCES players(id)
+      ON DELETE SET NULL;
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_rooms_host_player
   ON rooms(host_player_id);
 
--- =========================
+-- =====================================================
 -- ROUNDS
--- =========================
+-- =====================================================
 CREATE TABLE IF NOT EXISTS rounds (
   id SERIAL PRIMARY KEY,
 
@@ -99,7 +122,6 @@ CREATE TABLE IF NOT EXISTS rounds (
     REFERENCES rooms(id)
     ON DELETE CASCADE,
 
-  -- 1-based index (ตรง backend)
   round_index INT NOT NULL
     CHECK (round_index >= 1),
 
@@ -121,9 +143,12 @@ CREATE INDEX IF NOT EXISTS idx_rounds_roomid
 CREATE INDEX IF NOT EXISTS idx_rounds_status
   ON rounds(status);
 
--- =========================
+CREATE INDEX IF NOT EXISTS idx_rounds_game_key
+  ON rounds(game_key);
+
+-- =====================================================
 -- MINI GAME RESULTS
--- =========================
+-- =====================================================
 CREATE TABLE IF NOT EXISTS mini_game_results (
   id SERIAL PRIMARY KEY,
 
@@ -140,7 +165,7 @@ CREATE TABLE IF NOT EXISTS mini_game_results (
   score INT NOT NULL DEFAULT 0
     CHECK (score >= 0),
 
-  meta JSONB,                         -- extra game data
+  meta JSONB,
 
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 

@@ -1,6 +1,8 @@
-import { useEffect, useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import Phaser from "phaser";
-import DollScene from "./DollShooting/DollScene";
+
+import FestivalMapScene from "../games/FestivalMapScene";
+import DollShootScene from "./DollShooting/DollShootScene";
 
 export default function GameContainer({
   roomCode,
@@ -10,17 +12,40 @@ export default function GameContainer({
 }) {
   const gameRef = useRef(null);
   const containerRef = useRef(null);
-  const onGameEndRef = useRef(onGameEnd);
 
-  /* =========================
-     Keep latest callback (SAFE)
-  ========================= */
+  // ⭐ เก็บ round ปัจจุบัน (สำคัญมาก)
+  const currentRoundIdRef = useRef(null);
+
+  // 🔒 กัน stale closure
+  const onGameEndRef = useRef(onGameEnd);
   useEffect(() => {
     onGameEndRef.current = onGameEnd;
   }, [onGameEnd]);
 
   /* =========================
-     Create Phaser (ONCE)
+     LISTEN ROUND START (WS)
+  ========================= */
+  useEffect(() => {
+    if (!wsRef?.current) return;
+
+    const handleWS = (msg) => {
+      if (msg?.type === "round_start") {
+        currentRoundIdRef.current = msg.round_id;
+        console.log("🎯 round started:", msg.round_id);
+      }
+    };
+
+    wsRef.current.onMessage = handleWS;
+
+    return () => {
+      if (wsRef.current?.onMessage === handleWS) {
+        wsRef.current.onMessage = null;
+      }
+    };
+  }, [wsRef]);
+
+  /* =========================
+     INIT PHASER (ONCE)
   ========================= */
   useEffect(() => {
     if (gameRef.current || !containerRef.current) return;
@@ -30,55 +55,96 @@ export default function GameContainer({
       parent: containerRef.current,
       width: 800,
       height: 600,
-      backgroundColor: "#1b1b1b",
-      physics: {
-        default: "arcade",
-        arcade: {
-          debug: false,
-        },
+      backgroundColor: "#000",
+      scale: {
+        mode: Phaser.Scale.NONE,
       },
-      scene: [DollScene], // ✅ ใช้ class ตรง ๆ
+      scene: [FestivalMapScene, DollShootScene],
     };
 
     const game = new Phaser.Game(config);
     gameRef.current = game;
 
-    // ❗ สำคัญ: start scene หลังสร้าง game เสร็จ
-    game.scene.start("DollShootScene", {
-      roomCode,
-      player,
-      wsRef, // 🔥 ส่ง WS ref จาก Game.jsx
-      onGameEnd: (result) => {
-        onGameEndRef.current?.(result);
-      },
-    });
-
     /* =========================
-       CLEANUP (UNMOUNT SAFE)
+       🎮 ENTER GAME HANDLER
     ========================= */
-    return () => {
-      if (gameRef.current) {
-        try {
-          gameRef.current.destroy(true);
-        } catch {}
-        gameRef.current = null;
+    const handleEnterGame = (gameKey) => {
+      if (!gameRef.current) return;
+
+      const roundId = currentRoundIdRef.current;
+      if (!roundId) {
+        console.warn("❌ no active round");
+        return;
+      }
+
+      switch (gameKey) {
+        case "SHOOT": {
+          game.scene.start("DollShootScene", {
+            roomCode,
+            player,
+            roundId, // ⭐ ส่งเข้า MiniGame
+            onGameEnd: (result) => {
+              onGameEndRef.current?.(result);
+
+              // 🔁 กลับ Map
+              game.scene.start("FestivalMapScene", {
+                roomCode,
+                player,
+              });
+            },
+          });
+          break;
+        }
+
+        default:
+          console.warn(
+            "[GameContainer] Unknown gameKey:",
+            gameKey
+          );
       }
     };
-    // ❗ create once only
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
+    // 📡 ฟัง event จาก Phaser
+    game.events.on("enter-game", handleEnterGame);
+
+    /* =========================
+       ▶️ START FESTIVAL MAP
+    ========================= */
+    game.scene.start("FestivalMapScene", {
+      roomCode,
+      player,
+    });
+
+
+    
+
+    /* =========================
+       🧹 CLEANUP
+    ========================= */
+    return () => {
+      if (!gameRef.current) return;
+
+      game.events.off("enter-game", handleEnterGame);
+      gameRef.current.destroy(true);
+      gameRef.current = null;
+    };
+  }, []); // ❗ สร้าง Phaser แค่ครั้งเดียว
+
+  /* =========================
+     RENDER
+  ========================= */
   return (
     <div
       ref={containerRef}
+      id="phaser-root"
       style={{
         width: 800,
         height: 600,
         margin: "0 auto",
-        borderRadius: 12,
+        borderRadius: 16,
         overflow: "hidden",
-        boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
         background: "#000",
+        boxShadow: "0 12px 32px rgba(0,0,0,0.45)",
       }}
     />
   );

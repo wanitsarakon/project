@@ -1,17 +1,17 @@
 /**
- * createRoomSocket (ULTRA HARDENED – PRODUCTION FINAL++)
+ * createRoomSocket (TEAM / SOLO READY)
  *
  * ✅ reconnect-safe
- * ✅ heartbeat-safe (Gin + Gorilla WS)
- * ✅ React / Phaser unmount-safe
  * ✅ StrictMode-safe
- * ✅ race-condition proof
- * ✅ no zombie socket
+ * ✅ heartbeat-safe
+ * ✅ no duplicate JOIN
+ * ✅ backend-aligned (signal-based)
  */
 
 export function createRoomSocket(roomCode, onMessage, options = {}) {
   const {
     playerId = null,
+    mode = "solo", // solo | team
     urlBase =
       window.location.protocol === "https:"
         ? `wss://${window.location.host}`
@@ -19,6 +19,11 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
     reconnectDelay = 2000,
     heartbeatInterval = 30000,
     debug = false,
+
+    // OPTIONAL CALLBACKS
+    onOpen,
+    onTeamUpdate,   // () => void   (signal only)
+    onScoreUpdate,  // ({ player_id, score })
   } = options;
 
   /* =========================
@@ -31,9 +36,12 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
   let connecting = false;
   let destroyed = false;
 
-  // 🔐 instance guard (StrictMode / race safe)
+  // StrictMode / race guard
   let instanceId = 0;
   let activeInstanceId = 0;
+
+  // prevent duplicate JOIN
+  let joined = false;
 
   /* =========================
      CONNECT
@@ -46,6 +54,7 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
 
     const myInstanceId = instanceId;
     activeInstanceId = myInstanceId;
+    joined = false;
 
     let url = `${urlBase}/ws/${roomCode}`;
     if (playerId != null) {
@@ -57,9 +66,8 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
     let socket;
     try {
       socket = new WebSocket(url);
-    } catch (err) {
+    } catch {
       connecting = false;
-      debug && console.error("❌ WS create failed:", err);
       scheduleReconnect(myInstanceId);
       return;
     }
@@ -75,6 +83,18 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
 
       connecting = false;
       debug && console.log("✅ WS connected:", roomCode);
+
+      // JOIN once per connection
+      if (!joined) {
+        safeSend({
+          type: "join",
+          player_id: playerId,
+          mode, // solo | team
+        });
+        joined = true;
+      }
+
+      onOpen?.();
       startHeartbeat(myInstanceId);
     };
 
@@ -87,20 +107,41 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
       )
         return;
 
+      let data;
       try {
-        const data = JSON.parse(event.data);
-        if (data?.type) {
-          onMessage?.(data);
-        }
+        data = JSON.parse(event.data);
       } catch {
-        // ignore non-JSON (ping frame from backend)
+        return;
       }
-    };
 
-    /* ---------- ERROR ---------- */
-    socket.onerror = (err) => {
-      debug && console.error("❌ WS error:", err);
-      // let onclose handle reconnect
+      if (!data?.type) return;
+
+      debug && console.log("📩 WS message:", data);
+
+      switch (data.type) {
+        /* =====================
+           👥 TEAM UPDATE (SIGNAL)
+        ===================== */
+        case "TEAM_UPDATE":
+        case "team_update":
+          // ❗ backend ส่งมาเป็น signal เท่านั้น
+          onTeamUpdate?.();
+          break;
+
+        /* =====================
+           🏆 SCORE UPDATE
+        ===================== */
+        case "SCORE_UPDATE":
+        case "score_update":
+          onScoreUpdate?.(data);
+          break;
+
+        /* =====================
+           📦 DEFAULT
+        ===================== */
+        default:
+          onMessage?.(data);
+      }
     };
 
     /* ---------- CLOSE ---------- */
@@ -113,6 +154,10 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
       if (!destroyed) {
         scheduleReconnect(myInstanceId);
       }
+    };
+
+    socket.onerror = () => {
+      // let onclose handle reconnect
     };
   };
 
@@ -129,7 +174,6 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
 
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null;
-
       if (!destroyed && fromInstance === activeInstanceId) {
         connect();
       }
@@ -137,24 +181,20 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
   };
 
   /* =========================
-     HEARTBEAT (TEXT PING)
-     - backend updates last_seen_at
+     HEARTBEAT
   ========================= */
   const startHeartbeat = (fromInstance) => {
     stopHeartbeat();
 
     heartbeatTimer = setInterval(() => {
-      if (
-        destroyed ||
-        fromInstance !== activeInstanceId
-      ) {
+      if (destroyed || fromInstance !== activeInstanceId) {
         stopHeartbeat();
         return;
       }
 
       if (ws?.readyState === WebSocket.OPEN) {
         try {
-          ws.send("ping"); // backend readPump handles this
+          ws.send("ping");
         } catch {}
       }
     }, heartbeatInterval);
@@ -168,7 +208,18 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
   };
 
   /* =========================
-     CLEANUP (HARD)
+     SAFE SEND
+  ========================= */
+  const safeSend = (data) => {
+    if (destroyed || ws?.readyState !== WebSocket.OPEN) return;
+
+    try {
+      ws.send(JSON.stringify(data));
+    } catch {}
+  };
+
+  /* =========================
+     CLEANUP
   ========================= */
   const cleanup = (closeSocket = true) => {
     stopHeartbeat();
@@ -205,22 +256,12 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
      PUBLIC API
   ========================= */
   return {
-    send(data) {
-      if (
-        destroyed ||
-        ws?.readyState !== WebSocket.OPEN
-      )
-        return;
-
-      try {
-        ws.send(JSON.stringify(data));
-      } catch {}
-    },
+    send: safeSend,
 
     close() {
       if (destroyed) return;
       destroyed = true;
-      activeInstanceId = -1; // 🔒 block reconnect forever
+      activeInstanceId = -1;
       cleanup(true);
     },
 

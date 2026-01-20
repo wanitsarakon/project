@@ -82,7 +82,6 @@ func (h *Hub) Run() {
 					select {
 					case c.Send <- msg.Data:
 					default:
-						// slow or dead client → remove async
 						go h.removeClient(c)
 					}
 				}
@@ -93,7 +92,7 @@ func (h *Hub) Run() {
 }
 
 /* =========================
-   REMOVE CLIENT (ABSOLUTELY SAFE)
+   REMOVE CLIENT (SAFE)
 ========================= */
 func (h *Hub) removeClient(c *Client) {
 	c.disconnect.Do(func() {
@@ -109,10 +108,7 @@ func (h *Hub) removeClient(c *Client) {
 
 		c.onDisconnect()
 
-		// close send channel safely
 		close(c.Send)
-
-		// close socket
 		_ = c.Conn.Close()
 
 		log.Printf("❌ WS unregister room=%s player=%d clients=%d",
@@ -121,31 +117,31 @@ func (h *Hub) removeClient(c *Client) {
 }
 
 /* =========================
-   DISCONNECT LOGIC (ONCE)
+   DISCONNECT LOGIC
 ========================= */
 func (c *Client) onDisconnect() {
 	if c.PlayerID == 0 || c.Hub.DB == nil {
 		return
 	}
 
-	// mark offline
 	_, _ = c.Hub.DB.Exec(`
 		UPDATE players
 		SET connected=false
 		WHERE id=$1
 	`, c.PlayerID)
 
-	// notify room (non-blocking)
-	select {
-	case c.Hub.Broadcast <- &Message{
-		Room: c.Room,
-		Data: MustJSON(map[string]any{
-			"type":      "player_disconnect",
-			"player_id": c.PlayerID,
-		}),
-	}:
-	default:
-	}
+	// player disconnect
+	c.Hub.broadcastRoom(c.Room, map[string]any{
+		"type":      "player_disconnect",
+		"player_id": c.PlayerID,
+	})
+
+	// team update
+	teams := c.Hub.fetchTeams(c.Room)
+	c.Hub.broadcastRoom(c.Room, map[string]any{
+		"type":  "team_update",
+		"teams": teams,
+	})
 }
 
 /* =========================
@@ -166,7 +162,6 @@ func NewClient(
 		Send:     make(chan []byte, 256),
 	}
 
-	// mark connected
 	if playerID > 0 && hub.DB != nil {
 		_, _ = hub.DB.Exec(`
 			UPDATE players
@@ -184,7 +179,7 @@ func NewClient(
 }
 
 /* =========================
-   READ PUMP (HEARTBEAT SAFE)
+   READ PUMP
 ========================= */
 func (c *Client) readPump() {
 	defer func() {
@@ -205,7 +200,6 @@ func (c *Client) readPump() {
 			return
 		}
 
-		// heartbeat update
 		if c.PlayerID > 0 && c.Hub.DB != nil {
 			_, _ = c.Hub.DB.Exec(`
 				UPDATE players
@@ -214,16 +208,17 @@ func (c *Client) readPump() {
 			`, c.PlayerID)
 		}
 
-		// ignore text ping
 		text := strings.TrimSpace(strings.ToLower(string(msg)))
 		if text == "ping" {
 			continue
 		}
+
+		// 🔮 รองรับ future message เช่น join / ready
 	}
 }
 
 /* =========================
-   WRITE PUMP (SAFE)
+   WRITE PUMP
 ========================= */
 func (c *Client) writePump() {
 	ticker := time.NewTicker(30 * time.Second)
@@ -238,23 +233,69 @@ func (c *Client) writePump() {
 			}
 
 			_ = c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-			if err := c.Conn.WriteMessage(
-				websocket.TextMessage,
-				msg,
-			); err != nil {
+			if err := c.Conn.WriteMessage(websocket.TextMessage, msg); err != nil {
 				c.Hub.Unregister <- c
 				return
 			}
 
 		case <-ticker.C:
 			_ = c.Conn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-			if err := c.Conn.WriteMessage(
-				websocket.PingMessage,
-				nil,
-			); err != nil {
+			if err := c.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
 				c.Hub.Unregister <- c
 				return
 			}
 		}
+	}
+}
+
+/* =========================
+   FETCH TEAMS (REAL DATA)
+========================= */
+func (h *Hub) fetchTeams(roomCode string) []map[string]any {
+	if h.DB == nil {
+		return nil
+	}
+
+	rows, err := h.DB.Query(`
+		SELECT p.id, p.name, p.team, p.total_score
+		FROM players p
+		JOIN rooms r ON r.id=p.room_id
+		WHERE r.code=$1 AND p.connected=true
+		ORDER BY p.team, p.id
+	`, roomCode)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+
+	var teams []map[string]any
+	for rows.Next() {
+		var id, score int
+		var name string
+		var team sql.NullString
+
+		_ = rows.Scan(&id, &name, &team, &score)
+
+		teams = append(teams, map[string]any{
+			"id":    id,
+			"name":  name,
+			"team":  team.String,
+			"score": score,
+		})
+	}
+
+	return teams
+}
+
+/* =========================
+   BROADCAST HELPER
+========================= */
+func (h *Hub) broadcastRoom(room string, payload map[string]any) {
+	select {
+	case h.Broadcast <- &Message{
+		Room: room,
+		Data: MustJSON(payload),
+	}:
+	default:
 	}
 }

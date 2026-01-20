@@ -11,7 +11,7 @@ import (
 )
 
 /* =========================
-   REGISTER ROUTES (FINAL)
+   REGISTER ROUTES (PRODUCTION FINAL)
 ========================= */
 func RegisterRoutes(
 	r *gin.Engine,
@@ -19,9 +19,9 @@ func RegisterRoutes(
 	hub *ws.Hub,
 ) {
 
-	// =========================
-	// SAFETY GUARD
-	// =========================
+	/* =========================
+	   SAFETY GUARD
+	========================= */
 	if r == nil || db == nil || hub == nil {
 		panic("❌ RegisterRoutes: nil dependency")
 	}
@@ -31,7 +31,7 @@ func RegisterRoutes(
 	========================= */
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
-			"status": "ok",
+			"status":  "ok",
 			"service": "thai-festival-backend",
 		})
 	})
@@ -43,7 +43,7 @@ func RegisterRoutes(
 	roundCtrl := controllers.NewRoundController(db, hub)
 
 	/* =========================
-	   ROOM FLOW
+	   ROOM FLOW (LOBBY / WAITING)
 	   /rooms/*
 	========================= */
 	room := r.Group("/rooms")
@@ -54,17 +54,25 @@ func RegisterRoutes(
 		room.GET("/:code", roomCtrl.GetRoom)
 		room.POST("/join", roomCtrl.JoinRoom)
 
-		// ▶ host control
+		// ▶ host control (start whole game session)
 		room.POST("/:code/start", roomCtrl.StartGame)
-		room.POST("/:code/end", roomCtrl.EndGame)
-
-		// ⚙ engine / internal
-		room.POST("/:code/round/start", roundCtrl.StartRound)
+		// ❌ end game ถูกจัดการผ่าน round engine แล้ว
 	}
 
 	/* =========================
-	   ROUND ENGINE
+	   ROUND FLOW (ROOM CONTEXT)
+	   /rooms/:code/round/*
+	   → ใช้เริ่มรอบถัดไป
+	========================= */
+	roomRound := r.Group("/rooms/:code/round")
+	{
+		roomRound.POST("/start", roundCtrl.StartRound)
+	}
+
+	/* =========================
+	   ROUND ENGINE (CORE GAME)
 	   /rounds/*
+	   → submit / end round
 	========================= */
 	round := r.Group("/rounds")
 	{
@@ -78,15 +86,15 @@ func RegisterRoutes(
 	========================= */
 	wsGroup := r.Group("/ws")
 	{
-		// 🌍 global realtime (room list / lobby update)
+		// 🌍 global realtime (room list / lobby)
 		wsGroup.GET("/global", roomCtrl.ServeWs)
 
-		// 🏟 room realtime
+		// 🏟 room realtime (festival map / score / round)
 		wsGroup.GET("/:room_code", roomCtrl.ServeWs)
 	}
 
 	/* =========================
-	   FALLBACK (DEBUG FRIENDLY)
+	   FALLBACK
 	========================= */
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{

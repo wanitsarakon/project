@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState } from "react";
 
 import Home from "./pages/Home";
 import Host from "./pages/Host";
@@ -7,25 +7,18 @@ import Lobby from "./pages/Lobby";
 import FestivalMap from "./pages/FestivalMap";
 import Game from "./pages/Game";
 
-/*
-VIEWS:
-- home
-- host
-- roomlist
-- lobby
-- festival-map
-- game
-*/
-
 export default function App() {
   const [view, setView] = useState("home");
 
   /**
-   * session = ข้อมูลที่ต้องอยู่ตลอด lifecycle ของ "ห้อง"
-   * ❗ ห้ามล้างตอนเข้า game / festival-map
-   * ❗ ล้างเฉพาะตอนออกจากห้องจริง ๆ
+   * session = context ของห้อง
    */
   const [session, setSession] = useState(null);
+
+  /**
+   * 🔑 เกมที่กำลังจะเล่น (จาก Festival Map)
+   */
+  const [currentGame, setCurrentGame] = useState(null);
 
   /* =========================
      NAV HELPERS
@@ -33,6 +26,7 @@ export default function App() {
 
   const goHome = () => {
     setSession(null);
+    setCurrentGame(null);
     setView("home");
   };
 
@@ -55,10 +49,6 @@ export default function App() {
     setView("lobby");
   };
 
-  /**
-   * ❌ ใช้เฉพาะ “ออกจากห้อง”
-   * ❌ ห้ามใช้ตอนจบเกม
-   */
   const leaveRoom = () => {
     if (!session?.player) {
       goHome();
@@ -67,12 +57,12 @@ export default function App() {
 
     const { player, isHost } = session;
 
-    // เก็บชื่อไว้ (UX) แต่ล้าง room context
     setSession({
       player: { name: player.name },
       isHost,
     });
 
+    setCurrentGame(null);
     setView(isHost ? "host" : "roomlist");
   };
 
@@ -145,17 +135,16 @@ export default function App() {
         roomCode={session.roomCode}
         player={session.player}
         onLeave={leaveRoom}
-        /**
-         * ✅ Host กด Start
-         * → ทุกคนไป Festival Map
-         */
-        onStartGame={() => setView("festival-map")}
+        onStartGame={() => {
+          setCurrentGame(null);
+          setView("festival-map");
+        }}
       />
     );
   }
 
   /* =========================
-     FESTIVAL MAP (หน้าซุ้มเกม)
+     FESTIVAL MAP
   ========================= */
   if (view === "festival-map") {
     if (!session?.player?.id || !session?.roomCode) {
@@ -168,20 +157,27 @@ export default function App() {
         roomCode={session.roomCode}
         player={session.player}
         /**
-         * ▶ Host เริ่มเกมถัดไป
-         * → เข้า Mini Game
+         * 🔥 เลือกซุ้ม → ระบุเกม
          */
-        onEnterGame={() => setView("game")}
+        onEnterGame={(gameKey) => {
+          setCurrentGame(gameKey);
+          setView("game");
+        }}
+        onLeave={leaveRoom}
       />
     );
   }
 
   /* =========================
-     GAME (Mini Game จริง)
+     GAME
   ========================= */
   if (view === "game") {
-    if (!session?.player?.id || !session?.roomCode) {
-      goHome();
+    if (
+      !session?.player?.id ||
+      !session?.roomCode ||
+      !currentGame
+    ) {
+      setView("festival-map");
       return null;
     }
 
@@ -189,15 +185,8 @@ export default function App() {
       <Game
         roomCode={session.roomCode}
         player={session.player}
-        /**
-         * ⬅ ออกจากเกมเอง
-         * → กลับ Festival Map
-         */
+        gameKey={currentGame}
         onExit={() => setView("festival-map")}
-        /**
-         * 🏁 Mini Game จบ
-         * → กลับ Festival Map
-         */
         onFinish={(result) => {
           console.log("🏁 Game finished:", result);
           setView("festival-map");

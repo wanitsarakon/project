@@ -11,8 +11,9 @@ import React, {
  *
  * props:
  * - roomCode
- * - player        { id, name }
- * - results       [{ player_id, name, score | total_score, rank?, prize? }]
+ * - player        { id, name, team? }
+ * - results       [{ player_id, name, total_score, team? }]
+ * - mode          "solo" | "team"
  * - isHost
  * - onExit        () => void
  */
@@ -21,52 +22,19 @@ export default function SummaryPage({
   roomCode,
   player,
   results = [],
+  mode = "solo",
   isHost = false,
   onExit,
 }) {
   /* =========================
      STATE / REFS
   ========================= */
-  const [countdown, setCountdown] = useState(15); // ⏳ UX default
+  const [countdown, setCountdown] = useState(15);
   const exitingRef = useRef(false);
-  const mountedRef = useRef(false);
   const timerRef = useRef(null);
 
   /* =========================
-     NORMALIZE + SORT RESULTS
-  ========================= */
-  const sortedResults = useMemo(() => {
-    if (!Array.isArray(results) || results.length === 0) {
-      return [];
-    }
-
-    const list = results.map((r) => ({
-      player_id: r.player_id,
-      name: r.name || "ผู้เล่น",
-      score: r.score ?? r.total_score ?? 0,
-      rank: r.rank ?? null,
-      prize: r.prize ?? null,
-    }));
-
-    const hasRank = list.every(
-      (r) => typeof r.rank === "number"
-    );
-
-    if (hasRank) {
-      return [...list].sort((a, b) => a.rank - b.rank);
-    }
-
-    // fallback: sort by score desc
-    return [...list]
-      .sort((a, b) => b.score - a.score)
-      .map((r, i) => ({
-        ...r,
-        rank: i + 1,
-      }));
-  }, [results]);
-
-  /* =========================
-     EXIT (SAFE, ONCE)
+     EXIT (SAFE)
   ========================= */
   const triggerExit = useCallback(() => {
     if (exitingRef.current) return;
@@ -81,11 +49,9 @@ export default function SummaryPage({
   }, [onExit]);
 
   /* =========================
-     COUNTDOWN TIMER
+     COUNTDOWN
   ========================= */
   useEffect(() => {
-    mountedRef.current = true;
-
     timerRef.current = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
@@ -97,24 +63,67 @@ export default function SummaryPage({
     }, 1000);
 
     return () => {
-      mountedRef.current = false;
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
+      if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [triggerExit]);
 
   /* =========================
+     SOLO RESULT
+  ========================= */
+  const soloResults = useMemo(() => {
+    if (!Array.isArray(results)) return [];
+
+    return [...results]
+      .map((r) => ({
+        player_id: r.player_id,
+        name: r.name || "ผู้เล่น",
+        score: r.total_score ?? 0,
+      }))
+      .sort((a, b) => b.score - a.score)
+      .map((r, i) => ({
+        ...r,
+        rank: i + 1,
+      }));
+  }, [results]);
+
+  /* =========================
+     TEAM RESULT
+  ========================= */
+  const teamResults = useMemo(() => {
+    if (!Array.isArray(results)) return [];
+
+    const map = {}; // team => { team, total, members[] }
+
+    results.forEach((p) => {
+      if (!p.team) return;
+
+      if (!map[p.team]) {
+        map[p.team] = {
+          team: p.team,
+          total: 0,
+          members: [],
+        };
+      }
+
+      map[p.team].total += p.total_score ?? 0;
+      map[p.team].members.push({
+        id: p.player_id,
+        name: p.name,
+        score: p.total_score ?? 0,
+      });
+    });
+
+    return Object.values(map)
+      .sort((a, b) => b.total - a.total)
+      .map((t, i) => ({
+        ...t,
+        rank: i + 1,
+      }));
+  }, [results]);
+
+  /* =========================
      HELPERS
   ========================= */
-  const isMe = useCallback(
-    (r) =>
-      player?.id != null &&
-      r.player_id === player.id,
-    [player]
-  );
-
   const rankEmoji = (rank) => {
     if (rank === 1) return "🥇";
     if (rank === 2) return "🥈";
@@ -128,10 +137,7 @@ export default function SummaryPage({
   return (
     <div className="summary-root">
       <div className="panel">
-        <h2 style={{ marginBottom: 4 }}>
-          🏆 สรุปผลการแข่งขัน
-        </h2>
-
+        <h2>🏆 สรุปผลการแข่งขัน</h2>
         <div style={{ fontSize: 13, color: "#666" }}>
           ห้อง {roomCode}
         </div>
@@ -139,16 +145,12 @@ export default function SummaryPage({
         <hr />
 
         {/* =========================
-            RESULT LIST
+            SOLO MODE
         ========================= */}
-        {sortedResults.length === 0 ? (
-          <p style={{ textAlign: "center", color: "#777" }}>
-            😴 ไม่มีข้อมูลผลการแข่งขัน
-          </p>
-        ) : (
+        {mode === "solo" && (
           <ul style={{ listStyle: "none", padding: 0 }}>
-            {sortedResults.map((r) => {
-              const me = isMe(r);
+            {soloResults.map((r) => {
+              const me = r.player_id === player?.id;
 
               return (
                 <li
@@ -158,38 +160,64 @@ export default function SummaryPage({
                     padding: "10px 12px",
                     borderRadius: 10,
                     background: me ? "#fff3cd" : "#fff",
-                    boxShadow:
-                      "0 2px 6px rgba(0,0,0,0.15)",
                     border: me
                       ? "2px solid #f1c40f"
                       : "none",
                   }}
                 >
-                  <div
-                    style={{
-                      fontSize: 16,
-                      fontWeight: "bold",
-                    }}
-                  >
+                  <b>
                     {rankEmoji(r.rank)} อันดับ {r.rank} —{" "}
                     {r.name}
                     {me && " (คุณ)"}
+                  </b>
+                  <div>คะแนน: {r.score}</div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+
+        {/* =========================
+            TEAM MODE
+        ========================= */}
+        {mode === "team" && (
+          <ul style={{ listStyle: "none", padding: 0 }}>
+            {teamResults.map((t) => {
+              const isMyTeam = t.team === player?.team;
+
+              return (
+                <li
+                  key={t.team}
+                  style={{
+                    marginBottom: 14,
+                    padding: "12px",
+                    borderRadius: 12,
+                    background: isMyTeam
+                      ? "#e8f8f5"
+                      : "#fff",
+                    border: isMyTeam
+                      ? "2px solid #1abc9c"
+                      : "none",
+                  }}
+                >
+                  <div style={{ fontSize: 17, fontWeight: "bold" }}>
+                    {rankEmoji(t.rank)} ทีม {t.team} — อันดับ{" "}
+                    {t.rank}
+                  </div>
+
+                  <div style={{ marginBottom: 6 }}>
+                    คะแนนรวมทีม:{" "}
+                    <b>{t.total}</b>
                   </div>
 
                   <div style={{ fontSize: 14 }}>
-                    คะแนน: <b>{r.score}</b>
+                    {t.members.map((m) => (
+                      <div key={m.id}>
+                        • {m.name} ({m.score})
+                        {m.id === player?.id && " ← คุณ"}
+                      </div>
+                    ))}
                   </div>
-
-                  {r.prize && (
-                    <div
-                      style={{
-                        fontSize: 13,
-                        marginTop: 4,
-                      }}
-                    >
-                      🎁 {r.prize}
-                    </div>
-                  )}
                 </li>
               );
             })}
@@ -214,7 +242,6 @@ export default function SummaryPage({
           className="confirm-btn"
           style={{ marginTop: 14 }}
           onClick={triggerExit}
-          disabled={exitingRef.current}
         >
           🚪 ออกจากห้อง
         </button>
@@ -222,13 +249,13 @@ export default function SummaryPage({
         {isHost && (
           <div
             style={{
-              marginTop: 10,
+              marginTop: 8,
               fontSize: 12,
               color: "#999",
               textAlign: "center",
             }}
           >
-            (Host ไม่ต้องกดอะไร ห้องจะถูกปิดอัตโนมัติ)
+            (Host ไม่ต้องกดอะไร ห้องจะปิดอัตโนมัติ)
           </div>
         )}
       </div>

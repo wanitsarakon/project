@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -45,10 +46,12 @@ func main() {
 	log.Println("✅ Connected to PostgreSQL")
 
 	/* =========================
-	   RESET STALE STATE (SAFE)
+	   RESET STALE STATE
 	========================= */
 	if err := resetStaleState(db); err != nil {
 		log.Println("⚠️ Reset stale state warning:", err)
+	} else {
+		log.Println("🧹 Stale state reset completed")
 	}
 
 	/* =========================
@@ -69,9 +72,10 @@ func main() {
 	   GIN ENGINE
 	========================= */
 	gin.SetMode(gin.ReleaseMode)
+	gin.DisableConsoleColor()
+
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
-
 	_ = r.SetTrustedProxies(nil)
 
 	/* =========================
@@ -103,12 +107,17 @@ func main() {
 		port = "8080"
 	}
 
+	baseCtx, baseCancel := context.WithCancel(context.Background())
+
 	srv := &http.Server{
 		Addr:         ":" + port,
 		Handler:      r,
 		ReadTimeout:  15 * time.Second,
 		WriteTimeout: 15 * time.Second,
 		IdleTimeout:  60 * time.Second,
+		BaseContext: func(net.Listener) context.Context {
+			return baseCtx
+		},
 	}
 
 	go func() {
@@ -127,21 +136,19 @@ func main() {
 
 	log.Println("🛑 Shutting down server...")
 
-	// ✅ 1️⃣ STOP AUTO CLEANUP FIRST (CRITICAL)
+	// 1️⃣ STOP BACKGROUND SERVICES
 	cleanupCancel()
+	baseCancel()
 
-	shutdownCtx, cancel := context.WithTimeout(
-		context.Background(),
-		10*time.Second,
-	)
+	// 2️⃣ SHUTDOWN HTTP (stop new requests / WS)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	// 2️⃣ stop HTTP (stop new requests / WS)
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Println("⚠️ HTTP shutdown error:", err)
 	}
 
-	// 3️⃣ close DB (NO goroutine uses it now)
+	// 3️⃣ CLOSE DB (safe now)
 	if err := db.Close(); err != nil {
 		log.Println("⚠️ DB close error:", err)
 	}
@@ -150,14 +157,11 @@ func main() {
 }
 
 /* =========================
-   RESET STALE STATE (TX SAFE)
+   RESET STALE STATE
 ========================= */
 func resetStaleState(db *sql.DB) error {
 
-	ctx, cancel := context.WithTimeout(
-		context.Background(),
-		5*time.Second,
-	)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	tx, err := db.BeginTx(ctx, nil)

@@ -1,20 +1,19 @@
 import Phaser from "phaser";
 
-export default class DollScene extends Phaser.Scene {
+const API_BASE =
+  import.meta.env.VITE_API_URL || "http://localhost:8080";
+
+export default class DollShootScene extends Phaser.Scene {
   constructor() {
     super({ key: "DollShootScene" });
 
-    /* =========================
-       RUNTIME (FROM REACT)
-    ========================= */
+    /* ===== FROM REACT ===== */
     this.roomCode = null;
     this.player = null;
+    this.roundId = null;
     this.onGameEnd = null;
-    this.wsRef = null;
 
-    /* =========================
-       GAME STATE
-    ========================= */
+    /* ===== GAME STATE ===== */
     this.score = 0;
     this.combo = 0;
     this.timeLeft = 60;
@@ -27,8 +26,8 @@ export default class DollScene extends Phaser.Scene {
   init(data) {
     this.roomCode = data.roomCode;
     this.player = data.player;
+    this.roundId = data.roundId; // ⭐ สำคัญ
     this.onGameEnd = data.onGameEnd;
-    this.wsRef = data.wsRef; // ✅ ใช้ WS จาก React เท่านั้น
 
     this.score = 0;
     this.combo = 0;
@@ -36,15 +35,13 @@ export default class DollScene extends Phaser.Scene {
     this.ended = false;
   }
 
-  preload() {
-    // เผื่อใส่ asset ภายหลัง
-  }
+  preload() {}
 
   /* =========================
      CREATE
   ========================= */
   create() {
-    const { width, height } = this.scale;
+    const { width } = this.scale;
 
     /* ---------- UI ---------- */
     this.scoreText = this.add.text(16, 16, "คะแนน: 0", {
@@ -65,9 +62,7 @@ export default class DollScene extends Phaser.Scene {
 
     /* ---------- INPUT ---------- */
     this.input.on("pointerdown", (p) => {
-      if (!this.ended) {
-        this.shoot(p.x, p.y);
-      }
+      if (!this.ended) this.shoot(p.x, p.y);
     });
 
     /* ---------- COLLISION ---------- */
@@ -79,7 +74,7 @@ export default class DollScene extends Phaser.Scene {
       this
     );
 
-    /* ---------- SPAWN TIMER ---------- */
+    /* ---------- SPAWN ---------- */
     this.spawnTimer = this.time.addEvent({
       delay: 900,
       loop: true,
@@ -87,7 +82,7 @@ export default class DollScene extends Phaser.Scene {
       callbackScope: this,
     });
 
-    /* ---------- GAME TIMER ---------- */
+    /* ---------- TIMER ---------- */
     this.timeEvent = this.time.addEvent({
       delay: 1000,
       loop: true,
@@ -95,7 +90,6 @@ export default class DollScene extends Phaser.Scene {
       callbackScope: this,
     });
 
-    /* ---------- CLEANUP ---------- */
     this.events.once("shutdown", this.onShutdown, this);
     this.events.once("destroy", this.onShutdown, this);
   }
@@ -104,8 +98,6 @@ export default class DollScene extends Phaser.Scene {
      SHOOT
   ========================= */
   shoot(x, y) {
-    if (this.ended) return;
-
     const bullet = this.add.circle(
       this.scale.width / 2,
       this.scale.height - 30,
@@ -122,9 +114,7 @@ export default class DollScene extends Phaser.Scene {
 
     this.bullets.add(bullet);
 
-    this.time.delayedCall(1500, () => {
-      if (bullet.active) bullet.destroy();
-    });
+    this.time.delayedCall(1500, () => bullet.destroy());
   }
 
   /* =========================
@@ -148,9 +138,8 @@ export default class DollScene extends Phaser.Scene {
     this.physics.add.existing(doll);
     doll.body.setAllowGravity(false);
 
-    const speed = 40 + (60 - this.timeLeft) * 1.2;
     doll.body.setVelocityX(
-      Phaser.Math.Between(-speed, speed)
+      Phaser.Math.Between(-60, 60)
     );
 
     this.dolls.add(doll);
@@ -160,29 +149,18 @@ export default class DollScene extends Phaser.Scene {
      HIT DOLL
   ========================= */
   hitDoll(bullet, doll) {
-    if (this.ended) return;
-
     bullet.destroy();
     doll.destroy();
 
     this.combo++;
 
     let gain = 10;
-    if (this.combo % 3 === 0) {
-      gain += 5;
-    }
+    if (this.combo % 3 === 0) gain += 5;
 
     this.score += gain;
     this.scoreText.setText(`คะแนน: ${this.score}`);
 
-    /* ---------- SEND SCORE ---------- */
-    this.wsRef?.current?.send({
-      type: "score_update",
-      player_id: this.player.id,
-      score: gain,
-    });
-
-    this.time.delayedCall(600, () => {
+    this.time.delayedCall(500, () => {
       this.combo = 0;
     });
   }
@@ -202,23 +180,34 @@ export default class DollScene extends Phaser.Scene {
   }
 
   /* =========================
-     END GAME (ONCE)
+     END GAME (SEND SCORE)
   ========================= */
-  endGame() {
+  async endGame() {
     if (this.ended) return;
     this.ended = true;
 
-    this.spawnTimer?.remove(false);
-    this.timeEvent?.remove(false);
+    this.spawnTimer?.remove();
+    this.timeEvent?.remove();
 
-    /* ---------- NOTIFY BACKEND ---------- */
-    this.wsRef?.current?.send({
-      type: "game_summary",
-      player_id: this.player.id,
-      score: this.score,
-    });
+    /* ---------- SUBMIT SCORE (HTTP) ---------- */
+    try {
+      await fetch(
+        `${API_BASE}/rounds/${this.roundId}/submit`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            player_id: this.player.id,
+            score: this.score,
+            meta: { game: "shoot" },
+          }),
+        }
+      );
+    } catch (err) {
+      console.error("❌ submit score failed", err);
+    }
 
-    /* ---------- NOTIFY REACT ---------- */
+    /* ---------- BACK TO MAP ---------- */
     this.time.delayedCall(300, () => {
       this.onGameEnd?.({
         player_id: this.player.id,
@@ -231,9 +220,8 @@ export default class DollScene extends Phaser.Scene {
      CLEANUP
   ========================= */
   onShutdown() {
-    this.spawnTimer?.remove(false);
-    this.timeEvent?.remove(false);
-
+    this.spawnTimer?.remove();
+    this.timeEvent?.remove();
     this.bullets?.clear(true, true);
     this.dolls?.clear(true, true);
   }
