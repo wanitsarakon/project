@@ -12,11 +12,15 @@ export default function App() {
 
   /**
    * session = context ของห้อง
+   * {
+   *   roomCode,
+   *   player: { id, name, isHost }
+   * }
    */
   const [session, setSession] = useState(null);
 
   /**
-   * 🔑 เกมที่กำลังจะเล่น (จาก Festival Map)
+   * 🔑 เกมที่กำลังเล่นอยู่
    */
   const [currentGame, setCurrentGame] = useState(null);
 
@@ -30,40 +34,40 @@ export default function App() {
     setView("home");
   };
 
-  const goLobby = (roomCode, playerWithId, isHost) => {
-    if (!roomCode || !playerWithId?.id) {
+  /**
+   * ✅ เข้าห้อง (Host / Player ใช้ร่วมกัน)
+   * ❗ ทำหน้าที่แค่ set state + navigate
+   * ❌ ไม่ redirect
+   */
+  const goLobby = (roomCode, player) => {
+    if (!roomCode || !player) {
       console.error("❌ Invalid lobby data", {
         roomCode,
-        playerWithId,
+        player,
       });
-      goHome();
-      return;
+      return; // ✅ ไม่เด้ง home
     }
 
     setSession({
       roomCode,
-      player: playerWithId,
-      isHost,
+      player, // ⭐ source of truth
     });
 
     setView("lobby");
   };
 
   const leaveRoom = () => {
-    if (!session?.player) {
+    if (!session?.player?.name) {
       goHome();
       return;
     }
 
-    const { player, isHost } = session;
+    const { player } = session;
 
-    setSession({
-      player: { name: player.name },
-      isHost,
-    });
-
+    // กลับไปหน้าเดิมตามบทบาท
+    setSession({ player: { name: player.name } });
     setCurrentGame(null);
-    setView(isHost ? "host" : "roomlist");
+    setView(player.isHost ? "host" : "roomlist");
   };
 
   /* =========================
@@ -76,10 +80,10 @@ export default function App() {
           const player = { name };
 
           if (role === "host") {
-            setSession({ player, isHost: true });
+            setSession({ player });
             setView("host");
           } else {
-            setSession({ player, isHost: false });
+            setSession({ player });
             setView("roomlist");
           }
         }}
@@ -88,7 +92,7 @@ export default function App() {
   }
 
   /* =========================
-     HOST
+     HOST (CREATE ROOM)
   ========================= */
   if (view === "host") {
     if (!session?.player) return null;
@@ -96,8 +100,8 @@ export default function App() {
     return (
       <Host
         host={session.player}
-        onCreateRoom={(roomCode, playerWithId) =>
-          goLobby(roomCode, playerWithId, true)
+        onCreateRoom={(roomCode, playerFromBackend) =>
+          goLobby(roomCode, playerFromBackend)
         }
         onBack={goHome}
       />
@@ -105,7 +109,7 @@ export default function App() {
   }
 
   /* =========================
-     ROOM LIST
+     ROOM LIST (JOIN ROOM)
   ========================= */
   if (view === "roomlist") {
     if (!session?.player) return null;
@@ -113,8 +117,8 @@ export default function App() {
     return (
       <RoomList
         player={session.player}
-        onJoin={(roomCode, playerWithId) =>
-          goLobby(roomCode, playerWithId, false)
+        onJoin={(roomCode, playerFromBackend) =>
+          goLobby(roomCode, playerFromBackend)
         }
         onBack={goHome}
       />
@@ -126,7 +130,8 @@ export default function App() {
   ========================= */
   if (view === "lobby") {
     if (!session?.player?.id || !session?.roomCode) {
-      goHome();
+      console.warn("⚠️ Invalid lobby state", session);
+      goHome(); // ✅ validate ที่จุดเดียว
       return null;
     }
 
@@ -156,9 +161,6 @@ export default function App() {
       <FestivalMap
         roomCode={session.roomCode}
         player={session.player}
-        /**
-         * 🔥 เลือกซุ้ม → ระบุเกม
-         */
         onEnterGame={(gameKey) => {
           setCurrentGame(gameKey);
           setView("game");

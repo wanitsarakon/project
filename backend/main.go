@@ -46,7 +46,7 @@ func main() {
 	log.Println("✅ Connected to PostgreSQL")
 
 	/* =========================
-	   RESET STALE STATE
+	   RESET STALE STATE (BOOT)
 	========================= */
 	if err := resetStaleState(db); err != nil {
 		log.Println("⚠️ Reset stale state warning:", err)
@@ -62,7 +62,7 @@ func main() {
 	log.Println("✅ WebSocket Hub running")
 
 	/* =========================
-	   AUTO CLEANUP (WITH CONTEXT)
+	   AUTO CLEANUP SERVICE
 	========================= */
 	cleanupCtx, cleanupCancel := context.WithCancel(context.Background())
 	ws.StartAutoCleanup(cleanupCtx, db, hub)
@@ -76,7 +76,11 @@ func main() {
 
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
-	_ = r.SetTrustedProxies(nil)
+
+	// 🔒 trusted proxy (important for prod / ws)
+	if err := r.SetTrustedProxies(nil); err != nil {
+		log.Println("⚠️ SetTrustedProxies warning:", err)
+	}
 
 	/* =========================
 	   CORS
@@ -148,7 +152,7 @@ func main() {
 		log.Println("⚠️ HTTP shutdown error:", err)
 	}
 
-	// 3️⃣ CLOSE DB (safe now)
+	// 3️⃣ CLOSE DB
 	if err := db.Close(); err != nil {
 		log.Println("⚠️ DB close error:", err)
 	}
@@ -168,7 +172,9 @@ func resetStaleState(db *sql.DB) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		_ = tx.Rollback()
+	}()
 
 	// 1️⃣ mark stale players offline
 	if _, err := tx.ExecContext(ctx, `

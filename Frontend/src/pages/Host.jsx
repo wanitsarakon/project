@@ -8,7 +8,11 @@ import React, {
 const API_BASE =
   import.meta.env.VITE_API_URL || "http://localhost:8080";
 
-export default function Host({ host, onCreateRoom, onBack }) {
+export default function Host({
+  host,
+  onCreateRoom,
+  onBack,
+}) {
   /* =========================
      STATE
   ========================= */
@@ -20,8 +24,8 @@ export default function Host({ host, onCreateRoom, onBack }) {
   /* =========================
      ROOM SETTINGS
   ========================= */
-  const [mode, setMode] = useState("solo");
-  const [maxPlayers, setMaxPlayers] = useState(8); // ⌨️ พิมพ์อย่างเดียว
+  const [mode, setMode] = useState("solo"); // solo | team
+  const [maxPlayers, setMaxPlayers] = useState(8);
   const [isPrivate, setIsPrivate] = useState(false);
   const [password, setPassword] = useState("");
 
@@ -30,6 +34,7 @@ export default function Host({ host, onCreateRoom, onBack }) {
   ========================= */
   const passwordRef = useRef(null);
   const mountedRef = useRef(false);
+  const creatingRef = useRef(false);
 
   /* =========================
      LIFECYCLE
@@ -46,7 +51,7 @@ export default function Host({ host, onCreateRoom, onBack }) {
   ========================= */
   useEffect(() => {
     if (isPrivate) {
-      passwordRef.current?.focus();
+      setTimeout(() => passwordRef.current?.focus(), 0);
     } else {
       setPassword("");
     }
@@ -57,33 +62,42 @@ export default function Host({ host, onCreateRoom, onBack }) {
      HELPERS
   ========================= */
   const normalize = useCallback(
-    (v = "") => v.replace(/\s+/g, " ").trim(),
+    (v = "") => String(v).replace(/\s+/g, " ").trim(),
     []
   );
+
+  const setSafeState = useCallback((fn) => {
+    if (mountedRef.current) fn();
+  }, []);
 
   /* =========================
      CREATE ROOM
   ========================= */
   const createRoom = useCallback(async () => {
-    if (loading || roomCode) return;
+    if (loading || roomCode || creatingRef.current) return;
 
-    if (!host?.name) {
+    const hostName = normalize(host?.name);
+    if (!hostName) {
       setError("ไม่พบข้อมูล Host");
       return;
     }
 
-    if (maxPlayers < 1 || maxPlayers > 100) {
+    if (
+      typeof maxPlayers !== "number" ||
+      maxPlayers < 1 ||
+      maxPlayers > 100
+    ) {
       setError("จำนวนผู้เล่นต้องอยู่ระหว่าง 1 ถึง 100 คน");
       return;
     }
 
     const cleanPassword = normalize(password);
-
     if (isPrivate && cleanPassword.length < 4) {
       setError("รหัสห้องต้องอย่างน้อย 4 ตัวอักษร");
       return;
     }
 
+    creatingRef.current = true;
     setLoading(true);
     setError(null);
 
@@ -94,26 +108,41 @@ export default function Host({ host, onCreateRoom, onBack }) {
         body: JSON.stringify({
           name: "Thai Festival Room",
           mode,
-          host_name: host.name,
+          host_name: hostName,
           max_players: maxPlayers,
           room_password: isPrivate ? cleanPassword : null,
         }),
       });
 
-      const data = await res.json();
+      let data = null;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error("Invalid server response");
+      }
 
       if (!res.ok) {
-        throw new Error(data?.error || "create room failed");
+        throw new Error(data?.error || "สร้างห้องไม่สำเร็จ");
       }
 
-      setRoomCode(data.room_code);
-      setCreatedPlayer(data.player);
-    } catch {
-      if (mountedRef.current) {
-        setError("❌ สร้างห้องไม่สำเร็จ กรุณาลองใหม่");
-      }
+      setSafeState(() => {
+        setRoomCode(data.room_code);
+        setCreatedPlayer({
+          ...data.player,
+          isHost: true, // ⭐ สำคัญมาก
+        });
+      });
+    } catch (err) {
+      console.error("❌ createRoom error:", err);
+      setSafeState(() =>
+        setError(
+          err?.message ||
+            "❌ สร้างห้องไม่สำเร็จ กรุณาลองใหม่"
+        )
+      );
     } finally {
-      mountedRef.current && setLoading(false);
+      creatingRef.current = false;
+      setSafeState(() => setLoading(false));
     }
   }, [
     loading,
@@ -124,15 +153,16 @@ export default function Host({ host, onCreateRoom, onBack }) {
     isPrivate,
     password,
     normalize,
+    setSafeState,
   ]);
 
   /* =========================
      ENTER LOBBY
   ========================= */
-  const enterLobby = () => {
+  const enterLobby = useCallback(() => {
     if (!roomCode || !createdPlayer || loading) return;
-    onCreateRoom(roomCode, createdPlayer);
-  };
+    onCreateRoom?.(roomCode, createdPlayer);
+  }, [roomCode, createdPlayer, loading, onCreateRoom]);
 
   /* =========================
      UI
@@ -154,16 +184,14 @@ export default function Host({ host, onCreateRoom, onBack }) {
 
         {!roomCode && (
           <>
-            {/* Mode */}
+            {/* MODE */}
             <div style={{ marginBottom: 12 }}>
               <div style={{ marginBottom: 6 }}>
                 🎮 โหมดการเล่น
               </div>
 
               <button
-                className={`role-btn ${
-                  mode === "solo" ? "active" : ""
-                }`}
+                className={`role-btn ${mode === "solo" ? "active" : ""}`}
                 onClick={() => !loading && setMode("solo")}
                 disabled={loading}
               >
@@ -171,9 +199,7 @@ export default function Host({ host, onCreateRoom, onBack }) {
               </button>
 
               <button
-                className={`role-btn ${
-                  mode === "team" ? "active" : ""
-                }`}
+                className={`role-btn ${mode === "team" ? "active" : ""}`}
                 onClick={() => !loading && setMode("team")}
                 disabled={loading}
                 style={{ marginLeft: 8 }}
@@ -182,33 +208,32 @@ export default function Host({ host, onCreateRoom, onBack }) {
               </button>
             </div>
 
-            {/* Max players (INPUT ONLY) */}
+            {/* MAX PLAYERS */}
             <div style={{ marginBottom: 12 }}>
               <div style={{ marginBottom: 6 }}>
-                👥 จำนวนผู้เล่นสูงสุด (พิมพ์ 1–100)
+                👥 จำนวนผู้เล่นสูงสุด (1–100)
               </div>
 
               <input
-                type="text"                 // ⛔ ไม่ใช้ number
-                inputMode="numeric"         // 📱 mobile keypad
+                type="text"
+                inputMode="numeric"
                 pattern="[0-9]*"
                 value={maxPlayers}
                 onChange={(e) => {
                   if (loading) return;
                   const v = e.target.value.replace(/\D/g, "");
-                  if (v === "") return setMaxPlayers("");
-                  const n = Math.min(100, Math.max(1, Number(v)));
-                  setMaxPlayers(n);
+                  if (!v) return;
+                  setMaxPlayers(
+                    Math.min(100, Math.max(1, Number(v)))
+                  );
                 }}
-                onWheel={(e) => e.currentTarget.blur()} // ⛔ scroll
                 disabled={loading}
                 className="room-input"
                 style={{ width: 120, textAlign: "center" }}
-                placeholder="1–100"
               />
             </div>
 
-            {/* Private room */}
+            {/* PRIVATE ROOM */}
             <div style={{ marginBottom: 12 }}>
               <label>
                 <input
@@ -254,11 +279,11 @@ export default function Host({ host, onCreateRoom, onBack }) {
               {roomCode}
             </div>
 
-            <p style={{ fontSize: 14 }}>
-              โหมด: {mode} | ผู้เล่นสูงสุด: {maxPlayers}
-            </p>
-
-            <button className="confirm-btn" onClick={enterLobby}>
+            <button
+              className="confirm-btn"
+              onClick={enterLobby}
+              style={{ marginTop: 12 }}
+            >
               ▶ เข้าสู่ Lobby
             </button>
           </div>

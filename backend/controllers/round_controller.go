@@ -25,17 +25,18 @@ func NewRoundController(db *sql.DB, hub *ws.Hub) *RoundController {
 
 /* =========================
    GAME SEQUENCE
+   ⚠️ ต้องตรงกับ frontend gameKey
 ========================= */
 var GameSequence = []string{
-	"fish",
-	"carousel",
-	"shoot",
-	"cotton",
-	"worship",
+	"FishScoopingScene",
+	"CAROUSEL",
+	"SHOOT",
+	"COTTON",
+	"WORSHIP",
 }
 
 /* =========================
-   START ROUND
+   START ROUND (HOST ONLY)
 ========================= */
 func (rc *RoundController) StartRound(c *gin.Context) {
 	code := c.Param("code")
@@ -47,6 +48,7 @@ func (rc *RoundController) StartRound(c *gin.Context) {
 	}
 	defer tx.Rollback()
 
+	/* ===== LOCK ROOM ===== */
 	var roomID int
 	var roomStatus string
 	if err := tx.QueryRow(`
@@ -64,6 +66,7 @@ func (rc *RoundController) StartRound(c *gin.Context) {
 		return
 	}
 
+	/* ===== CHECK ACTIVE ROUND ===== */
 	var active bool
 	_ = tx.QueryRow(`
 		SELECT EXISTS (
@@ -77,6 +80,7 @@ func (rc *RoundController) StartRound(c *gin.Context) {
 		return
 	}
 
+	/* ===== NEXT ROUND INDEX ===== */
 	var nextRound int
 	_ = tx.QueryRow(`
 		SELECT COALESCE(MAX(round_index),0) + 1
@@ -91,6 +95,7 @@ func (rc *RoundController) StartRound(c *gin.Context) {
 
 	gameKey := GameSequence[nextRound-1]
 
+	/* ===== CREATE ROUND ===== */
 	var roundID int
 	if err := tx.QueryRow(`
 		INSERT INTO rounds
@@ -107,6 +112,9 @@ func (rc *RoundController) StartRound(c *gin.Context) {
 		return
 	}
 
+	/* =========================
+	   WS: ROUND START
+	========================= */
 	rc.Hub.Broadcast <- &ws.Message{
 		Room: code,
 		Data: ws.MustJSON(gin.H{
@@ -119,6 +127,30 @@ func (rc *RoundController) StartRound(c *gin.Context) {
 		}),
 	}
 
+	/* =========================
+	   WS: ENTER GAME (NON-HOST)
+	========================= */
+	rows, _ := rc.DB.Query(`
+		SELECT id FROM players
+		WHERE room_id=$1 AND is_host=false AND connected=true
+	`, roomID)
+	defer rows.Close()
+
+	for rows.Next() {
+		var pid int
+		rows.Scan(&pid)
+
+		rc.Hub.Broadcast <- &ws.Message{
+			Room: code,
+			Data: ws.MustJSON(gin.H{
+				"type":      "enter_game",
+				"player_id": pid,
+				"game_key":  gameKey,
+				"round_id":  roundID,
+			}),
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"round_id": roundID,
 		"round":    nextRound,
@@ -127,10 +159,10 @@ func (rc *RoundController) StartRound(c *gin.Context) {
 }
 
 /* =========================
-   SUBMIT SCORE
+   SUBMIT SCORE (PLAYER)
 ========================= */
 func (rc *RoundController) SubmitScore(c *gin.Context) {
-	roundID, _ := strconv.Atoi(c.Param("roundID"))
+	roundID, _ := strconv.Atoi(c.Param("round_id"))
 
 	var req struct {
 		PlayerID int         `json:"player_id"`
@@ -159,7 +191,7 @@ func (rc *RoundController) SubmitScore(c *gin.Context) {
 		WHERE r.id=$1
 		FOR UPDATE
 	`, roundID).Scan(&status, &gameKey, &roomCode, &roomID); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "round not active"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "round not found"})
 		return
 	}
 
@@ -181,6 +213,7 @@ func (rc *RoundController) SubmitScore(c *gin.Context) {
 		return
 	}
 
+	/* ===== SAVE SCORE ===== */
 	if _, err := tx.Exec(`
 		INSERT INTO mini_game_results
 			(round_id, player_id, game_key, score, meta)
@@ -201,7 +234,7 @@ func (rc *RoundController) SubmitScore(c *gin.Context) {
 		return
 	}
 
-	/* ===== player score update ===== */
+	/* ===== WS: SCORE UPDATE ===== */
 	rc.Hub.Broadcast <- &ws.Message{
 		Room: roomCode,
 		Data: ws.MustJSON(gin.H{
@@ -211,44 +244,14 @@ func (rc *RoundController) SubmitScore(c *gin.Context) {
 		}),
 	}
 
-	/* ===== team score update ===== */
-	rows, _ := rc.DB.Query(`
-		SELECT team, SUM(total_score)
-		FROM players
-		WHERE room_id=$1 AND team IS NOT NULL
-		GROUP BY team
-	`, roomID)
-	defer rows.Close()
-
-	teamScores := []gin.H{}
-	for rows.Next() {
-		var team string
-		var score int
-		_ = rows.Scan(&team, &score)
-
-		teamScores = append(teamScores, gin.H{
-			"team":  team,
-			"score": score,
-		})
-	}
-
-	rc.Hub.Broadcast <- &ws.Message{
-		Room: roomCode,
-		Data: ws.MustJSON(gin.H{
-			"type":   "team_score_update",
-			"teams":  teamScores,
-			"round":  roundID,
-		}),
-	}
-
 	c.JSON(http.StatusOK, gin.H{"ok": true})
 }
 
 /* =========================
-   END ROUND
+   END ROUND (HOST ONLY)
 ========================= */
 func (rc *RoundController) EndRound(c *gin.Context) {
-	roundID, _ := strconv.Atoi(c.Param("roundID"))
+	roundID, _ := strconv.Atoi(c.Param("round_id"))
 
 	var roomCode string
 	var roundIndex int

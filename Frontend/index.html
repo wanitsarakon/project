@@ -27,7 +27,7 @@
       property="og:description"
       content="มินิเกมงานวัดไทย เล่นฟรีหลายคนแบบเรียลไทม์"
     />
-    <!-- ใช้ตอน deploy จริง -->
+    <!-- ใส่ตอน deploy จริง -->
     <!-- <meta property="og:image" content="/og-image.png" /> -->
     <meta property="og:locale" content="th_TH" />
 
@@ -70,12 +70,20 @@
 
     <!-- =========================
          PWA (OPTIONAL)
+         เปิดเมื่อมี manifest + service worker
     ========================= -->
-    <!-- เปิดเมื่อมี manifest + service worker -->
     <!-- <link rel="manifest" href="/manifest.json" /> -->
+    <!-- <link rel="icon" href="/favicon.ico" /> -->
   </head>
 
-  <body>
+  <body
+    style="
+      margin: 0;
+      font-family: 'Kanit', system-ui, -apple-system, BlinkMacSystemFont,
+        sans-serif;
+      background: #fffaf3;
+    "
+  >
     <!-- =========================
          NO SCRIPT FALLBACK
     ========================= -->
@@ -93,7 +101,7 @@
           color: #222;
         "
       >
-        ⚠️ เว็บไซต์นี้ต้องเปิดใช้งาน JavaScript
+        ⚠️ เว็บไซต์นี้จำเป็นต้องเปิดใช้งาน JavaScript
       </div>
     </noscript>
 
@@ -104,6 +112,8 @@
 
     <!-- =========================
          VITE ENTRY
+         - ใช้ type="module"
+         - ปลอดภัยกับ React 18
     ========================= -->
     <script type="module" src="/src/main.jsx"></script>
   </body>

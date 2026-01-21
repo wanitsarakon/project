@@ -27,12 +27,13 @@ func NewRoomController(db *sql.DB, hub *ws.Hub) *RoomController {
 }
 
 /* =========================
-   CREATE ROOM
+   CREATE ROOM (HOST)
+   ✅ Backend = Source of Truth (is_host)
 ========================= */
 func (rc *RoomController) CreateRoom(c *gin.Context) {
 	var req struct {
 		Name         string  `json:"name"`
-		Mode         string  `json:"mode"` // solo | team
+		Mode         string  `json:"mode"`
 		HostName     string  `json:"host_name"`
 		MaxPlayers   int     `json:"max_players"`
 		RoomPassword *string `json:"room_password"`
@@ -46,11 +47,9 @@ func (rc *RoomController) CreateRoom(c *gin.Context) {
 	if req.Name == "" {
 		req.Name = "Thai Festival Room"
 	}
-
 	if req.Mode != "team" {
 		req.Mode = "solo"
 	}
-
 	if req.MaxPlayers < 1 {
 		req.MaxPlayers = 1
 	}
@@ -79,7 +78,14 @@ func (rc *RoomController) CreateRoom(c *gin.Context) {
 
 	var hostID int
 	if err := tx.QueryRow(`
-		INSERT INTO players (name, room_id, is_host, connected, total_score, last_seen_at)
+		INSERT INTO players (
+			name,
+			room_id,
+			is_host,
+			connected,
+			total_score,
+			last_seen_at
+		)
 		VALUES ($1,$2,true,true,0,NOW())
 		RETURNING id
 	`, req.HostName, roomID).Scan(&hostID); err != nil {
@@ -92,19 +98,21 @@ func (rc *RoomController) CreateRoom(c *gin.Context) {
 		return
 	}
 
+	// แจ้งหน้า Home
 	rc.broadcastGlobal()
 
 	c.JSON(http.StatusOK, gin.H{
 		"room_code": code,
 		"player": gin.H{
-			"id":   hostID,
-			"name": req.HostName,
+			"id":      hostID,
+			"name":    req.HostName,
+			"is_host": true,
 		},
 	})
 }
 
 /* =========================
-   JOIN ROOM
+   JOIN ROOM (PLAYER)
 ========================= */
 func (rc *RoomController) JoinRoom(c *gin.Context) {
 	var req struct {
@@ -148,31 +156,42 @@ func (rc *RoomController) JoinRoom(c *gin.Context) {
 
 	var playerID int
 	if err := tx.QueryRow(`
-		INSERT INTO players (name, room_id, connected, total_score, last_seen_at)
-		VALUES ($1,$2,true,0,NOW())
+		INSERT INTO players (name, room_id, is_host, connected, total_score, last_seen_at)
+		VALUES ($1,$2,false,true,0,NOW())
 		RETURNING id
 	`, req.Name, roomID).Scan(&playerID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "join room failed"})
 		return
 	}
 
-	tx.Commit()
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "commit failed"})
+		return
+	}
 
 	rc.broadcastRoom(req.RoomCode, gin.H{
 		"type": "player_join",
 		"player": gin.H{
-			"id":    playerID,
-			"name":  req.Name,
-			"score": 0,
+			"id":        playerID,
+			"name":      req.Name,
+			"is_host":   false,
+			"connected": true,
 		},
 	})
 
 	rc.broadcastGlobal()
-	c.JSON(http.StatusOK, gin.H{"player_id": playerID})
+
+	c.JSON(http.StatusOK, gin.H{
+		"player": gin.H{
+			"id":      playerID,
+			"name":    req.Name,
+			"is_host": false,
+		},
+	})
 }
 
 /* =========================
-   LIST ROOMS
+   LIST ROOMS (HOME)
 ========================= */
 func (rc *RoomController) ListRooms(c *gin.Context) {
 	rows, err := rc.DB.Query(`
@@ -210,16 +229,24 @@ func (rc *RoomController) ListRooms(c *gin.Context) {
 }
 
 /* =========================
-   GET ROOM DETAIL
+   GET ROOM DETAIL (LOBBY)
+   ✅ ส่ง is_host จาก DB
 ========================= */
 func (rc *RoomController) GetRoom(c *gin.Context) {
 	code := c.Param("code")
 
 	rows, err := rc.DB.Query(`
-		SELECT id, name, team, total_score, connected
-		FROM players
-		WHERE room_id=(SELECT id FROM rooms WHERE code=$1)
-		ORDER BY team NULLS LAST, id ASC
+		SELECT
+			p.id,
+			p.name,
+			p.is_host,
+			p.team,
+			p.total_score,
+			p.connected
+		FROM players p
+		JOIN rooms r ON r.id=p.room_id
+		WHERE r.code=$1
+		ORDER BY p.is_host DESC, p.id ASC
 	`, code)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "room not found"})
@@ -231,14 +258,15 @@ func (rc *RoomController) GetRoom(c *gin.Context) {
 	for rows.Next() {
 		var id, score int
 		var name string
+		var isHost, connected bool
 		var team sql.NullString
-		var connected bool
 
-		rows.Scan(&id, &name, &team, &score, &connected)
+		rows.Scan(&id, &name, &isHost, &team, &score, &connected)
 
 		players = append(players, gin.H{
 			"id":        id,
 			"name":      name,
+			"is_host":   isHost,
 			"team":      team.String,
 			"score":     score,
 			"connected": connected,
@@ -249,73 +277,27 @@ func (rc *RoomController) GetRoom(c *gin.Context) {
 }
 
 /* =========================
-   START GAME (TEAM LOGIC)
+   START GAME (HOST)
 ========================= */
 func (rc *RoomController) StartGame(c *gin.Context) {
 	code := c.Param("code")
 
 	var roomID int
-	var mode string
-
 	if err := rc.DB.QueryRow(`
-		SELECT id, mode FROM rooms
+		SELECT id FROM rooms
 		WHERE code=$1 AND status='waiting'
-	`, code).Scan(&roomID, &mode); err != nil {
+	`, code).Scan(&roomID); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "cannot start game"})
 		return
 	}
 
-	_, _ = rc.DB.Exec(`UPDATE rooms SET status='playing' WHERE id=$1`, roomID)
-
-	// ✅ TEAM MODE
-	if mode == "team" {
-		rc.assignTeams(roomID, code)
-	}
+	rc.DB.Exec(`UPDATE rooms SET status='playing' WHERE id=$1`, roomID)
 
 	rc.broadcastRoom(code, gin.H{
 		"type": "game_start",
-		"mode": mode,
 	})
 
 	c.JSON(http.StatusOK, gin.H{"ok": true})
-}
-
-/* =========================
-   TEAM ASSIGN (4 TEAMS EVEN)
-========================= */
-func (rc *RoomController) assignTeams(roomID int, code string) {
-	rows, _ := rc.DB.Query(`
-		SELECT id FROM players
-		WHERE room_id=$1 AND connected=true
-	`, roomID)
-	defer rows.Close()
-
-	var playerIDs []int
-	for rows.Next() {
-		var id int
-		rows.Scan(&id)
-		playerIDs = append(playerIDs, id)
-	}
-
-	rand.Shuffle(len(playerIDs), func(i, j int) {
-		playerIDs[i], playerIDs[j] = playerIDs[j], playerIDs[i]
-	})
-
-	teams := []string{"red", "blue", "green", "yellow"}
-	teamCount := make(map[string]int)
-
-	for i, pid := range playerIDs {
-		team := teams[i%4]
-		teamCount[team]++
-
-		rc.DB.Exec(`
-			UPDATE players SET team=$1 WHERE id=$2
-		`, team, pid)
-	}
-
-	rc.broadcastRoom(code, gin.H{
-		"type": "team_update",
-	})
 }
 
 /* =========================

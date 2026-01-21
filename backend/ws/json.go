@@ -16,7 +16,7 @@ import (
    - debug-friendly
 ========================= */
 
-// immutable empty JSON (DO NOT MODIFY)
+// immutable empty JSON (READ-ONLY)
 var emptyJSON = []byte("{}")
 
 /*
@@ -30,15 +30,29 @@ MustJSON
 */
 func MustJSON(v any) []byte {
 
-	// fast path
+	// fast path: nil
 	if v == nil {
 		return emptyJSON
+	}
+
+	// fast path: already JSON
+	switch t := v.(type) {
+	case []byte:
+		if len(t) == 0 {
+			return emptyJSON
+		}
+		return t
+	case json.RawMessage:
+		if len(t) == 0 {
+			return emptyJSON
+		}
+		return []byte(t)
 	}
 
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf(
-				"❌ MustJSON panic: %v | type=%v\n%s",
+				"[MustJSON] ❌ panic: %v | type=%v\n%s",
 				r,
 				reflect.TypeOf(v),
 				debug.Stack(),
@@ -49,14 +63,14 @@ func MustJSON(v any) []byte {
 	b, err := json.Marshal(v)
 	if err != nil {
 		log.Printf(
-			"❌ MustJSON marshal error: %v | type=%v",
+			"[MustJSON] ❌ marshal error: %v | type=%v",
 			err,
 			reflect.TypeOf(v),
 		)
 		return emptyJSON
 	}
 
-	// safety guard (should not happen but keep it)
+	// safety guard
 	if len(b) == 0 {
 		return emptyJSON
 	}
@@ -74,14 +88,29 @@ TryJSON
 */
 func TryJSON(v any) ([]byte, error) {
 
+	// fast path: nil
 	if v == nil {
 		return emptyJSON, nil
+	}
+
+	// fast path: already JSON
+	switch t := v.(type) {
+	case []byte:
+		if len(t) == 0 {
+			return emptyJSON, nil
+		}
+		return t, nil
+	case json.RawMessage:
+		if len(t) == 0 {
+			return emptyJSON, nil
+		}
+		return []byte(t), nil
 	}
 
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf(
-				"❌ TryJSON panic: %v | type=%v\n%s",
+				"[TryJSON] ❌ panic: %v | type=%v\n%s",
 				r,
 				reflect.TypeOf(v),
 				debug.Stack(),
@@ -92,7 +121,7 @@ func TryJSON(v any) ([]byte, error) {
 	b, err := json.Marshal(v)
 	if err != nil {
 		log.Printf(
-			"❌ TryJSON marshal error: %v | type=%v",
+			"[TryJSON] ❌ marshal error: %v | type=%v",
 			err,
 			reflect.TypeOf(v),
 		)

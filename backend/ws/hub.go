@@ -22,12 +22,11 @@ type Message struct {
    CLIENT
 ========================= */
 type Client struct {
-	Hub      *Hub
-	Conn     *websocket.Conn
-	Room     string
-	PlayerID int
-	Send     chan []byte
-
+	Hub       *Hub
+	Conn      *websocket.Conn
+	Room      string
+	PlayerID  int
+	Send      chan []byte
 	disconnect sync.Once
 }
 
@@ -36,11 +35,11 @@ type Client struct {
 ========================= */
 type Hub struct {
 	DB         *sql.DB
-	Clients    map[*Client]bool
+	Clients    map[*Client]struct{}
 	Register   chan *Client
 	Unregister chan *Client
 	Broadcast  chan *Message
-	mu         sync.Mutex
+	mu         sync.RWMutex
 }
 
 /* =========================
@@ -49,10 +48,10 @@ type Hub struct {
 func NewHub(db *sql.DB) *Hub {
 	return &Hub{
 		DB:         db,
-		Clients:    make(map[*Client]bool),
+		Clients:    make(map[*Client]struct{}),
 		Register:   make(chan *Client),
 		Unregister: make(chan *Client),
-		Broadcast:  make(chan *Message, 256),
+		Broadcast:  make(chan *Message, 512),
 	}
 }
 
@@ -65,7 +64,7 @@ func (h *Hub) Run() {
 
 		case c := <-h.Register:
 			h.mu.Lock()
-			h.Clients[c] = true
+			h.Clients[c] = struct{}{}
 			count := len(h.Clients)
 			h.mu.Unlock()
 
@@ -76,7 +75,7 @@ func (h *Hub) Run() {
 			h.removeClient(c)
 
 		case msg := <-h.Broadcast:
-			h.mu.Lock()
+			h.mu.RLock()
 			for c := range h.Clients {
 				if msg.Room == "global" || c.Room == msg.Room {
 					select {
@@ -86,13 +85,13 @@ func (h *Hub) Run() {
 					}
 				}
 			}
-			h.mu.Unlock()
+			h.mu.RUnlock()
 		}
 	}
 }
 
 /* =========================
-   REMOVE CLIENT (SAFE)
+   REMOVE CLIENT (SAFE / IDEMPOTENT)
 ========================= */
 func (h *Hub) removeClient(c *Client) {
 	c.disconnect.Do(func() {
@@ -130,13 +129,13 @@ func (c *Client) onDisconnect() {
 		WHERE id=$1
 	`, c.PlayerID)
 
-	// player disconnect
+	// notify room
 	c.Hub.broadcastRoom(c.Room, map[string]any{
 		"type":      "player_disconnect",
 		"player_id": c.PlayerID,
 	})
 
-	// team update
+	// update team list
 	teams := c.Hub.fetchTeams(c.Room)
 	c.Hub.broadcastRoom(c.Room, map[string]any{
 		"type":  "team_update",
@@ -162,6 +161,7 @@ func NewClient(
 		Send:     make(chan []byte, 256),
 	}
 
+	// mark connected
 	if playerID > 0 && hub.DB != nil {
 		_, _ = hub.DB.Exec(`
 			UPDATE players
@@ -186,7 +186,7 @@ func (c *Client) readPump() {
 		c.Hub.Unregister <- c
 	}()
 
-	c.Conn.SetReadLimit(2048)
+	c.Conn.SetReadLimit(4096)
 	_ = c.Conn.SetReadDeadline(time.Now().Add(90 * time.Second))
 
 	c.Conn.SetPongHandler(func(string) error {
@@ -200,6 +200,7 @@ func (c *Client) readPump() {
 			return
 		}
 
+		// heartbeat update
 		if c.PlayerID > 0 && c.Hub.DB != nil {
 			_, _ = c.Hub.DB.Exec(`
 				UPDATE players
@@ -209,11 +210,11 @@ func (c *Client) readPump() {
 		}
 
 		text := strings.TrimSpace(strings.ToLower(string(msg)))
-		if text == "ping" {
+		if text == "" || text == "ping" {
 			continue
 		}
 
-		// 🔮 รองรับ future message เช่น join / ready
+		// 🔮 รองรับ future commands (ready / emote / chat)
 	}
 }
 
@@ -260,7 +261,7 @@ func (h *Hub) fetchTeams(roomCode string) []map[string]any {
 		SELECT p.id, p.name, p.team, p.total_score
 		FROM players p
 		JOIN rooms r ON r.id=p.room_id
-		WHERE r.code=$1 AND p.connected=true
+		WHERE r.code=$1
 		ORDER BY p.team, p.id
 	`, roomCode)
 	if err != nil {
@@ -274,7 +275,9 @@ func (h *Hub) fetchTeams(roomCode string) []map[string]any {
 		var name string
 		var team sql.NullString
 
-		_ = rows.Scan(&id, &name, &team, &score)
+		if err := rows.Scan(&id, &name, &team, &score); err != nil {
+			continue
+		}
 
 		teams = append(teams, map[string]any{
 			"id":    id,

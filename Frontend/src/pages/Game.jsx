@@ -3,20 +3,17 @@ import GameContainer from "../games/GameContainer";
 import { createRoomSocket } from "../websocket/wsClient";
 
 /**
- * Game = Mini Game จริง
+ * Game = Mini Game Wrapper
  * - ถูกเรียกจาก Festival Map
  * - จบแล้วต้องกลับ Festival Map เสมอ
  */
 export default function Game({
   roomCode,
   player,
-  onExit,    // ⬅ ออกจากมินิเกมเอง → Festival Map
-  onFinish,  // 🏁 มินิเกมจบ → Festival Map
+  onExit,    // ⬅ ออกจากมินิเกมเอง
+  onFinish,  // 🏁 มินิเกมจบ
 }) {
   const wsRef = useRef(null);
-
-  // guards
-  const mountedRef = useRef(false);
   const finishedRef = useRef(false);
 
   /* =========================
@@ -26,10 +23,9 @@ export default function Game({
   useEffect(() => {
     if (!roomCode || !player?.id) return;
 
-    mountedRef.current = true;
     finishedRef.current = false;
 
-    // 🔒 safety: ปิด socket เก่าถ้ามี
+    // 🔒 ปิด socket เก่าถ้ามี
     try {
       wsRef.current?.close();
     } catch {}
@@ -38,7 +34,7 @@ export default function Game({
     wsRef.current = createRoomSocket(
       roomCode,
       () => {
-        // 🎮 mini game ไม่ต้องฟัง lobby / festival event
+        // 🎮 mini game ไม่ต้องฟัง lobby event
       },
       {
         playerId: player.id,
@@ -47,14 +43,25 @@ export default function Game({
     );
 
     return () => {
-      mountedRef.current = false;
-
+      // cleanup: ปิด WS ถ้ายังไม่ปิด
       try {
         wsRef.current?.close();
       } catch {}
       wsRef.current = null;
     };
   }, [roomCode, player?.id]);
+
+  /* =========================
+     SAFE CLOSE WS (ONCE)
+  ========================= */
+  const closeSocketOnce = () => {
+    if (wsRef.current) {
+      try {
+        wsRef.current.close();
+      } catch {}
+      wsRef.current = null;
+    }
+  };
 
   /* =========================
      MINI GAME END (ONCE)
@@ -66,33 +73,21 @@ export default function Game({
 
       console.log("🎮 Mini game result:", result);
 
-      // 🔒 ปิด WS ครั้งเดียวพอ
-      try {
-        wsRef.current?.close();
-      } catch {}
-      wsRef.current = null;
-
-      if (!mountedRef.current) return;
-
-      // 🏁 แจ้ง App → กลับ Festival Map
+      closeSocketOnce();
       onFinish?.(result);
     },
     [onFinish]
   );
 
   /* =========================
-     MANUAL EXIT (ESC / BUTTON)
+     MANUAL EXIT
      → Festival Map
   ========================= */
   const handleExit = useCallback(() => {
     if (finishedRef.current) return;
     finishedRef.current = true;
 
-    try {
-      wsRef.current?.close();
-    } catch {}
-    wsRef.current = null;
-
+    closeSocketOnce();
     onExit?.();
   }, [onExit]);
 
@@ -116,8 +111,8 @@ export default function Game({
       <GameContainer
         roomCode={roomCode}
         player={player}
-        wsRef={wsRef}               // ✅ WS เดียวตลอดมินิเกม
-        onGameEnd={handleGameEnd}   // ✅ จบเกมครั้งเดียว
+        wsRef={wsRef}             // ✅ WS เดียวตลอดมินิเกม
+        onGameEnd={handleGameEnd} // ✅ จบเกมครั้งเดียว
       />
 
       {/* Manual Exit */}

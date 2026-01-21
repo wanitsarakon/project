@@ -8,56 +8,73 @@ import React, {
 import { createRoomSocket } from "../websocket/wsClient";
 
 const API_BASE =
-  import.meta.env.VITE_API_URL || "http://localhost:8080";
+  import.meta.env.VITE_API_URL ||
+  "http://localhost:8080";
 
-export default function RoomList({ player, onJoin, onBack }) {
+export default function RoomList({
+  player,
+  onJoin,
+  onBack,
+}) {
   /* =========================
      STATE
   ========================= */
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [joiningRoomCode, setJoiningRoomCode] = useState(null);
+  const [joiningRoomCode, setJoiningRoomCode] =
+    useState(null);
   const [error, setError] = useState(null);
 
   /* =========================
-     REFS
+     REFS (GUARDS)
   ========================= */
   const wsRef = useRef(null);
   const mountedRef = useRef(false);
+  const joiningRef = useRef(false);
 
   /* =========================
-     Helpers
+     HELPERS
   ========================= */
-  const normalizeName = (v = "") =>
-    v.replace(/\s+/g, " ").trim();
+  const normalizeName = useCallback(
+    (v = "") =>
+      String(v).replace(/\s+/g, " ").trim(),
+    []
+  );
+
+  const safeSet = useCallback((fn) => {
+    if (mountedRef.current) fn();
+  }, []);
 
   /* =========================
-     Load rooms (REST)
+     LOAD ROOMS (REST)
   ========================= */
   const loadRooms = useCallback(async () => {
-    if (!mountedRef.current) return;
-
-    setLoading(true);
-    setError(null);
+    safeSet(() => {
+      setLoading(true);
+      setError(null);
+    });
 
     try {
-      const res = await fetch(`${API_BASE}/rooms`);
+      const res = await fetch(
+        `${API_BASE}/rooms`
+      );
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
       }
 
       const data = await res.json();
-      if (!mountedRef.current) return;
-
-      setRooms(Array.isArray(data) ? data : []);
+      safeSet(() =>
+        setRooms(Array.isArray(data) ? data : [])
+      );
     } catch (err) {
       console.error("❌ loadRooms error:", err);
-      mountedRef.current &&
-        setError("❌ โหลดรายการห้องไม่สำเร็จ");
+      safeSet(() =>
+        setError("❌ โหลดรายการห้องไม่สำเร็จ")
+      );
     } finally {
-      mountedRef.current && setLoading(false);
+      safeSet(() => setLoading(false));
     }
-  }, []);
+  }, [safeSet]);
 
   /* =========================
      MOUNT / UNMOUNT
@@ -79,11 +96,16 @@ export default function RoomList({ player, onJoin, onBack }) {
   useEffect(() => {
     if (!mountedRef.current) return;
 
+    wsRef.current?.close();
+    wsRef.current = null;
+
     wsRef.current = createRoomSocket(
       "global",
       (msg) => {
-        if (!mountedRef.current) return;
-        if (msg?.type === "room_update") {
+        if (
+          msg?.type === "room_update" &&
+          mountedRef.current
+        ) {
           loadRooms();
         }
       },
@@ -97,68 +119,89 @@ export default function RoomList({ player, onJoin, onBack }) {
   }, [loadRooms]);
 
   /* =========================
-     JOIN ROOM
+     JOIN ROOM (FIXED)
   ========================= */
-  const joinRoom = async (room) => {
-    if (
-      !mountedRef.current ||
-      joiningRoomCode !== null
-    )
-      return;
+  const joinRoom = useCallback(
+    async (room) => {
+      if (
+        joiningRef.current ||
+        !mountedRef.current
+      )
+        return;
 
-    if (room.status !== "waiting") {
-      alert("⛔ เกมเริ่มไปแล้ว");
-      return;
-    }
-
-    if (room.player_count >= room.max_players) {
-      alert("👥 ห้องเต็มแล้ว");
-      return;
-    }
-
-    const cleanName = normalizeName(player?.name);
-    if (!cleanName) {
-      alert("❌ ชื่อผู้เล่นไม่ถูกต้อง");
-      return;
-    }
-
-    setJoiningRoomCode(room.code);
-
-    try {
-      const res = await fetch(
-        `${API_BASE}/rooms/join`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            room_code: room.code,
-            name: cleanName,
-          }),
-        }
-      );
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(
-          data?.error || "Join failed"
-        );
+      if (room.status !== "waiting") {
+        alert("⛔ เกมเริ่มไปแล้ว");
+        return;
       }
 
-      // ✅ เข้า lobby
-      onJoin(room.code, {
-        id: data.player_id,
-        name: cleanName,
-      });
-    } catch (err) {
-      console.error("❌ joinRoom error:", err);
-      alert("เข้าห้องไม่สำเร็จ\n" + err.message);
-    } finally {
-      mountedRef.current &&
-        setJoiningRoomCode(null);
-    }
-  };
+      if (room.player_count >= room.max_players) {
+        alert("👥 ห้องเต็มแล้ว");
+        return;
+      }
+
+      const cleanName = normalizeName(
+        player?.name
+      );
+      if (!cleanName) {
+        alert("❌ ชื่อผู้เล่นไม่ถูกต้อง");
+        return;
+      }
+
+      joiningRef.current = true;
+      safeSet(() => setJoiningRoomCode(room.code));
+
+      try {
+        const res = await fetch(
+          `${API_BASE}/rooms/join`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body: JSON.stringify({
+              room_code: room.code,
+              name: cleanName,
+            }),
+          }
+        );
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(
+            data?.error || "Join failed"
+          );
+        }
+
+        // ✅ FIX สำคัญ: ใช้ player จาก backend ตรง ๆ
+        const backendPlayer = data.player;
+        if (!backendPlayer?.id) {
+          throw new Error(
+            "Invalid player data from server"
+          );
+        }
+
+        onJoin?.(room.code, {
+          id: backendPlayer.id,
+          name: backendPlayer.name,
+          isHost:
+            backendPlayer.is_host === true,
+        });
+      } catch (err) {
+        console.error("❌ joinRoom error:", err);
+        alert(
+          "เข้าห้องไม่สำเร็จ\n" +
+            (err?.message || "")
+        );
+      } finally {
+        joiningRef.current = false;
+        safeSet(() =>
+          setJoiningRoomCode(null)
+        );
+      }
+    },
+    [player, normalizeName, onJoin, safeSet]
+  );
 
   /* =========================
      UI
@@ -181,7 +224,9 @@ export default function RoomList({ player, onJoin, onBack }) {
 
         {loading && <p>⏳ กำลังโหลด...</p>}
         {error && (
-          <p style={{ color: "red" }}>{error}</p>
+          <p style={{ color: "red" }}>
+            {error}
+          </p>
         )}
 
         {!loading &&
@@ -218,27 +263,39 @@ export default function RoomList({ player, onJoin, onBack }) {
                   {room.name ||
                     "Thai Festival Room"}
                 </b>
+
                 <div>รหัส: {room.code}</div>
+
                 <div>
                   👥 {room.player_count} /{" "}
                   {room.max_players}
                 </div>
 
                 {started && (
-                  <div style={{ color: "#c0392b" }}>
+                  <div
+                    style={{
+                      color: "#c0392b",
+                    }}
+                  >
                     ⛔ เกมเริ่มแล้ว
                   </div>
                 )}
 
                 {full && !started && (
-                  <div style={{ color: "#e67e22" }}>
+                  <div
+                    style={{
+                      color: "#e67e22",
+                    }}
+                  >
                     👥 ห้องเต็ม
                   </div>
                 )}
 
                 <button
                   disabled={disabled}
-                  onClick={() => joinRoom(room)}
+                  onClick={() =>
+                    joinRoom(room)
+                  }
                 >
                   {joiningThis
                     ? "⏳ กำลังเข้า..."
@@ -255,7 +312,9 @@ export default function RoomList({ player, onJoin, onBack }) {
         <button
           style={{ marginTop: 16 }}
           onClick={onBack}
-          disabled={joiningRoomCode !== null}
+          disabled={
+            joiningRoomCode !== null
+          }
         >
           ← กลับหน้าแรก
         </button>

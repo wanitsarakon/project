@@ -22,8 +22,8 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
 
     // OPTIONAL CALLBACKS
     onOpen,
-    onTeamUpdate,   // () => void   (signal only)
-    onScoreUpdate,  // ({ player_id, score })
+    onTeamUpdate,  // () => void (signal only)
+    onScoreUpdate // ({ player_id, score })
   } = options;
 
   /* =========================
@@ -40,7 +40,7 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
   let instanceId = 0;
   let activeInstanceId = 0;
 
-  // prevent duplicate JOIN
+  // prevent duplicate JOIN per connection
   let joined = false;
 
   /* =========================
@@ -104,8 +104,9 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
         destroyed ||
         myInstanceId !== activeInstanceId ||
         typeof event?.data !== "string"
-      )
+      ) {
         return;
+      }
 
       let data;
       try {
@@ -124,7 +125,6 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
         ===================== */
         case "TEAM_UPDATE":
         case "team_update":
-          // ❗ backend ส่งมาเป็น signal เท่านั้น
           onTeamUpdate?.();
           break;
 
@@ -169,8 +169,9 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
       destroyed ||
       reconnectTimer ||
       fromInstance !== activeInstanceId
-    )
+    ) {
       return;
+    }
 
     reconnectTimer = setTimeout(() => {
       reconnectTimer = null;

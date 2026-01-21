@@ -4,14 +4,8 @@ export default class FishScoopingScene extends Phaser.Scene {
   constructor() {
     super({ key: "FishScoopingScene" });
 
-    this.roomCode = null;
-    this.player = null;
-    this.wsRef = null;
-    this.onGameEnd = null;
-
     this.timeLeft = 60;
     this.score = 0;
-
     this.failHit = 0;
     this.netBroken = false;
   }
@@ -19,7 +13,7 @@ export default class FishScoopingScene extends Phaser.Scene {
   /* =====================
      INIT
   ===================== */
-  init(data) {
+  init(data = {}) {
     this.roomCode = data.roomCode;
     this.player = data.player;
     this.wsRef = data.wsRef;
@@ -31,8 +25,15 @@ export default class FishScoopingScene extends Phaser.Scene {
     this.netBroken = false;
   }
 
+  /* =====================
+     PRELOAD
+  ===================== */
   preload() {
-    // ใช้ shape ก่อน ยังไม่ต้อง asset
+    this.load.image("bg", "/assets/BGfish.jpg");
+    this.load.image("fish", "/assets/Fish.png");
+    this.load.image("fish_gold", "/assets/Fish_gold.png");
+    this.load.image("spoon", "/assets/Spoon.png");
+    this.load.image("bucket", "/assets/water_bowl.png");
   }
 
   /* =====================
@@ -41,53 +42,51 @@ export default class FishScoopingScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale;
 
+    /* ===== BG ===== */
+    this.add.image(width / 2, height / 2, "bg").setDepth(0);
+
     /* ===== UI ===== */
     this.scoreText = this.add.text(16, 16, "คะแนน: 0", {
       fontSize: "20px",
-      color: "#fff",
-    });
+      color: "#ffffff",
+    }).setDepth(10);
 
     this.timeText = this.add
       .text(width - 16, 16, "เวลา: 60", {
         fontSize: "20px",
-        color: "#fff",
+        color: "#ffffff",
       })
-      .setOrigin(1, 0);
+      .setOrigin(1, 0)
+      .setDepth(10);
 
     this.netStatusText = this.add
       .text(width / 2, height - 20, "", {
         fontSize: "18px",
         color: "#ff4444",
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(10);
 
     /* ===== BUCKET ===== */
-    this.bucket = this.add.rectangle(
-      width / 2,
-      height - 60,
-      120,
-      40,
-      0x8b4513
-    );
+    this.bucket = this.physics.add
+      .staticImage(width / 2, height - 55, "bucket")
+      .setScale(0.4)
+      .setDepth(5);
 
-    this.physics.add.existing(this.bucket, true);
-
-    /* ===== NET (SCOOP) ===== */
-    this.net = this.add.circle(
-      width / 2,
-      height / 2,
-      20,
-      0xffffff,
-      0.6
-    );
-    this.physics.add.existing(this.net);
+    /* ===== NET (SPOON) ===== */
+    this.net = this.physics.add.image(width / 2, height / 2, "spoon");
+    this.net.setScale(0.4);
+    this.net.setDepth(6);
     this.net.body.setAllowGravity(false);
+    this.net.body.setCircle(28, -28, -28); // ✅ FIX hitbox
 
     this.input.on("pointermove", (p) => {
-      this.net.setPosition(p.x, p.y);
+      if (!this.netBroken) {
+        this.net.setPosition(p.x, p.y);
+      }
     });
 
-    /* ===== GROUPS ===== */
+    /* ===== FISH GROUP ===== */
     this.fishes = this.physics.add.group();
 
     /* ===== COLLISION ===== */
@@ -101,13 +100,13 @@ export default class FishScoopingScene extends Phaser.Scene {
 
     this.physics.add.overlap(
       this.bucket,
-      this.net,
+      this.fishes,
       this.dropFish,
       null,
       this
     );
 
-    /* ===== SPAWN ===== */
+    /* ===== TIMERS ===== */
     this.spawnTimer = this.time.addEvent({
       delay: 900,
       loop: true,
@@ -115,7 +114,6 @@ export default class FishScoopingScene extends Phaser.Scene {
       callbackScope: this,
     });
 
-    /* ===== TIMER ===== */
     this.timer = this.time.addEvent({
       delay: 1000,
       loop: true,
@@ -131,74 +129,117 @@ export default class FishScoopingScene extends Phaser.Scene {
     if (this.netBroken) return;
 
     const isGold = Math.random() < 0.2;
-    const fish = this.add.circle(
-      Phaser.Math.Between(50, this.scale.width - 50),
-      Phaser.Math.Between(80, 300),
-      isGold ? 12 : 10,
-      isGold ? 0xffd700 : 0x00bfff
+    const fromLeft = Math.random() < 0.5;
+    const dir = fromLeft ? 1 : -1;
+
+    const fish = this.fishes.create(
+      fromLeft ? -80 : this.scale.width + 80,
+      Phaser.Math.Between(150, 420),
+      isGold ? "fish_gold" : "fish"
     );
 
-    fish.type = isGold ? "gold" : "normal";
+    fish.setScale(isGold ? 0.45 : 0.4);
+    fish.setDepth(4);
+    fish.setFlipX(!fromLeft);
+
     fish.value = isGold ? 3 : 1;
+    fish.following = false;
 
-    this.physics.add.existing(fish);
+    const timeFactor = (60 - this.timeLeft) / 60;
+    const speed = 70 + timeFactor * 90;
+
+    fish.setVelocity(dir * speed, 0);
+    fish.waveOffset = Math.random() * 100;
     fish.body.setAllowGravity(false);
+  }
 
-    const speed =
-      40 + Math.floor((60 - this.timeLeft) / 15) * 20;
+  /* =====================
+     UPDATE
+  ===================== */
+  update(time) {
+    this.fishes.getChildren().forEach((fish) => {
+      if (!fish.body) return;
 
-    fish.body.setVelocity(
-      Phaser.Math.Between(-speed, speed),
-      Phaser.Math.Between(-speed, speed)
-    );
+      if (fish.following) {
+        fish.setPosition(this.net.x, this.net.y);
+        return;
+      }
 
-    this.fishes.add(fish);
+      fish.setVelocityY(
+        Math.sin((time + fish.waveOffset) * 0.005) * 25
+      );
+
+      if (
+        fish.x < -150 ||
+        fish.x > this.scale.width + 150
+      ) {
+        fish.destroy();
+      }
+    });
   }
 
   /* =====================
      CATCH FISH
   ===================== */
   catchFish(net, fish) {
-    if (this.netBroken || fish.caught) return;
+    if (this.netBroken || fish.following) return;
 
-    fish.caught = true;
-    fish.body.stop();
-    fish.setFillStyle(0xffffff);
     fish.following = true;
+    fish.body.stop();
+    fish.body.enable = false; // ✅ FIX
+
+    this.time.delayedCall(2000, () => {
+      if (!fish.active) return;
+
+      if (fish.following) {
+        fish.following = false;
+        fish.body.enable = true;
+
+        fish.setVelocity(
+          Phaser.Math.Between(-80, 80),
+          Phaser.Math.Between(-40, 40)
+        );
+
+        this.failHit++;
+        if (this.failHit >= 3) {
+          this.breakNet();
+        }
+      }
+    });
   }
 
   /* =====================
      DROP INTO BUCKET
   ===================== */
-  dropFish() {
-    const caughtFish = this.fishes
-      .getChildren()
-      .find((f) => f.following);
+  dropFish(bucket, fish) {
+    if (!fish.following) return;
 
-    if (!caughtFish) return;
-
-    caughtFish.destroy();
-
-    this.score += caughtFish.value;
+    this.score += fish.value;
     this.scoreText.setText(`คะแนน: ${this.score}`);
 
-    this.wsRef?.current?.send({
-      type: "score_update",
-      player_id: this.player.id,
-      score: caughtFish.value,
-    });
-
+    fish.destroy();
     this.failHit = 0;
+
+    this.wsRef?.current?.send?.({
+      type: "score_update",
+      player_id: this.player?.id,
+      score: fish.value,
+    });
   }
 
   /* =====================
-     FAIL HANDLING
+     NET BREAK
   ===================== */
-  update() {
-    this.fishes.getChildren().forEach((f) => {
-      if (f.following) {
-        f.setPosition(this.net.x, this.net.y);
-      }
+  breakNet() {
+    if (this.netBroken) return;
+
+    this.netBroken = true;
+    this.netStatusText.setText("❌ แหขาด! รอ 3 วินาที");
+
+    this.time.delayedCall(3000, () => {
+      this.netBroken = false;
+      this.failHit = 0;
+      this.netStatusText.setText("");
     });
   }
 
@@ -215,33 +256,15 @@ export default class FishScoopingScene extends Phaser.Scene {
   }
 
   /* =====================
-     NET BREAK
-  ===================== */
-  breakNet() {
-    if (this.netBroken) return;
-
-    this.netBroken = true;
-    this.netStatusText.setText("❌ แหขาด! รอ 3 วินาที");
-
-    this.time.delayedCall(3000, () => {
-      this.netBroken = false;
-      this.netStatusText.setText("");
-      this.failHit = 0;
-    });
-  }
-
-  /* =====================
      END GAME
   ===================== */
   endGame() {
-    this.spawnTimer.remove();
-    this.timer.remove();
+    this.spawnTimer?.remove();
+    this.timer?.remove();
 
-    this.time.delayedCall(300, () => {
-      this.onGameEnd?.({
-        player_id: this.player.id,
-        score: this.score,
-      });
+    this.onGameEnd?.({
+      player_id: this.player?.id,
+      score: this.score,
     });
   }
 }

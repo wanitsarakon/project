@@ -5,7 +5,7 @@ import "./styles.css";
 
 /* =========================
    Root Error Boundary
-   (Production-safe)
+   (Production-Safe)
 ========================= */
 class RootErrorBoundary extends React.Component {
   static displayName = "RootErrorBoundary";
@@ -14,6 +14,7 @@ class RootErrorBoundary extends React.Component {
     super(props);
     this.state = {
       hasError: false,
+      errorId: 0, // ใช้ reset boundary
     };
   }
 
@@ -23,13 +24,21 @@ class RootErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, info) {
-    // 🧠 production สามารถต่อ Sentry / LogRocket / backend log ได้
+    // 🧠 production: ต่อ Sentry / LogRocket ได้ตรงนี้
     console.error("❌ Uncaught error:", error, info);
   }
 
   handleReload = () => {
-    // 🔁 รีเฟรชแบบ clean
+    // 🔁 hard reload (clean)
     window.location.reload();
+  };
+
+  handleRecover = () => {
+    // ♻️ soft recover (reset React tree)
+    this.setState((s) => ({
+      hasError: false,
+      errorId: s.errorId + 1,
+    }));
   };
 
   render() {
@@ -60,30 +69,53 @@ class RootErrorBoundary extends React.Component {
               lineHeight: 1.5,
             }}
           >
-            เกิดข้อผิดพลาดที่ไม่คาดคิด <br />
-            กรุณารีเฟรชหน้า หรือกลับมาใหม่อีกครั้ง
+            เกิดข้อผิดพลาดที่ไม่คาดคิด
+            <br />
+            คุณสามารถลองกู้คืน หรือรีเฟรชหน้าใหม่
           </p>
 
-          <button
-            onClick={this.handleReload}
-            style={{
-              marginTop: 16,
-              padding: "10px 18px",
-              borderRadius: 10,
-              border: "none",
-              cursor: "pointer",
-              background: "#ff7a00",
-              color: "#fff",
-              fontSize: 16,
-            }}
-          >
-            🔄 รีเฟรชหน้า
-          </button>
+          <div style={{ display: "flex", gap: 12 }}>
+            <button
+              onClick={this.handleRecover}
+              style={{
+                marginTop: 16,
+                padding: "10px 18px",
+                borderRadius: 10,
+                border: "1px solid #ccc",
+                cursor: "pointer",
+                background: "#fff",
+                fontSize: 15,
+              }}
+            >
+              ♻️ ลองกู้คืน
+            </button>
+
+            <button
+              onClick={this.handleReload}
+              style={{
+                marginTop: 16,
+                padding: "10px 18px",
+                borderRadius: 10,
+                border: "none",
+                cursor: "pointer",
+                background: "#ff7a00",
+                color: "#fff",
+                fontSize: 15,
+              }}
+            >
+              🔄 รีเฟรชหน้า
+            </button>
+          </div>
         </div>
       );
     }
 
-    return this.props.children;
+    // key ใช้ reset tree เมื่อ recover
+    return (
+      <React.Fragment key={this.state.errorId}>
+        {this.props.children}
+      </React.Fragment>
+    );
   }
 }
 

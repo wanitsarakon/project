@@ -1,7 +1,7 @@
 -- =========================================
 -- FINAL SCHEMA (PRODUCTION)
 -- Thai Festival Game System
--- Backend-aligned (v5.5)
+-- Backend + Frontend aligned (v5.5 FIXED)
 -- =========================================
 
 BEGIN;
@@ -23,9 +23,10 @@ CREATE TABLE IF NOT EXISTS rooms (
   max_players INT NOT NULL DEFAULT 8
     CHECK (max_players > 0 AND max_players <= 100),
 
-  host_player_id INT,              -- FK (added later)
+  -- ⭐ Backend Source of Truth: Host
+  host_player_id INT,
 
-  room_password TEXT,              -- NULL = public
+  room_password TEXT, -- NULL = public
 
   status VARCHAR(20) NOT NULL DEFAULT 'waiting'
     CHECK (status IN ('waiting','playing','finished')),
@@ -54,11 +55,12 @@ CREATE TABLE IF NOT EXISTS players (
 
   name TEXT NOT NULL,
 
+  -- ⭐ Host flag (DB = Source of Truth)
   is_host BOOLEAN NOT NULL DEFAULT false,
 
   -- team mode (nullable for solo)
   team VARCHAR(20)
-    CHECK (team IN ('red','blue')),
+    CHECK (team IN ('red','blue','green','yellow')),
 
   total_score INT NOT NULL DEFAULT 0
     CHECK (total_score >= 0),
@@ -92,7 +94,7 @@ CREATE INDEX IF NOT EXISTS idx_players_team
 
 -- =====================================================
 -- ⭐ FK: rooms.host_player_id → players.id
--- (ทำหลัง players เพื่อเลี่ยง circular dependency)
+-- (Host may disconnect → SET NULL)
 -- =====================================================
 DO $$
 BEGIN
@@ -125,6 +127,7 @@ CREATE TABLE IF NOT EXISTS rounds (
   round_index INT NOT NULL
     CHECK (round_index >= 1),
 
+  -- IMPORTANT: must match frontend gameKey exactly
   game_key VARCHAR(50) NOT NULL,
 
   status VARCHAR(20) NOT NULL DEFAULT 'playing'
