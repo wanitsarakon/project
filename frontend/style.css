@@ -1,0 +1,99 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #000;
+}
+
+.game-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    /* ลบกรอบแดงและเงาออก */
+    border: none;
+    box-shadow: none;
+}
+
+canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    /* ใช้รูป bg เป็นพื้นหลังของ Canvas โดยตรง */
+    background-image: url('images/bg.png'); 
+    background-size: cover;
+    background-position: center;
+cursor: crosshair; 
+}
+/* ปรับพวกตัวเลขคะแนนให้ลอยอยู่ด้านบน */
+.ui-panel {
+    position: absolute;
+    top: 20px;
+    width: 100%;
+    display: flex;
+    justify-content: space-around;
+    z-index: 100;
+    pointer-events: none;
+}
+
+.stat-box {
+    background: rgba(0, 0, 0, 0.8);
+    color: #f1c40f;
+    padding: 10px 25px;
+    border-radius: 30px;
+    font-size: 24px;
+    font-weight: bold;
+    border: 2px solid #f1c40f;
+    min-width: 120px;
+    text-align: center;
+}
+
+.combo-text {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #ff3e3e;
+    font-size: 70px;
+    font-weight: bold;
+    text-shadow: 3px 3px 0px #fff;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.9);
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 20;
+}
+
+.hidden { display: none; }
+
+button {
+    padding: 15px 40px;
+    font-size: 24px;
+    background: #27ae60;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 50px;
+    transition: 0.2s;
+}
+
+button:hover { background: #2ecc71; transform: scale(1.1); }
+
+.instructions {
+    position: absolute;
+    bottom: 15px;
+    width: 100%;
+    text-align: center;
+    color: #fff;
+    text-shadow: 1px 1px 2px #000;
+}
