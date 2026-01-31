@@ -93,7 +93,7 @@ canvas {
 
     width: 650px;           
     height: 480px;          
-    padding-top: 190px; /* ขยับตัวหนังสือลงมาจากขอบบนของแผ่นไม้ */
+    padding-top: 160px; /* ขยับตัวหนังสือลงมาจากขอบบนของแผ่นไม้ */
     padding-bottom: 40px;
     padding-left: 40px;
     padding-right: 40px;
@@ -131,7 +131,7 @@ canvas {
 /* --- ปุ่มเริ่มเกมแบบ 3D สมูท (ขอบขาวหนา) --- */
 .start-button {
 position: relative;
-    padding: 18px 60px;
+    padding: 18px 40px;
     font-size: 32px;
     font-weight: 900;
     color: #fff;
