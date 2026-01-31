@@ -93,7 +93,7 @@ canvas {
 
     width: 650px;           
     height: 480px;          
-    padding-top: 180px; /* ขยับตัวหนังสือลงมาจากขอบบนของแผ่นไม้ */
+    padding-top: 190px; /* ขยับตัวหนังสือลงมาจากขอบบนของแผ่นไม้ */
     padding-bottom: 40px;
     padding-left: 40px;
     padding-right: 40px;
@@ -119,37 +119,57 @@ canvas {
 }
 
 .sub-text {
-    color: #fff;
+    color: #f9f9f7;
     font-size: 18px;
     margin-bottom: 40px;
     font-weight: bold;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    text-shadow: 
+        1px 1px 2px rgba(0, 0, 0, 1), 
+        0px 0px 8px rgba(0, 0, 0, 0.6);
 }
 
 /* --- ปุ่มเริ่มเกมแบบ 3D สมูท (ขอบขาวหนา) --- */
 .start-button {
-    background: linear-gradient(to bottom, #44ce1b 0%, #2bb10c 100%);
-    color: white;
-    font-size: 40px;
+position: relative;
+    padding: 18px 60px;
+    font-size: 32px;
     font-weight: 900;
-    padding: 15px 70px;
+    color: #fff;
+    text-transform: uppercase;
+    text-decoration: none;
+    background: linear-gradient(to bottom, #53f323 0%, #2bb10c 100%); /* สีเขียวสด */
+    border: none;
     border-radius: 50px;
-    border: 6px solid #ffffff; /* ขอบขาวหนาตามรูป Game UI */
-    box-shadow: 
-        0 6px 0px #1e8449,      
-        0 10px 20px rgba(0,0,0,0.4); 
-    
     cursor: pointer;
-    transition: all 0.1s ease;
-    display: inline-block;
-    outline: none;
+    
+    /* เงาและขอบแบบ 3D */
+    box-shadow: 
+        0 8px 0 #2f8d56,        /* เงาหนาด้านล่างทำให้ดูนูน */
+        0 15px 20px rgba(0,0,0,0.35); 
+    
+    transition: all 0.15s ease;
+    text-shadow: 2px 2px 0px rgba(101, 94, 94, 0.685);
+    overflow: hidden;
 }
 
-
+.start-button:after{
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: rgba(255, 255, 255, 0.2);
+    transform: rotate(30deg);
+    transition: 0.5s;
+    pointer-events: none;
+}
 .start-button:hover {
-    transform: scale(1.05);
+    transform: translateY(-2px);
+    box-shadow: 0 10px 0 #1e8449, 0 15px 25px rgba(0,0,0,0.4);
     filter: brightness(1.1);
 }
+
 
 .start-button:active {
     transform: translateY(4px);
@@ -194,7 +214,7 @@ canvas {
     position: absolute;
     top: 40%; left: 50%;
     transform: translate(-50%, -50%);
-    color: #e61717dc;
+    color: #f00101dc;
     font-size: 80px;
     font-weight: 900;
     text-shadow: 4px 4px 0px #fff, 6px 6px 0px #000;
@@ -216,7 +236,7 @@ canvas {
     position: absolute;
     /* ปรับตำแหน่งจากขอบบนและขอบซ้าย */
     top: 170px;  /* วางไว้ใต้ป้ายคะแนนหลัก (ลองปรับเลขนี้ขึ้นลงได้) */
-    left: 10px;  /* ขยับให้ตรงกับแนวป้ายคะแนนทางซ้าย */
+    left: 15px;  /* ขยับให้ตรงกับแนวป้ายคะแนนทางซ้าย */
     
     /* ใส่รูปภาพที่คุณทำไว้ */
     background-image: url('images/scoredoll.png'); 
