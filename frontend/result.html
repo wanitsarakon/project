@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="style.css"> 
+    <title>บทสรุปดวงวิญญาณ</title>
+</head>
+<body class="result-page">
+    <img src="images/result_bg.png" class="full-bg" style="filter: brightness(0.3); position: fixed; z-index: -1;">
+
+    <div class="intro-container">
+        <div class="npc-side">
+            <img src="images/npc.png" class="ghost-npc">
+        </div>
+
+        <div class="content-side">
+            <div class="signboard result-board-final">
+                <div class="sign-title">🕯️บทสรุปดวงวิญญาณ🕯️</div>
+                
+                <div class="total-score-container">
+                    <h2 id="totalScore">0 / 160</h2>
+                    <div class="score-decoration">นี่คือความสามารถของท่าน....ขอบคุณที่ปลดปล่อยพวกเรา</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ระบบคำนวณคะแนน
+        const invRemaining = JSON.parse(localStorage.getItem('playerInventory')) || [];
+        const receivedItems = JSON.parse(localStorage.getItem('ghostReceivedItems')) || {};
+        
+        const ghostData = [
+            { id: 'woman', req: ['key', 'scissors'] },
+            { id: 'girl', req: ['toy', 'lighter'] },
+            { id: 'man', req: ['blade', 'med'] },
+            { id: 'maid', req: ['gun', 'coin'] }
+        ];
+
+        let currentScore = 0;
+        ghostData.forEach(ghost => {
+            const playerGave = receivedItems[ghost.id] || [];
+            const correctCount = playerGave.filter(item => ghost.req.includes(item)).length;
+            const isSaved = (playerGave.length === ghost.req.length) && (correctCount === ghost.req.length);
+            
+            if (isSaved) currentScore += 40;
+            else currentScore += (correctCount * 10);
+        });
+
+        currentScore += (invRemaining.length * 10);
+        document.getElementById('totalScore').innerText = currentScore + " / 160";
+    </script>
+</body>
+</html>
