@@ -29,7 +29,7 @@ class RootErrorBoundary extends React.Component {
   }
 
   handleReload = () => {
-    // 🔁 hard reload (clean)
+    // 🔁 hard reload (clean state)
     window.location.reload();
   };
 
@@ -110,7 +110,7 @@ class RootErrorBoundary extends React.Component {
       );
     }
 
-    // key ใช้ reset tree เมื่อ recover
+    // key ใช้ reset React tree เมื่อ recover
     return (
       <React.Fragment key={this.state.errorId}>
         {this.props.children}

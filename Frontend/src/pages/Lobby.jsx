@@ -10,44 +10,37 @@ import { createRoomSocket } from "../websocket/wsClient";
 const API_BASE =
   import.meta.env.VITE_API_URL || "http://localhost:8080";
 
-/**
- * Lobby
- * - แสดงผู้เล่น
- * - Host กด Start
- * - Host ไม่เข้าเกม แต่เห็นสถานะผู้เล่นกำลังเล่น
- * - Player เข้า Festival Map เมื่อเกมเริ่ม
- */
 export default function Lobby({
   roomCode,
   player,
   onLeave,
-  onStartGame, // → Festival Map (PLAYER ONLY)
+  onStartGame,
 }) {
   /* =========================
      STATE
   ========================= */
   const [players, setPlayers] = useState([]);
   const [starting, setStarting] = useState(false);
-  const [gameStarted, setGameStarted] = useState(false); // ⭐ เพิ่ม
+  const [gameStarted, setGameStarted] = useState(false);
 
   /* =========================
-     REFS (GUARDS)
+     REFS
   ========================= */
   const wsRef = useRef(null);
   const mountedRef = useRef(false);
   const leavingRef = useRef(false);
   const startedRef = useRef(false);
+  const isMeHostRef = useRef(false);
 
   /* =========================
-     SAFE SET STATE
+     SAFE SET
   ========================= */
   const safeSet = useCallback((fn) => {
     if (mountedRef.current) fn();
   }, []);
 
   /* =========================
-     LOAD ROOM (HTTP)
-     → Backend = Source of Truth
+     LOAD ROOM
   ========================= */
   const loadRoom = useCallback(async () => {
     try {
@@ -57,7 +50,6 @@ export default function Lobby({
       if (!res.ok) throw new Error();
 
       const data = await res.json();
-      if (!mountedRef.current) return;
 
       safeSet(() =>
         setPlayers(
@@ -65,11 +57,9 @@ export default function Lobby({
             ? data.players.map((p) => ({
                 id: p.id,
                 name: p.name,
-                team: p.team ?? null,
                 isHost: p.is_host === true,
                 connected: p.connected !== false,
-                total_score:
-                  p.total_score ?? p.score ?? 0,
+                total_score: p.total_score ?? 0,
               }))
             : []
         )
@@ -80,46 +70,40 @@ export default function Lobby({
   }, [roomCode, safeSet]);
 
   /* =========================
-     WS MESSAGE HANDLER
+     WS MESSAGE
   ========================= */
   const handleMessage = useCallback(
     (msg) => {
       if (!mountedRef.current || !msg?.type) return;
 
       switch (msg.type) {
-        /* ===== PLAYER JOIN ===== */
-        case "player_join": {
-          const p = msg.player;
-          if (!p) return;
-
+        case "player_join":
           safeSet(() =>
             setPlayers((prev) => {
               const exists = prev.find(
-                (x) => x.id === p.id
+                (p) => p.id === msg.player.id
               );
               if (exists) {
-                return prev.map((x) =>
-                  x.id === p.id
-                    ? { ...x, connected: true }
-                    : x
+                return prev.map((p) =>
+                  p.id === msg.player.id
+                    ? { ...p, connected: true }
+                    : p
                 );
               }
               return [
                 ...prev,
                 {
-                  id: p.id,
-                  name: p.name,
-                  isHost: p.is_host === true,
+                  id: msg.player.id,
+                  name: msg.player.name,
+                  isHost: msg.player.is_host,
                   connected: true,
-                  total_score: p.score ?? 0,
+                  total_score: 0,
                 },
               ];
             })
           );
           break;
-        }
 
-        /* ===== PLAYER DISCONNECT ===== */
         case "player_disconnect":
           safeSet(() =>
             setPlayers((prev) =>
@@ -132,28 +116,14 @@ export default function Lobby({
           );
           break;
 
-        /* ===== HOST TRANSFER ===== */
-        case "host_transfer":
-          safeSet(() =>
-            setPlayers((prev) =>
-              prev.map((p) => ({
-                ...p,
-                isHost: p.id === msg.player_id,
-              }))
-            )
-          );
-          break;
-
-        /* ===== GAME START ===== */
         case "game_start":
           if (startedRef.current) return;
           startedRef.current = true;
 
-          // ⭐ แยกพฤติกรรม Host / Player
           if (isMeHostRef.current) {
             safeSet(() => setGameStarted(true));
           } else {
-            onStartGame?.(); // PLAYER → Festival Map
+            onStartGame?.();
           }
           break;
 
@@ -165,11 +135,10 @@ export default function Lobby({
   );
 
   /* =========================
-     MOUNT / UNMOUNT
+     MOUNT
   ========================= */
   useEffect(() => {
     mountedRef.current = true;
-    leavingRef.current = false;
     startedRef.current = false;
     setGameStarted(false);
 
@@ -178,7 +147,6 @@ export default function Lobby({
     return () => {
       mountedRef.current = false;
       wsRef.current?.close();
-      wsRef.current = null;
     };
   }, [loadRoom]);
 
@@ -186,12 +154,7 @@ export default function Lobby({
      WS CONNECT
   ========================= */
   useEffect(() => {
-    if (
-      !player?.id ||
-      leavingRef.current ||
-      wsRef.current
-    )
-      return;
+    if (!player?.id || wsRef.current) return;
 
     wsRef.current = createRoomSocket(
       roomCode,
@@ -212,22 +175,15 @@ export default function Lobby({
     (p) => p.id === player.id && p.isHost
   );
 
-  // ⭐ ใช้ ref กัน stale closure
-  const isMeHostRef = useRef(false);
   useEffect(() => {
     isMeHostRef.current = isMeHost;
   }, [isMeHost]);
 
   /* =========================
-     START GAME (HOST)
+     START GAME
   ========================= */
   const startGame = async () => {
-    if (
-      !isMeHost ||
-      starting ||
-      startedRef.current
-    )
-      return;
+    if (!isMeHost || starting) return;
 
     setStarting(true);
     try {
@@ -236,8 +192,7 @@ export default function Lobby({
         { method: "POST" }
       );
       if (!res.ok) throw new Error();
-    } catch (err) {
-      console.error("❌ startGame error", err);
+    } catch {
       alert("❌ เริ่มเกมไม่สำเร็จ");
     } finally {
       safeSet(() => setStarting(false));
@@ -245,77 +200,84 @@ export default function Lobby({
   };
 
   /* =========================
-     LEAVE ROOM
-  ========================= */
-  const leaveRoom = () => {
-    if (leavingRef.current) return;
-    leavingRef.current = true;
-
-    wsRef.current?.close();
-    wsRef.current = null;
-
-    onLeave?.();
-  };
-
-  /* =========================
      UI
   ========================= */
   return (
-    <div className="lobby-root">
-      <h2>🎪 Lobby ห้อง {roomCode}</h2>
+    <div className="home-root">
+      <div className="ui-panel lobby-panel">
+        <h2 className="lobby-title">
+          🎪 Lobby ห้อง {roomCode}
+        </h2>
 
-      <div style={{ marginBottom: 8 }}>
-        คุณ: <b>{player.name}</b>{" "}
-        {isMeHost && "(Host)"}
-      </div>
-
-      <h3>👥 ผู้เล่น</h3>
-      <ul>
-        {players.map((p) => (
-          <li key={p.id}>
-            {p.connected ? "🟢" : "🔴"}{" "}
-            <b>{p.name}</b>
-            {p.isHost && " ⭐"} —{" "}
-            {p.total_score}
-          </li>
-        ))}
-      </ul>
-
-      {/* ===== HOST CONTROL ===== */}
-      {isMeHost && !gameStarted && (
-        <button
-          onClick={startGame}
-          disabled={starting}
-          style={{ marginTop: 12 }}
-        >
-          {starting
-            ? "⏳ กำลังเริ่ม..."
-            : "▶ Start"}
-        </button>
-      )}
-
-      {/* ===== HOST WAITING STATE ===== */}
-      {isMeHost && gameStarted && (
-        <div
-          style={{
-            marginTop: 16,
-            padding: 12,
-            borderRadius: 8,
-            background: "#fff3cd",
-            color: "#856404",
-          }}
-        >
-          ⏳ เกมเริ่มแล้ว <br />
-          ผู้เล่นกำลังเล่นมินิเกมอยู่
+        {/* HOST BADGE */}
+        <div className="lobby-me">
+          คุณ: <b>{player.name}</b>
+          {isMeHost && (
+            <span className="host-badge">
+              HOST
+            </span>
+          )}
         </div>
-      )}
 
-      <button
-        onClick={leaveRoom}
-        style={{ marginTop: 16 }}
-      >
-        ← ออกจากห้อง
-      </button>
+        {/* PLAYER LIST */}
+        <div className="player-section">
+          <h3>👥 ผู้เล่น</h3>
+          <ul className="player-list">
+            {players.map((p) => (
+              <li
+                key={p.id}
+                className={`player-item ${
+                  p.isHost ? "host" : ""
+                }`}
+              >
+                <span>
+                  {p.connected ? "🟢" : "🔴"}{" "}
+                  {p.name}
+                  {p.isHost && " ⭐"}
+                </span>
+                <span className="score">
+                  {p.total_score}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* HOST CONTROL */}
+        {isMeHost && !gameStarted && (
+          <button
+            className="start-btn big"
+            onClick={startGame}
+            disabled={starting}
+          >
+            {starting
+              ? "⏳ กำลังเริ่มเกม..."
+              : "▶ เริ่มเกม"}
+          </button>
+        )}
+
+        {/* HOST WAITING */}
+        {isMeHost && gameStarted && (
+          <div className="host-wait">
+            ⏳ เกมเริ่มแล้ว <br />
+            ผู้เล่นกำลังเล่นมินิเกม
+          </div>
+        )}
+
+        {/* PLAYER WAITING */}
+        {!isMeHost && !gameStarted && (
+          <div className="player-wait">
+            ⏳ รอ Host เริ่มเกม
+          </div>
+        )}
+
+        <button
+          className="back-btn"
+          onClick={onLeave}
+        >
+          ← ออกจากห้อง
+        </button>
+      </div>
     </div>
   );
 }

@@ -31,7 +31,7 @@
     <!-- <meta property="og:image" content="/og-image.png" /> -->
     <meta property="og:locale" content="th_TH" />
 
-    <!-- Twitter (optional) -->
+    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
 
     <!-- =========================
@@ -80,8 +80,8 @@
     style="
       margin: 0;
       font-family: 'Kanit', system-ui, -apple-system, BlinkMacSystemFont,
-        sans-serif;
-      background: #fffaf3;
+        'Segoe UI', sans-serif;
+      background: #000; /* ให้ตรงกับ game-root / phaser */
     "
   >
     <!-- =========================
@@ -112,8 +112,8 @@
 
     <!-- =========================
          VITE ENTRY
-         - ใช้ type="module"
-         - ปลอดภัยกับ React 18
+         - type="module" (จำเป็น)
+         - React 18 + ErrorBoundary
     ========================= -->
     <script type="module" src="/src/main.jsx"></script>
   </body>

@@ -2,20 +2,27 @@
  * 🎪 GAMES CONFIG (Thai Festival Mini Games)
  *
  * ใช้ร่วมกันทั้ง:
- * - FestivalMap (หน้าซุ้มเกม)
- * - Mini Game Loader
+ * - FestivalMapScene
+ * - GameContainer / Mini Game Loader
  * - Summary / Winner
  * - Backend round logic (อนาคต)
  */
 
+/**
+ * ⚠️ RULE:
+ * - key = id กลาง (frontend + backend ต้องตรงกัน)
+ * - scene = Phaser.Scene key
+ * - order = ลำดับการเล่น
+ */
+
 export const GAMES = [
   {
-    key: "fishing",
+    key: "fish",
     name: "เกมตักปลา",
     order: 1,
     icon: "🐟",
     description: "ตักปลาให้ได้มากที่สุดภายในเวลาที่กำหนด",
-    scene: "FishingScene",          // Phaser Scene (อนาคต)
+    scene: "FishScoopingScene", // ✅ ตรงกับของจริง
     enabled: true,
   },
   {
@@ -25,16 +32,16 @@ export const GAMES = [
     icon: "🐎",
     description: "หมุนม้าให้หยุดในตำแหน่งที่แม่นยำ",
     scene: "HorseScene",
-    enabled: true,
+    enabled: false, // ❗ ยังไม่ทำ
   },
   {
-    key: "shooting",
+    key: "shoot",
     name: "เกมยิงตุ๊กตา",
     order: 3,
     icon: "🎯",
     description: "ยิงเป้าให้โดนเพื่อสะสมคะแนน",
     scene: "DollShootScene",
-    enabled: true,
+    enabled: false,
   },
   {
     key: "cotton",
@@ -43,7 +50,7 @@ export const GAMES = [
     icon: "🍭",
     description: "หมุนสายไหมให้สวยและเร็วที่สุด",
     scene: "CottonCandyScene",
-    enabled: true,
+    enabled: false,
   },
   {
     key: "pray",
@@ -52,36 +59,37 @@ export const GAMES = [
     icon: "🙏",
     description: "เสี่ยงเซียมซีเพื่อรับแต้มพิเศษ",
     scene: "PrayScene",
-    enabled: true,
+    enabled: false,
   },
 ];
 
 /* =========================
-   🔧 HELPERS (OPTIONAL)
-   ใช้แล้วชีวิตง่ายขึ้นมาก
+   🔧 HELPERS
 ========================= */
 
-/** เรียงเกมตามลำดับ */
+/** เกมที่เปิดใช้งาน + เรียงตาม order */
 export const getOrderedGames = () =>
-  GAMES.filter((g) => g.enabled).sort(
-    (a, b) => a.order - b.order
-  );
+  GAMES
+    .filter((g) => g.enabled)
+    .sort((a, b) => a.order - b.order);
 
-/** หาเกมจาก key */
+/** หาเกมจาก key (เฉพาะ enabled) */
 export const getGameByKey = (key) =>
-  GAMES.find((g) => g.key === key);
+  GAMES.find((g) => g.key === key && g.enabled);
 
-/** เกมถัดไป */
+/** เกมถัดไปจาก key ปัจจุบัน */
 export const getNextGame = (currentKey) => {
   const ordered = getOrderedGames();
   const idx = ordered.findIndex(
     (g) => g.key === currentKey
   );
-  return idx >= 0 && idx < ordered.length - 1
-    ? ordered[idx + 1]
-    : null;
+
+  if (idx === -1) return null;
+  return ordered[idx + 1] ?? null;
 };
 
-/** เกมแรก */
-export const getFirstGame = () =>
-  getOrderedGames()[0] || null;
+/** เกมแรกของงาน */
+export const getFirstGame = () => {
+  const ordered = getOrderedGames();
+  return ordered.length > 0 ? ordered[0] : null;
+};

@@ -86,11 +86,11 @@ func runCleanupOnce(
 		/* ---- mark disconnected ---- */
 		_, _ = db.ExecContext(ctx, `
 			UPDATE players
-			SET connected=false
-			WHERE id=$1
+			SET connected = false
+			WHERE id = $1
 		`, playerID)
 
-		/* ---- notify player disconnect ---- */
+		/* ---- notify disconnect ---- */
 		broadcasts = append(broadcasts, broadcastEvent{
 			room: roomCode,
 			data: MustJSON(map[string]any{
@@ -99,9 +99,8 @@ func runCleanupOnce(
 			}),
 		})
 
-		/* ---- TEAM UPDATE (ส่งทีมใหม่) ---- */
+		/* ---- TEAM UPDATE ---- */
 		teams := fetchTeams(ctx, db, roomID)
-
 		broadcasts = append(broadcasts, broadcastEvent{
 			room: roomCode,
 			data: MustJSON(map[string]any{
@@ -110,7 +109,7 @@ func runCleanupOnce(
 			}),
 		})
 
-		/* ---- HOST TRANSFER ---- */
+		/* ---- HOST TRANSFER (once per room) ---- */
 		if !handledRooms[roomID] {
 			if newHostID := transferHost(ctx, db, roomID); newHostID > 0 {
 				broadcasts = append(broadcasts, broadcastEvent{
@@ -126,9 +125,29 @@ func runCleanupOnce(
 	}
 
 	/* =========================
-	   2️⃣ CLEAN EMPTY ROOMS
+	   2️⃣ RESET BROKEN ROOMS
+	   (playing แต่ไม่มีผู้เล่น)
 	========================= */
-	_, _ = db.ExecContext(ctx, `
+	res, err := db.ExecContext(ctx, `
+		UPDATE rooms
+		SET status = 'waiting'
+		WHERE status = 'playing'
+		  AND NOT EXISTS (
+			SELECT 1 FROM players
+			WHERE room_id = rooms.id
+			  AND connected = true
+		  )
+	`)
+	if err == nil {
+		if n, _ := res.RowsAffected(); n > 0 {
+			anyChange = true
+		}
+	}
+
+	/* =========================
+	   3️⃣ CLEAN EMPTY ROOMS
+	========================= */
+	res, err = db.ExecContext(ctx, `
 		DELETE FROM rooms
 		WHERE status IN ('waiting','finished')
 		  AND NOT EXISTS (
@@ -137,9 +156,14 @@ func runCleanupOnce(
 			  AND connected = true
 		  )
 	`)
+	if err == nil {
+		if n, _ := res.RowsAffected(); n > 0 {
+			anyChange = true
+		}
+	}
 
 	/* =========================
-	   3️⃣ BROADCAST EVENTS
+	   4️⃣ BROADCAST EVENTS
 	========================= */
 	for _, b := range broadcasts {
 		select {
@@ -148,11 +172,12 @@ func runCleanupOnce(
 			Data: b.data,
 		}:
 		default:
+			// กัน block ถ้า hub ช้า
 		}
 	}
 
 	/* =========================
-	   4️⃣ GLOBAL ROOM UPDATE
+	   5️⃣ GLOBAL ROOM UPDATE
 	========================= */
 	if anyChange {
 		select {
@@ -179,7 +204,8 @@ func fetchTeams(
 	rows, err := db.QueryContext(ctx, `
 		SELECT id, name, team, total_score
 		FROM players
-		WHERE room_id=$1 AND connected=true
+		WHERE room_id = $1
+		  AND connected = true
 		ORDER BY team, id
 	`, roomID)
 	if err != nil {
@@ -188,6 +214,7 @@ func fetchTeams(
 	defer rows.Close()
 
 	var teams []map[string]any
+
 	for rows.Next() {
 		var id, score int
 		var name, team sql.NullString
@@ -216,14 +243,18 @@ func transferHost(
 
 	var oldHostID int
 	_ = db.QueryRowContext(ctx, `
-		SELECT id FROM players
-		WHERE room_id=$1 AND is_host=true
+		SELECT id
+		FROM players
+		WHERE room_id = $1
+		  AND is_host = true
 	`, roomID).Scan(&oldHostID)
 
 	var newHostID int
 	err := db.QueryRowContext(ctx, `
-		SELECT id FROM players
-		WHERE room_id=$1 AND connected=true
+		SELECT id
+		FROM players
+		WHERE room_id = $1
+		  AND connected = true
 		ORDER BY last_seen_at DESC
 		LIMIT 1
 	`, roomID).Scan(&newHostID)
@@ -235,7 +266,7 @@ func transferHost(
 	_, _ = db.ExecContext(ctx, `
 		UPDATE players
 		SET is_host = (id = $1)
-		WHERE room_id=$2
+		WHERE room_id = $2
 	`, newHostID, roomID)
 
 	return newHostID

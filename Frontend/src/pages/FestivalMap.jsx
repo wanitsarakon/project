@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import GameContainer from "../games/GameContainer";
 import { createRoomSocket } from "../websocket/wsClient";
 
@@ -12,8 +12,7 @@ export default function FestivalMap({
   onLeave,
 }) {
   /* =========================
-     HOST GUARD (IMPORTANT)
-     Host = Controller, not Player
+     ROLE
   ========================= */
   const isHost = player?.isHost === true;
 
@@ -24,20 +23,29 @@ export default function FestivalMap({
   const [scores, setScores] = useState({});
 
   const wsRef = useRef(null);
+  const mountedRef = useRef(false);
+
+  /* =========================
+     SAFE SET
+  ========================= */
+  const safeSet = useCallback((fn) => {
+    if (mountedRef.current) fn();
+  }, []);
 
   /* =========================
      LOAD TEAM (TEAM MODE)
   ========================= */
-  const loadTeamFromServer = async () => {
+  const loadTeamFromServer = useCallback(async () => {
     if (mode !== "team") return;
 
     try {
       const res = await fetch(
         `${API_BASE}/rooms/${roomCode}`
       );
-      const data = await res.json();
+      if (!res.ok) return;
 
-      if (!data?.players) return;
+      const data = await res.json();
+      if (!Array.isArray(data?.players)) return;
 
       const me = data.players.find(
         (p) => p.id === player.id
@@ -48,34 +56,40 @@ export default function FestivalMap({
         (p) => p.team === me.team
       );
 
-      setTeam(
-        myTeam.map((p) => ({
-          id: p.id,
-          name: p.name,
-        }))
-      );
+      safeSet(() => {
+        setTeam(
+          myTeam.map((p) => ({
+            id: p.id,
+            name: p.name,
+          }))
+        );
 
-      const scoreMap = {};
-      myTeam.forEach((p) => {
-        scoreMap[p.id] =
-          p.score ?? p.total_score ?? 0;
+        const scoreMap = {};
+        myTeam.forEach((p) => {
+          scoreMap[p.id] =
+            p.total_score ?? p.score ?? 0;
+        });
+        setScores(scoreMap);
       });
-      setScores(scoreMap);
     } catch (err) {
       console.error("❌ loadTeamFromServer:", err);
     }
-  };
+  }, [mode, roomCode, player.id, safeSet]);
 
   /* =========================
      WEBSOCKET (PLAYER ONLY)
   ========================= */
   useEffect(() => {
+    mountedRef.current = true;
+
     if (
-      isHost || // ❌ Host ไม่ต้องมี WS เกม
+      isHost ||
       !roomCode ||
       !player?.id
     ) {
-      return;
+      return () => {
+        mountedRef.current = false;
+      };
     }
 
     const socket = createRoomSocket(
@@ -93,11 +107,13 @@ export default function FestivalMap({
           player_id,
           score,
         }) => {
-          setScores((prev) => ({
-            ...prev,
-            [player_id]:
-              (prev[player_id] || 0) + score,
-          }));
+          safeSet(() =>
+            setScores((prev) => ({
+              ...prev,
+              [player_id]:
+                (prev[player_id] || 0) + score,
+            }))
+          );
         },
       }
     );
@@ -106,13 +122,21 @@ export default function FestivalMap({
     loadTeamFromServer();
 
     return () => {
-      socket.close();
+      mountedRef.current = false;
+      socket?.close();
       wsRef.current = null;
     };
-  }, [roomCode, player?.id, mode, isHost]);
+  }, [
+    roomCode,
+    player?.id,
+    mode,
+    isHost,
+    loadTeamFromServer,
+    safeSet,
+  ]);
 
   /* =========================
-     HOST VIEW (WAITING)
+     HOST VIEW (CONTROLLER)
   ========================= */
   if (isHost) {
     return (
@@ -132,13 +156,13 @@ export default function FestivalMap({
       >
         <div
           style={{
-            fontSize: 28,
+            fontSize: 30,
             fontWeight: "bold",
             color: "#5b2c00",
             marginBottom: 12,
           }}
         >
-          🎪 เกมเริ่มแล้ว
+          🎪 รอบกำลังดำเนินอยู่
         </div>
 
         <div
@@ -148,14 +172,15 @@ export default function FestivalMap({
             marginBottom: 24,
           }}
         >
-          ⏳ ผู้เล่นกำลังเล่นมินิเกมอยู่
+          Host ไม่ต้องเข้าเล่น <br />
+          กำลังรอผู้เล่นทำมินิเกม
         </div>
 
         <button
           onClick={onLeave}
           style={{
-            padding: "14px 30px",
-            borderRadius: 22,
+            padding: "14px 32px",
+            borderRadius: 24,
             border: "none",
             background: "#e74c3c",
             color: "#fff",
@@ -171,7 +196,7 @@ export default function FestivalMap({
   }
 
   /* =========================
-     PLAYER VIEW (FESTIVAL MAP)
+     PLAYER VIEW
   ========================= */
   return (
     <div
@@ -183,6 +208,7 @@ export default function FestivalMap({
         flexDirection: "column",
         alignItems: "center",
         padding: "24px 16px",
+        fontFamily: "Kanit",
       }}
     >
       {/* ===== HEADER ===== */}
@@ -197,7 +223,6 @@ export default function FestivalMap({
             fontSize: 28,
             fontWeight: "bold",
             color: "#5b2c00",
-            fontFamily: "Kanit",
           }}
         >
           🎪 Festival Map
@@ -222,8 +247,10 @@ export default function FestivalMap({
             maxWidth: 480,
             background: "#fff",
             borderRadius: 16,
-            padding: 12,
+            padding: 14,
             marginBottom: 14,
+            boxShadow:
+              "0 8px 20px rgba(0,0,0,0.15)",
           }}
         >
           <div
@@ -242,6 +269,7 @@ export default function FestivalMap({
                 display: "flex",
                 justifyContent:
                   "space-between",
+                padding: "4px 0",
               }}
             >
               <span>
@@ -265,22 +293,21 @@ export default function FestivalMap({
         player={player}
         wsRef={wsRef}
         onGameEnd={() => {
-          // score update ผ่าน WS
+          // คะแนน sync ผ่าน WS
         }}
       />
 
-      {/* ===== EXIT ROOM ===== */}
+      {/* ===== EXIT ===== */}
       <button
         onClick={onLeave}
         style={{
           marginTop: 18,
-          padding: "14px 30px",
-          borderRadius: 22,
+          padding: "14px 32px",
+          borderRadius: 24,
           border: "none",
           background: "#e74c3c",
           color: "#fff",
           fontSize: 18,
-          fontFamily: "Kanit",
           cursor: "pointer",
         }}
       >

@@ -34,7 +34,6 @@ func main() {
 		log.Fatal("❌ Open DB error:", err)
 	}
 
-	// 🔒 production-safe pool
 	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(10)
 	db.SetConnMaxLifetime(30 * time.Minute)
@@ -77,7 +76,6 @@ func main() {
 	r := gin.New()
 	r.Use(gin.Logger(), gin.Recovery())
 
-	// 🔒 trusted proxy (important for prod / ws)
 	if err := r.SetTrustedProxies(nil); err != nil {
 		log.Println("⚠️ SetTrustedProxies warning:", err)
 	}
@@ -85,15 +83,26 @@ func main() {
 	/* =========================
 	   CORS
 	========================= */
-	allowOrigin := os.Getenv("CORS_ORIGIN")
-	if allowOrigin == "" {
-		allowOrigin = "http://localhost:5173"
-	}
-
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{allowOrigin},
-		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		AllowOrigins: []string{
+			"http://localhost:5173",
+			"http://127.0.0.1:5173",
+		},
+		AllowMethods: []string{
+			"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS",
+		},
+		AllowHeaders: []string{
+			"Origin",
+			"Content-Type",
+			"Authorization",
+			"Accept",
+			"X-Requested-With",
+			"Access-Control-Request-Method",
+			"Access-Control-Request-Headers",
+		},
+		ExposeHeaders: []string{
+			"Content-Length",
+		},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
@@ -140,19 +149,18 @@ func main() {
 
 	log.Println("🛑 Shutting down server...")
 
-	// 1️⃣ STOP BACKGROUND SERVICES
+	// 1️⃣ stop background services
 	cleanupCancel()
 	baseCancel()
 
-	// 2️⃣ SHUTDOWN HTTP (stop new requests / WS)
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	// 2️⃣ shutdown HTTP
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-
-	if err := srv.Shutdown(shutdownCtx); err != nil {
+	if err := srv.Shutdown(ctx); err != nil {
 		log.Println("⚠️ HTTP shutdown error:", err)
 	}
 
-	// 3️⃣ CLOSE DB
+	// 3️⃣ close DB
 	if err := db.Close(); err != nil {
 		log.Println("⚠️ DB close error:", err)
 	}

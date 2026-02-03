@@ -2,6 +2,7 @@ package ws
 
 import (
 	"database/sql"
+	"encoding/json"
 	"log"
 	"strings"
 	"sync"
@@ -22,11 +23,11 @@ type Message struct {
    CLIENT
 ========================= */
 type Client struct {
-	Hub       *Hub
-	Conn      *websocket.Conn
-	Room      string
-	PlayerID  int
-	Send      chan []byte
+	Hub        *Hub
+	Conn       *websocket.Conn
+	Room       string
+	PlayerID   int
+	Send       chan []byte
 	disconnect sync.Once
 }
 
@@ -91,7 +92,7 @@ func (h *Hub) Run() {
 }
 
 /* =========================
-   REMOVE CLIENT (SAFE / IDEMPOTENT)
+   REMOVE CLIENT (SAFE)
 ========================= */
 func (h *Hub) removeClient(c *Client) {
 	c.disconnect.Do(func() {
@@ -129,13 +130,11 @@ func (c *Client) onDisconnect() {
 		WHERE id=$1
 	`, c.PlayerID)
 
-	// notify room
 	c.Hub.broadcastRoom(c.Room, map[string]any{
 		"type":      "player_disconnect",
 		"player_id": c.PlayerID,
 	})
 
-	// update team list
 	teams := c.Hub.fetchTeams(c.Room)
 	c.Hub.broadcastRoom(c.Room, map[string]any{
 		"type":  "team_update",
@@ -161,7 +160,6 @@ func NewClient(
 		Send:     make(chan []byte, 256),
 	}
 
-	// mark connected
 	if playerID > 0 && hub.DB != nil {
 		_, _ = hub.DB.Exec(`
 			UPDATE players
@@ -200,7 +198,7 @@ func (c *Client) readPump() {
 			return
 		}
 
-		// heartbeat update
+		// heartbeat
 		if c.PlayerID > 0 && c.Hub.DB != nil {
 			_, _ = c.Hub.DB.Exec(`
 				UPDATE players
@@ -209,12 +207,28 @@ func (c *Client) readPump() {
 			`, c.PlayerID)
 		}
 
-		text := strings.TrimSpace(strings.ToLower(string(msg)))
-		if text == "" || text == "ping" {
+		trim := strings.TrimSpace(string(msg))
+		if trim == "" {
 			continue
 		}
 
-		// 🔮 รองรับ future commands (ready / emote / chat)
+		// ---- parse JSON message ----
+		var payload map[string]any
+		if err := json.Unmarshal(msg, &payload); err != nil {
+			continue
+		}
+
+		switch payload["type"] {
+
+		case "game_finish":
+			// ส่งต่อให้ controller / listener อื่น
+			c.Hub.Broadcast <- &Message{
+				Room: c.Room,
+				Data: MustJSON(payload),
+			}
+
+		// future: ready / chat / emote
+		}
 	}
 }
 
@@ -250,7 +264,7 @@ func (c *Client) writePump() {
 }
 
 /* =========================
-   FETCH TEAMS (REAL DATA)
+   FETCH TEAMS
 ========================= */
 func (h *Hub) fetchTeams(roomCode string) []map[string]any {
 	if h.DB == nil {

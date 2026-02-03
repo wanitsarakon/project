@@ -22,8 +22,8 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
 
     // OPTIONAL CALLBACKS
     onOpen,
-    onTeamUpdate,  // () => void (signal only)
-    onScoreUpdate // ({ player_id, score })
+    onTeamUpdate,   // () => void
+    onScoreUpdate,  // ({ player_id, score })
   } = options;
 
   /* =========================
@@ -89,7 +89,7 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
         safeSend({
           type: "join",
           player_id: playerId,
-          mode, // solo | team
+          mode,
         });
         joined = true;
       }
@@ -121,7 +121,7 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
 
       switch (data.type) {
         /* =====================
-           👥 TEAM UPDATE (SIGNAL)
+           👥 TEAM UPDATE
         ===================== */
         case "TEAM_UPDATE":
         case "team_update":
@@ -133,7 +133,12 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
         ===================== */
         case "SCORE_UPDATE":
         case "score_update":
-          onScoreUpdate?.(data);
+          if (
+            typeof data.player_id !== "undefined" &&
+            typeof data.score === "number"
+          ) {
+            onScoreUpdate?.(data);
+          }
           break;
 
         /* =====================
@@ -157,7 +162,7 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
     };
 
     socket.onerror = () => {
-      // let onclose handle reconnect
+      // onclose will handle reconnect
     };
   };
 
@@ -212,7 +217,11 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
      SAFE SEND
   ========================= */
   const safeSend = (data) => {
-    if (destroyed || ws?.readyState !== WebSocket.OPEN) return;
+    if (
+      destroyed ||
+      ws?.readyState !== WebSocket.OPEN
+    )
+      return;
 
     try {
       ws.send(JSON.stringify(data));

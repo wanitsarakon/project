@@ -1,24 +1,26 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 export default function Home({ onSelect }) {
+  const [step, setStep] = useState("landing"); // landing | form
   const [name, setName] = useState("");
-  const [role, setRole] = useState(null); // "host" | "player"
+  const [role, setRole] = useState(null); // host | player
   const [loading, setLoading] = useState(false);
 
   const inputRef = useRef(null);
-  const aliveRef = useRef(true);
 
   /* =========================
-     Lifecycle
+     Focus input เมื่อเข้า form
   ========================= */
   useEffect(() => {
-    aliveRef.current = true;
-    inputRef.current?.focus();
-
-    return () => {
-      aliveRef.current = false;
-    };
-  }, []);
+    if (step === "form") {
+      setTimeout(() => inputRef.current?.focus(), 120);
+    }
+  }, [step]);
 
   /* =========================
      Helpers
@@ -30,7 +32,7 @@ export default function Home({ onSelect }) {
   /* =========================
      Submit
   ========================= */
-  const handleConfirm = useCallback(async () => {
+  const handleConfirm = useCallback(() => {
     if (loading) return;
 
     const normalizedName = normalizeName(name);
@@ -50,96 +52,111 @@ export default function Home({ onSelect }) {
       return;
     }
 
-    try {
-      setLoading(true);
-      await onSelect(role, normalizedName);
-    } finally {
-      if (aliveRef.current) {
-        setLoading(false);
-      }
-    }
+    setLoading(true);
+    onSelect(role, normalizedName);
+    setLoading(false);
   }, [loading, name, role, onSelect, normalizeName]);
 
   /* =========================
-     Keyboard
+     Keyboard (Enter)
   ========================= */
   useEffect(() => {
     const onKeyDown = (e) => {
       if (e.key !== "Enter") return;
       if (loading) return;
-
-      // ป้องกัน Enter จาก input ที่ไม่ใช่ชื่อ
-      if (
-        document.activeElement &&
-        document.activeElement.tagName === "TEXTAREA"
-      ) {
-        return;
-      }
-
+      if (step !== "form") return;
       handleConfirm();
     };
 
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [handleConfirm, loading]);
+    return () =>
+      window.removeEventListener("keydown", onKeyDown);
+  }, [handleConfirm, loading, step]);
 
   /* =========================
      UI
   ========================= */
   return (
     <div className="home-root">
-      <div className="panel" role="main">
-        <h1 className="title">🎪 เกมงานวัด</h1>
+      {/* ===== PANEL กลาง ===== */}
+      <div className="ui-panel">
+        {/* ================= LANDING ================= */}
+        {step === "landing" && (
+          <div className="landing">
+            <h1 className="landing-title">
+              🎉 Temple fair
+              <span>mini-game 2D website</span>
+            </h1>
 
-        {/* Name */}
-        <input
-          ref={inputRef}
-          className="name-input"
-          placeholder="ชื่อของคุณ"
-          value={name}
-          maxLength={20}
-          disabled={loading}
-          aria-label="ชื่อผู้เล่น"
-          onChange={(e) => setName(e.target.value)}
-        />
+            <p className="landing-subtitle">
+              เรียนเชิญเข้าสู่งานวัดชิงรางวัล
+            </p>
 
-        {/* Role selection */}
-        <div className="role-row">
-          <button
-            type="button"
-            className={`role-btn ${role === "host" ? "active" : ""}`}
-            onClick={() => !loading && setRole("host")}
-            disabled={loading}
-            aria-pressed={role === "host"}
-          >
-            🧑‍💼 Host
-          </button>
-
-          <button
-            type="button"
-            className={`role-btn ${role === "player" ? "active" : ""}`}
-            onClick={() => !loading && setRole("player")}
-            disabled={loading}
-            aria-pressed={role === "player"}
-          >
-            🎮 Player
-          </button>
-        </div>
-
-        {/* Hint */}
-        {!role && !loading && (
-          <p className="hint-text">👆 กรุณาเลือกบทบาทก่อน</p>
+            <button
+              className="enter-btn"
+              onClick={() => setStep("form")}
+            >
+              ▶ เข้าสู่เกม
+            </button>
+          </div>
         )}
 
-        {/* Confirm */}
-        <button
-          className="confirm-btn"
-          onClick={handleConfirm}
-          disabled={loading}
-          style={{ marginTop: 16 }}
-        >
-          {loading ? "⏳ กำลังดำเนินการ..." : "ตกลง"}
-        </button>
+        {/* ================= FORM ================= */}
+        {step === "form" && (
+          <div role="main">
+            <h2 className="form-title">เริ่มเล่นเกม</h2>
+
+            <input
+              ref={inputRef}
+              className="name-input"
+              placeholder="ชื่อของคุณ"
+              value={name}
+              maxLength={20}
+              disabled={loading}
+              onChange={(e) => setName(e.target.value)}
+            />
+
+            <div className="role-row">
+              <button
+                className={`role-btn ${
+                  role === "host" ? "active" : ""
+                }`}
+                onClick={() => setRole("host")}
+                disabled={loading}
+              >
+                🧑‍💼 Host
+              </button>
+
+              <button
+                className={`role-btn ${
+                  role === "player" ? "active" : ""
+                }`}
+                onClick={() => setRole("player")}
+                disabled={loading}
+              >
+                🎮 Player
+              </button>
+            </div>
+
+            <button
+              className="confirm-btn"
+              onClick={handleConfirm}
+              disabled={loading}
+            >
+              {loading
+                ? "⏳ กำลังดำเนินการ..."
+                : "ตกลง"}
+            </button>
+
+            <button
+              className="back-btn"
+              onClick={() => setStep("landing")}
+              disabled={loading}
+            >
+              ← กลับ
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

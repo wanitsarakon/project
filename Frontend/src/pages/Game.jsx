@@ -15,6 +15,7 @@ export default function Game({
 }) {
   const wsRef = useRef(null);
   const finishedRef = useRef(false);
+  const socketClosedRef = useRef(false);
 
   /* =========================
      OPEN WS (GAME SCOPE)
@@ -24,6 +25,7 @@ export default function Game({
     if (!roomCode || !player?.id) return;
 
     finishedRef.current = false;
+    socketClosedRef.current = false;
 
     // 🔒 ปิด socket เก่าถ้ามี
     try {
@@ -43,24 +45,22 @@ export default function Game({
     );
 
     return () => {
-      // cleanup: ปิด WS ถ้ายังไม่ปิด
-      try {
-        wsRef.current?.close();
-      } catch {}
-      wsRef.current = null;
+      closeSocketOnce();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomCode, player?.id]);
 
   /* =========================
      SAFE CLOSE WS (ONCE)
   ========================= */
   const closeSocketOnce = () => {
-    if (wsRef.current) {
-      try {
-        wsRef.current.close();
-      } catch {}
-      wsRef.current = null;
-    }
+    if (socketClosedRef.current) return;
+    socketClosedRef.current = true;
+
+    try {
+      wsRef.current?.close();
+    } catch {}
+    wsRef.current = null;
   };
 
   /* =========================
@@ -98,7 +98,12 @@ export default function Game({
     return (
       <div style={{ padding: 24, textAlign: "center" }}>
         <p>⚠️ ข้อมูลเกมไม่ครบ</p>
-        <button onClick={onExit}>กลับหน้าซุ้มเกม</button>
+        <button
+          onClick={() => onExit?.()}
+          style={{ padding: "8px 16px" }}
+        >
+          กลับหน้าซุ้มเกม
+        </button>
       </div>
     );
   }
@@ -111,19 +116,21 @@ export default function Game({
       <GameContainer
         roomCode={roomCode}
         player={player}
-        wsRef={wsRef}             // ✅ WS เดียวตลอดมินิเกม
-        onGameEnd={handleGameEnd} // ✅ จบเกมครั้งเดียว
+        wsRef={wsRef}              // ✅ WS เดียวตลอดมินิเกม
+        onGameEnd={handleGameEnd}  // ✅ จบเกมครั้งเดียว
       />
 
       {/* Manual Exit */}
       <div style={{ textAlign: "center", marginTop: 16 }}>
         <button
           onClick={handleExit}
+          disabled={finishedRef.current}
           style={{
             padding: "8px 16px",
             borderRadius: 8,
             border: "none",
             cursor: "pointer",
+            opacity: finishedRef.current ? 0.6 : 1,
           }}
         >
           ⬅ กลับหน้าซุ้มเกม

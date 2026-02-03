@@ -2,7 +2,6 @@ import React, { useEffect, useRef } from "react";
 import Phaser from "phaser";
 
 import FestivalMapScene from "../games/FestivalMapScene";
-import DollShootScene from "./DollShooting/DollShootScene";
 import FishScoopingScene from "./FishScooping/FishScoopingScene";
 
 export default function GameContainer({
@@ -14,7 +13,7 @@ export default function GameContainer({
   const gameRef = useRef(null);
   const containerRef = useRef(null);
 
-  // ⭐ round ปัจจุบันจาก WS
+  // 🎯 current round id (จาก backend)
   const currentRoundIdRef = useRef(null);
 
   // 🔒 กัน stale closure
@@ -29,10 +28,12 @@ export default function GameContainer({
   useEffect(() => {
     if (!wsRef?.current) return;
 
-    const prevHandler = wsRef.current.onMessage;
+    const socket = wsRef.current;
+    const originalHandler = socket.onMessage;
 
     const handleWS = (msg) => {
-      prevHandler?.(msg);
+      // ส่งต่อ handler เดิมก่อน
+      originalHandler?.(msg);
 
       if (msg?.type === "round_start") {
         currentRoundIdRef.current = msg.round_id;
@@ -40,12 +41,10 @@ export default function GameContainer({
       }
     };
 
-    wsRef.current.onMessage = handleWS;
+    socket.onMessage = handleWS;
 
     return () => {
-      if (wsRef.current) {
-        wsRef.current.onMessage = prevHandler || null;
-      }
+      socket.onMessage = originalHandler || null;
     };
   }, [wsRef]);
 
@@ -62,7 +61,6 @@ export default function GameContainer({
       height: 600,
       backgroundColor: "#000",
 
-      // ✅🔥 สำคัญที่สุด — ต้องมี physics
       physics: {
         default: "arcade",
         arcade: {
@@ -72,12 +70,12 @@ export default function GameContainer({
       },
 
       scale: {
-        mode: Phaser.Scale.NONE,
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
       },
 
       scene: [
         FestivalMapScene,
-        DollShootScene,
         FishScoopingScene,
       ],
     };
@@ -94,44 +92,29 @@ export default function GameContainer({
       const roundId =
         currentRoundIdRef.current ?? "solo-mode";
 
-      console.log("🎮 Enter game:", gameKey, "round:", roundId);
-
       const backToMap = () => {
+        if (!gameRef.current) return;
+
         game.scene.start("FestivalMapScene", {
           roomCode,
           player,
+          currentRound: roundId,
           onEnterGame: handleEnterGame,
         });
       };
 
       switch (gameKey) {
-        case "FishScoopingScene": {
+        case "FishScoopingScene":
           game.scene.start("FishScoopingScene", {
             roomCode,
             player,
             roundId,
-            wsRef,
             onGameEnd: (result) => {
               onGameEndRef.current?.(result);
               backToMap();
             },
           });
           break;
-        }
-
-        case "SHOOT": {
-          game.scene.start("DollShootScene", {
-            roomCode,
-            player,
-            roundId,
-            wsRef,
-            onGameEnd: (result) => {
-              onGameEndRef.current?.(result);
-              backToMap();
-            },
-          });
-          break;
-        }
 
         default:
           console.warn(
@@ -147,6 +130,7 @@ export default function GameContainer({
     game.scene.start("FestivalMapScene", {
       roomCode,
       player,
+      currentRound: currentRoundIdRef.current,
       onEnterGame: handleEnterGame,
     });
 
@@ -154,12 +138,12 @@ export default function GameContainer({
        🧹 CLEANUP
     ========================= */
     return () => {
-      if (!gameRef.current) return;
-
-      gameRef.current.destroy(true);
-      gameRef.current = null;
+      if (gameRef.current) {
+        gameRef.current.destroy(true);
+        gameRef.current = null;
+      }
     };
-  }, []);
+  }, []); // ❗ ต้องเป็น [] เท่านั้น
 
   /* =========================
      RENDER
@@ -169,8 +153,9 @@ export default function GameContainer({
       ref={containerRef}
       id="phaser-root"
       style={{
-        width: 800,
-        height: 600,
+        width: "100%",
+        maxWidth: 900,
+        aspectRatio: "4 / 3",
         margin: "0 auto",
         borderRadius: 16,
         overflow: "hidden",

@@ -46,9 +46,6 @@ export default function Host({
     };
   }, []);
 
-  /* =========================
-     PRIVATE ROOM EFFECT
-  ========================= */
   useEffect(() => {
     if (isPrivate) {
       setTimeout(() => passwordRef.current?.focus(), 0);
@@ -114,12 +111,7 @@ export default function Host({
         }),
       });
 
-      let data = null;
-      try {
-        data = await res.json();
-      } catch {
-        throw new Error("Invalid server response");
-      }
+      const data = await res.json();
 
       if (!res.ok) {
         throw new Error(data?.error || "สร้างห้องไม่สำเร็จ");
@@ -129,11 +121,10 @@ export default function Host({
         setRoomCode(data.room_code);
         setCreatedPlayer({
           ...data.player,
-          isHost: true, // ⭐ สำคัญมาก
+          isHost: true,
         });
       });
     } catch (err) {
-      console.error("❌ createRoom error:", err);
       setSafeState(() =>
         setError(
           err?.message ||
@@ -169,15 +160,16 @@ export default function Host({
   ========================= */
   return (
     <div className="home-root">
-      <div className="panel">
-        <h2>🧑‍💼 Host</h2>
+      {/* ✅ PANEL กลาง (แก้ปัญหามองไม่เห็น) */}
+      <div className="ui-panel">
+        <h2 className="form-title">🧑‍💼 Host</h2>
 
-        <p>
+        <p style={{ color: "#fff", marginBottom: 12 }}>
           ชื่อ: <b>{host?.name || "-"}</b>
         </p>
 
         {error && (
-          <p style={{ color: "red", marginBottom: 12 }}>
+          <p style={{ color: "#ffb3b3", marginBottom: 12 }}>
             {error}
           </p>
         )}
@@ -185,39 +177,44 @@ export default function Host({
         {!roomCode && (
           <>
             {/* MODE */}
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ marginBottom: 6 }}>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ color: "#fff", marginBottom: 6 }}>
                 🎮 โหมดการเล่น
               </div>
 
-              <button
-                className={`role-btn ${mode === "solo" ? "active" : ""}`}
-                onClick={() => !loading && setMode("solo")}
-                disabled={loading}
-              >
-                เดี่ยว (Solo)
-              </button>
+              <div className="role-row">
+                <button
+                  className={`role-btn ${
+                    mode === "solo" ? "active" : ""
+                  }`}
+                  onClick={() => !loading && setMode("solo")}
+                  disabled={loading}
+                >
+                  เดี่ยว (Solo)
+                </button>
 
-              <button
-                className={`role-btn ${mode === "team" ? "active" : ""}`}
-                onClick={() => !loading && setMode("team")}
-                disabled={loading}
-                style={{ marginLeft: 8 }}
-              >
-                ทีม (Team)
-              </button>
+                <button
+                  className={`role-btn ${
+                    mode === "team" ? "active" : ""
+                  }`}
+                  onClick={() => !loading && setMode("team")}
+                  disabled={loading}
+                >
+                  ทีม (Team)
+                </button>
+              </div>
             </div>
 
             {/* MAX PLAYERS */}
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ marginBottom: 6 }}>
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ color: "#fff", marginBottom: 6 }}>
                 👥 จำนวนผู้เล่นสูงสุด (1–100)
               </div>
 
               <input
+                className="room-input"
                 type="text"
                 inputMode="numeric"
-                pattern="[0-9]*"
                 value={maxPlayers}
                 onChange={(e) => {
                   if (loading) return;
@@ -228,13 +225,16 @@ export default function Host({
                   );
                 }}
                 disabled={loading}
-                className="room-input"
-                style={{ width: 120, textAlign: "center" }}
               />
             </div>
 
-            {/* PRIVATE ROOM */}
-            <div style={{ marginBottom: 12 }}>
+            {/* PRIVATE */}
+            <div
+              style={{
+                marginBottom: 12,
+                color: "#fff",
+              }}
+            >
               <label>
                 <input
                   type="checkbox"
@@ -243,7 +243,7 @@ export default function Host({
                     !loading && setIsPrivate(e.target.checked)
                   }
                   disabled={loading}
-                />
+                />{" "}
                 🔒 ห้องส่วนตัว
               </label>
             </div>
@@ -265,17 +265,24 @@ export default function Host({
               className="confirm-btn"
               onClick={createRoom}
               disabled={loading}
-              style={{ marginTop: 16 }}
             >
-              {loading ? "⏳ กำลังสร้างห้อง..." : "➕ สร้างห้อง"}
+              {loading
+                ? "⏳ กำลังสร้างห้อง..."
+                : "➕ สร้างห้อง"}
             </button>
           </>
         )}
 
         {roomCode && (
           <div style={{ marginTop: 18, textAlign: "center" }}>
-            <p>🎟 เลขที่ห้อง</p>
-            <div style={{ fontSize: 32, fontWeight: "bold" }}>
+            <p style={{ color: "#fff" }}>🎟 เลขที่ห้อง</p>
+            <div
+              style={{
+                fontSize: 32,
+                fontWeight: "bold",
+                color: "#ffd966",
+              }}
+            >
               {roomCode}
             </div>
 
@@ -290,15 +297,9 @@ export default function Host({
         )}
 
         <button
+          className="back-btn"
           onClick={onBack}
           disabled={loading}
-          style={{
-            marginTop: 16,
-            background: "transparent",
-            border: "none",
-            cursor: "pointer",
-            color: "#555",
-          }}
         >
           ← ย้อนกลับ
         </button>

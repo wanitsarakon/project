@@ -12,11 +12,11 @@ import (
    - Shared: WS / Hub / Controller
    - panic-safe
    - goroutine-safe
-   - never return nil
+   - never return nil slice
    - debug-friendly
 ========================= */
 
-// immutable empty JSON (READ-ONLY)
+// immutable empty JSON (READ-ONLY, NEVER MODIFY)
 var emptyJSON = []byte("{}")
 
 /*
@@ -30,24 +30,27 @@ MustJSON
 */
 func MustJSON(v any) []byte {
 
-	// fast path: nil
+	/* ---------- FAST PATH ---------- */
+
 	if v == nil {
 		return emptyJSON
 	}
 
-	// fast path: already JSON
 	switch t := v.(type) {
 	case []byte:
 		if len(t) == 0 {
 			return emptyJSON
 		}
 		return t
+
 	case json.RawMessage:
 		if len(t) == 0 {
 			return emptyJSON
 		}
 		return []byte(t)
 	}
+
+	/* ---------- PANIC SAFE ---------- */
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -60,6 +63,8 @@ func MustJSON(v any) []byte {
 		}
 	}()
 
+	/* ---------- MARSHAL ---------- */
+
 	b, err := json.Marshal(v)
 	if err != nil {
 		log.Printf(
@@ -70,7 +75,6 @@ func MustJSON(v any) []byte {
 		return emptyJSON
 	}
 
-	// safety guard
 	if len(b) == 0 {
 		return emptyJSON
 	}
@@ -85,27 +89,31 @@ TryJSON
 - caller handle error เอง
 - เหมาะกับ REST API / HTTP response
 - ❌ ไม่ panic
+- ❌ ไม่คืน nil slice
 */
 func TryJSON(v any) ([]byte, error) {
 
-	// fast path: nil
+	/* ---------- FAST PATH ---------- */
+
 	if v == nil {
 		return emptyJSON, nil
 	}
 
-	// fast path: already JSON
 	switch t := v.(type) {
 	case []byte:
 		if len(t) == 0 {
 			return emptyJSON, nil
 		}
 		return t, nil
+
 	case json.RawMessage:
 		if len(t) == 0 {
 			return emptyJSON, nil
 		}
 		return []byte(t), nil
 	}
+
+	/* ---------- PANIC SAFE ---------- */
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -118,6 +126,8 @@ func TryJSON(v any) ([]byte, error) {
 		}
 	}()
 
+	/* ---------- MARSHAL ---------- */
+
 	b, err := json.Marshal(v)
 	if err != nil {
 		log.Printf(
@@ -125,7 +135,7 @@ func TryJSON(v any) ([]byte, error) {
 			err,
 			reflect.TypeOf(v),
 		)
-		return nil, err
+		return emptyJSON, err
 	}
 
 	if len(b) == 0 {

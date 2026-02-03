@@ -14,7 +14,7 @@ export default class FestivalMapScene extends Phaser.Scene {
   ===================== */
   init(data = {}) {
     this.currentRound = data.currentRound ?? 1;
-    this.onEnterGame = data.onEnterGame;
+    this.onEnterGame = data.onEnterGame ?? null;
   }
 
   /* =====================
@@ -22,11 +22,12 @@ export default class FestivalMapScene extends Phaser.Scene {
   ===================== */
   preload() {
     this.load.image("map", "/assets/Map.png");
-    this.load.image("fish", "/assets/FishScooping.png");
-    this.load.image("carousel", "/assets/carousel.png");
-    this.load.image("shoot", "/assets/shootdolls.png");
-    this.load.image("cotton", "/assets/CottonandyandLukChup.png");
-    this.load.image("worship", "/assets/Worship.png");
+
+    this.load.image("booth-fish", "/assets/fish_booth.png");
+    this.load.image("booth-carousel", "/assets/carousel_booth.png");
+    this.load.image("booth-shoot", "/assets/shoot_booth.png");
+    this.load.image("booth-cotton", "/assets/cotton_booth.png");
+    this.load.image("booth-worship", "/assets/worship_booth.png");
 
     this.load.image("lock", "/assets/lock.png");
     this.load.image("unlock", "/assets/unlock.png");
@@ -36,44 +37,69 @@ export default class FestivalMapScene extends Phaser.Scene {
      CREATE
   ===================== */
   create() {
-  /* ===== MAP ===== */
-  this.add.image(400, 300, "map");
+    const { width, height } = this.scale;
 
-  /* ===== BOOTH POSITIONS (กำหนดตามจุดแดง) ===== */
-  const BOOTH_POINTS = [
-    { x: 220, y: 210, key: "fish",     label: "เกมตักปลา",   gameKey: "FishScoopingScene", order: 1 },
-    { x: 400, y: 200, key: "carousel", label: "เกมขี่ม้า",    gameKey: "CAROUSEL",          order: 2 },
-    { x: 580, y: 220, key: "shoot",    label: "เกมยิงตุ๊กตา", gameKey: "SHOOT",             order: 3 },
-    { x: 320, y: 420, key: "worship",  label: "จุดไหว้ขอพร",  gameKey: "WORSHIP",           order: 4 },
-    { x: 520, y: 420, key: "cotton",   label: "เกมทำสายไหม",  gameKey: "COTTON",            order: 5 },
-  ];
+    /* ===== CLEAR SAFETY ===== */
+    this.children.removeAll(true);
+    this.cameras.main.setBackgroundColor("#000");
 
-  /* ===== PATH ===== */
-  this.drawPath(
-    BOOTH_POINTS.map(p => ({ x: p.x, y: p.y }))
-  );
+    /* ===== MAP ===== */
+    this.add.image(width / 2, height / 2, "map");
 
-  /* ===== BOOTHS ===== */
-  this.booths = [];
+    /* ===== BOOTH DATA ===== */
+    const BOOTH_POINTS = [
+      {
+        x: 220,
+        y: 210,
+        key: "booth-fish",
+        label: "เกมตักปลา",
+        gameKey: "FishScoopingScene",
+        order: 1,
+      },
+      {
+        x: 400,
+        y: 200,
+        key: "booth-carousel",
+        label: "เกมขี่ม้า",
+        gameKey: "CAROUSEL",
+        order: 2,
+      },
+      {
+        x: 580,
+        y: 220,
+        key: "booth-shoot",
+        label: "เกมยิงตุ๊กตา",
+        gameKey: "SHOOT",
+        order: 3,
+      },
+      {
+        x: 320,
+        y: 420,
+        key: "booth-worship",
+        label: "จุดไหว้ขอพร",
+        gameKey: "WORSHIP",
+        order: 4,
+      },
+      {
+        x: 520,
+        y: 420,
+        key: "booth-cotton",
+        label: "เกมทำสายไหม",
+        gameKey: "COTTON",
+        order: 5,
+      },
+    ];
 
-  BOOTH_POINTS.forEach(p => {
-    this.createBooth(
-      p.x,
-      p.y,
-      p.key,
-      p.label,
-      p.gameKey,
-      p.order
-    );
-  });
+    /* ===== PATH ===== */
+    this.drawPath(BOOTH_POINTS);
 
-  /* ===== ROUND EVENTS ===== */
-  this.game.events.on("round_start", this.onRoundStart, this);
-  this.game.events.on("round_end", this.onRoundEnd, this);
+    /* ===== BOOTHS ===== */
+    this.booths = [];
+    BOOTH_POINTS.forEach((p) => this.createBooth(p));
 
-  this.events.once("shutdown", this.onShutdown, this);
-  this.events.once("destroy", this.onShutdown, this);
-}
+    this.events.once("shutdown", this.onShutdown, this);
+    this.events.once("destroy", this.onShutdown, this);
+  }
 
   /* =====================
      DRAW PATH
@@ -99,7 +125,7 @@ export default class FestivalMapScene extends Phaser.Scene {
   /* =====================
      CREATE BOOTH
   ===================== */
-  createBooth(x, y, key, label, gameKey, order) {
+  createBooth({ x, y, key, label, gameKey, order }) {
     const booth = this.add.container(x, y);
 
     const img = this.add
@@ -141,58 +167,52 @@ export default class FestivalMapScene extends Phaser.Scene {
   /* =====================
      UPDATE BOOTH STATE
   ===================== */
-  updateBoothState(boothData) {
-    const { order, img, lockIcon, text, gameKey } = boothData;
-    const shouldUnlock = order === this.currentRound;
+  updateBoothState(b) {
+    const shouldUnlock = b.order === this.currentRound;
 
-    if (shouldUnlock && !boothData.unlocked) {
-      boothData.unlocked = true;
-      this.playUnlock(lockIcon);
+    /* ===== UNLOCK ===== */
+    if (shouldUnlock && !b.unlocked) {
+      b.unlocked = true;
 
-      img.clearTint().setAlpha(1);
-      img.setInteractive({ useHandCursor: true });
+      if (b.lockIcon?.active) {
+        this.playUnlock(b.lockIcon);
+        b.lockIcon = null;
+      }
 
-      img.once("pointerdown", () => {
-        this.onEnterGame?.({ gameKey });
+      b.img.clearTint().setAlpha(1);
+      b.img.setInteractive({ useHandCursor: true });
+      b.img.removeAllListeners();
+
+      b.img.once("pointerdown", () => {
+        this.onEnterGame?.({ gameKey: b.gameKey });
       });
 
-      text.setStyle({
+      b.text.setStyle({
         backgroundColor: "#ffd28a",
         color: "#5b2c00",
       });
 
-      // ✅ animation เฉพาะ img (ไม่ทำให้ตำแหน่งเพี้ยน)
-      boothData.floatTween = this.tweens.add({
-        targets: img,
+      b.floatTween = this.tweens.add({
+        targets: b.img,
         y: -28,
         duration: 1400,
         yoyo: true,
         repeat: -1,
-        ease: "sine.inOut",
+        ease: "Sine.easeInOut",
       });
     }
 
+    /* ===== LOCK ===== */
     if (!shouldUnlock) {
-      img.setTint(0x777777).setAlpha(0.55);
-      img.disableInteractive();
+      b.img.setTint(0x777777).setAlpha(0.55);
+      b.img.disableInteractive();
+      b.img.removeAllListeners();
 
-      boothData.floatTween?.stop();
-      boothData.floatTween = null;
-      img.y = -22;
+      b.floatTween?.stop();
+      b.floatTween = null;
+      b.img.y = -22;
     }
   }
-
-  /* =====================
-     ROUND EVENTS
-  ===================== */
-  onRoundStart(data) {
-    if (!data?.round) return;
-
-    this.currentRound = data.round;
-    this.booths.forEach((b) => this.updateBoothState(b));
-  }
-
-  onRoundEnd() {}
 
   /* =====================
      UNLOCK ANIMATION
@@ -200,9 +220,8 @@ export default class FestivalMapScene extends Phaser.Scene {
   playUnlock(lockIcon) {
     this.tweens.add({
       targets: lockIcon,
-      scale: 0.05,
+      scale: 0.08,
       duration: 600,
-      yoyo: true,
       ease: "Back.easeOut",
       onComplete: () => {
         lockIcon.setTexture("unlock");
@@ -223,11 +242,11 @@ export default class FestivalMapScene extends Phaser.Scene {
      CLEANUP
   ===================== */
   onShutdown() {
-    this.game.events.off("round_start", this.onRoundStart, this);
-    this.game.events.off("round_end", this.onRoundEnd, this);
-
     this.booths.forEach((b) => {
       b.floatTween?.stop();
+      b.img.removeAllListeners();
     });
+
+    this.booths = [];
   }
 }
