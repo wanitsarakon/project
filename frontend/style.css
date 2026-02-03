@@ -1,0 +1,446 @@
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700;800&display=swap');
+
+/* --- Root & Body Setup --- */
+body {
+    font-family: 'Sarabun', sans-serif;
+    background-image: url('images/bg.png'); 
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    margin: 0; 
+    padding: 0; 
+    height: 100vh; 
+    overflow: hidden; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    color: #3e2723;
+}
+
+/* --- Main Layout --- */
+.main-container {
+    width: 100%;
+    max-width: 1400px;
+    padding: 10px 20px;
+    box-sizing: border-box;
+    height: 100vh; 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-bottom: 140px; 
+}
+
+.hud-header { 
+    display: flex; 
+    justify-content: space-between; /* ป้ายจะแยกไปซ้ายสุด-ขวาสุด */
+    width: 100%; 
+    max-width: 1000px; /* ลดตัวเลขนี้เพื่อดึงป้ายทั้งสองเข้าหากัน */
+    margin: 0 auto;   /* จัดกลุ่มป้ายให้อยู่กลางหน้าจอ */
+    
+    /* หากต้องการเลื่อนลงจากขอบบนหน้าจอ */
+    margin-top:  5px; 
+}
+
+/* สไตล์ร่วมของป้ายทั้งสอง */
+.hud-box {
+    background-color: transparent !important; 
+    border: none !important;
+    box-shadow: none !important;
+    background-image: url('images/counttime.png'); 
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center;
+    width: 180px;
+    height: 145px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+}
+
+/* [แยกปรับ] เฉพาะป้ายเวลา */
+#timer-box {
+    transform: translateY(-20px);  /* ปรับตัวเลขนี้เพื่อเลื่อนเวลาขึ้น-ลง */
+    padding-left: 5px;   /* ปรับตัวเลขนี้เพื่อเลื่อนเวลาซ้าย-ขวา */
+}
+
+/* [แยกปรับ] เฉพาะป้ายคะแนน */
+#score-box {
+    transform: translateY(-20px); /* ปรับตัวเลขนี้เพื่อเลื่อนคะแนนขึ้น-ลง */
+    padding-left: 5px;   /* ปรับตัวเลขนี้เพื่อเลื่อนคะแนนซ้าย-ขวา */
+}
+
+/* สไตล์ตัวเลข */
+.hud-value {
+    font-size: 2.0rem !important;
+    font-weight: 900;
+    text-shadow: 2px 2px 0px #fff;
+    line-height: 1;
+
+    /* --- ส่วนที่ทำให้ขยับเฉพาะเลขได้อิสระ --- */
+    position: relative; 
+    
+    /* ค่าติดลบ = ดันขึ้น | ค่าบวก = ดันลง */
+    top: -6px;  /* ลองเปลี่ยนจาก -15px เป็น -20px หรือ -30px เพื่อดันขึ้นให้สูงขึ้นอีก */
+    
+    /* ค่าบวก = ขยับไปขวา | ค่าติดลบ = ขยับไปซ้าย */
+    left: 0px;   
+}
+
+#timer { color: #d32f2f; } /* เวลาสีแดง */
+#score { color: #2e7d32; } /* คะแนนสีเขียว */
+
+/* --- Progress Section --- */
+.progress-section {
+    width: 100%;
+    max-width: 700px;
+    position: relative;
+    margin-top: -20px;
+    margin-bottom: 15px;
+    text-align: center;
+    z-index: 5;
+}
+
+.progress-bar-container { 
+    width: 100%; 
+    height: 22px; 
+    background: #4e342e; 
+    border: 2px solid #ffca28; 
+    border-radius: 12px; 
+    overflow: hidden; 
+}
+
+.progress-fill { 
+    height: 100%; 
+    background: linear-gradient(to right, #66bb6a, #2e7d32); 
+    width: 0%; 
+    transition: width 0.3s ease; 
+}
+
+.progress-text { 
+    position: absolute; 
+    top: -24px; 
+    left: 0; 
+    width: 100%; 
+    text-align: center; 
+    color: #ffd700; 
+    font-weight: bold; 
+    font-size: 1.2rem; 
+    text-shadow: 1px 1px 2px black; 
+}
+
+.instruction { 
+    color: #ffd700; 
+    font-size: 1.3rem; 
+    font-weight: bold; 
+    text-shadow: 2px 2px 4px #000; 
+    margin-bottom: 20px; 
+    background: rgba(0,0,0,0.5); 
+    padding: 4px 20px; 
+    border-radius: 20px; 
+}
+
+.card-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center; 
+    flex: 1;
+    position: relative;
+    
+    /* --- ปรับขนาดที่นี่เพื่อให้ใหญ่ขึ้นทั้งชุด --- */
+    max-width: 500px;  /* ขยับขึ้นเป็น 250px หรือมากกว่าตามความต้องการ */
+    margin: 0 auto;
+}
+
+.game-board {
+    display: flex;
+    justify-content: center;
+    gap: 20px;         /* เพิ่มระยะห่างระหว่างการ์ดเพื่อให้ดูไม่อึดอัดเมื่อการ์ดใหญ่ขึ้น */
+    width: 100%;
+    padding: 0px;   /* เพิ่มพื้นที่ขอบซ้ายขวาของบอร์ด */
+}
+
+.image-box {
+
+    
+    background-color: #350901;
+    border: 2px solid #463205e4; /* ความหนาของขอบทอง */
+    box-shadow: 0 6px 12px rgba(0,0,0,0.6);
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* หากต้องการให้กรอบมีขนาดคงที่ ไม่ขยายตามหน้าจอ ให้ใช้: */
+    width: 140px; 
+    height: 240px; 
+}
+
+.real-img {
+    display: block;
+    width: 100%;      /* ขยายรูปให้เต็มความกว้างกรอบ */
+    height: 100%;     /* ขยายรูปให้เต็มความสูงกรอบ */
+    object-fit: cover; /* หรือใช้ 'contain' ถ้าไม่อยากให้รูปโดนตัดขอบ */
+}
+
+.drop-zone {
+    width: 100%;
+    height: 70px; 
+    min-height: 70px;
+    background: rgba(255, 236, 179, 0.3);
+    border: 3px solid #b8860b;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+    transition: opacity 0.3s;
+    margin-top: 30px;
+}
+
+/* --- Deck Area --- */
+.deck-area {
+    width: 100%; 
+    height: 110px;
+    background: linear-gradient(to top, rgba(62, 39, 35, 0.95), rgba(62, 39, 35, 0.7));
+    border-top: 3px solid #ffca28; 
+    display: none;
+    justify-content: center; 
+    align-items: center; 
+    gap: 20px;
+    position: fixed; 
+    bottom: 0; 
+    left: 0; 
+    z-index: 10; 
+    padding: 10px;
+    box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
+}
+
+.name-card-img {
+    cursor: grab; 
+    filter: drop-shadow(0 3px 4px rgba(0,0,0,0.5));
+    transition: transform 0.1s; 
+    height: 70px !important; 
+    width: auto;
+}
+
+.modal-overlay { 
+    position: fixed; 
+    top: 0; left: 0; 
+    width: 100%; height: 100%; 
+    display: none; 
+    justify-content: center; 
+    align-items: center; 
+    backdrop-filter: blur(8px); 
+    z-index: 1000; 
+}
+
+.modal-content { 
+    background: linear-gradient(to bottom, #fff8e1, #ffe082); 
+    border: 5px solid #8d6e63; 
+    border-radius: 20px; 
+    padding: 40px; 
+    text-align: center; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+.modal-header { 
+    font-size: 2rem; 
+    font-weight: 800; 
+    color: #3e2723; 
+    margin-bottom: 20px; 
+    border-bottom: 2px dashed #8d6e63; 
+    padding-bottom: 10px; 
+}
+
+
+/* แอนิเมชันขยับตัว NPC */
+@keyframes nudge {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-12px) rotate(2deg); }
+}
+/* --- หน้าเริ่มเกมแบบใช้รูปพื้นหลัง --- */
+/* --- ปรับแต่งกระดานเริ่มเกมหลัก --- */
+.start-board {
+    position: relative; /* สำคัญ: เพื่อให้กล่องข้อความอ้างอิงตำแหน่งกับป้ายนี้ */
+    background-image: url('images/start.png');
+    background-size: 100% 100%;
+    width: 550px;
+    height: 340px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding-top: 60px;
+    filter: drop-shadow(0 15px 30px rgba(0,0,0,0.6));
+    /* ขยับป้ายไปทางขวาตามที่คุณต้องการ */
+    margin-left: 250px; 
+    margin-bottom: -50px;
+}
+
+
+/* --- ฟองคำพูด: ลอยอยู่ข้างบนป้ายด่านเกม --- */
+.speech-bubble {
+    position: absolute;
+    top: -130px; /* ลอยขึ้นไปเหนือหัวป้ายด่านเกม */
+    left: 10%;
+    transform: translateX(-50%); /* จัดให้อยู่กึ่งกลางแนวนอน */
+    background: #ffffff;
+    border: 4px solid #3e2723;
+    border-radius: 20px;
+    padding: 15px 25px;
+    width: 400px;
+    text-align: center;
+    font-weight: bold;
+    color: #3e2723;
+    font-size: 1.1rem;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+    z-index: 100;
+}
+
+/* หางฟองคำพูดชี้ลง */
+.speech-bubble:after {
+    content: '';
+    position: absolute;
+    bottom: -18px;
+    left: 20%; /* ให้หางชี้ไปทางฝั่ง NPC */
+    border-width: 18px 15px 0;
+    border-style: solid;
+    border-color: #fffcfb transparent;
+}
+
+/* กลุ่มเนื้อหาข้อความและปุ่ม */
+.start-content-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: -20px; /* ระยะห่างระหว่างหัวข้อกับปุ่ม */
+}
+
+.start-title {
+    font-size: 2.8rem;
+    color: #ffd700; /* สีทองสว่าง */
+    text-shadow: 3px 3px 0px #3e2723;
+    margin: 0;
+    margin-top: -30px; /* ใส่ค่าลบเพื่อดึงข้อความขึ้นไปด้านบน */
+    margin-bottom: 5px; /* เว้นระยะห่างจากปุ่มด้านล่าง */
+}
+
+/* --- 2. ปรับตำแหน่งตัวละคร NPC --- */
+.npc-container {
+    position: absolute; /* ตั้งค่าให้เป็นอิสระจากองค์ประกอบอื่น */
+    
+    /* --- ส่วนที่ต้องปรับเพื่อขยับ NPC --- */
+    left: 250px;        /* เพิ่มตัวเลขเพื่อขยับไปทาง 'ขวา' | ลดตัวเลขเพื่อขยับไปทาง 'ซ้าย' */
+    bottom: -20px;      /* เพิ่มตัวเลขเพื่อขยับ 'ขึ้น' | ลดตัวเลขเพื่อขยับ 'ลง' */
+    
+    z-index: 1001;     /* มั่นใจว่าตัวละครไม่อยู่หลังป้าย */
+}
+.npc-character {
+    width: 300px;
+    height: auto;
+    filter: drop-shadow(10px 10px 15px rgba(0,0,0,0.5));
+    animation: nudge 3s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+.btn-green-start {
+    background: linear-gradient(to bottom, #4CAF50, #2E7D32);
+    color: white; 
+    border: 3px solid #fff; 
+    border-radius: 50px;
+    padding: 5px 30px; 
+    font-size: 2rem; 
+    font-weight: 800;
+    cursor: pointer; 
+    box-shadow: 0 5px 0px #1b5e20;
+    transition: all 0.2s;
+    margin-top: 20px;
+}
+
+.btn-green-start:hover { transform: scale(1.05); box-shadow: 0 8px 0px #1b5e20; }
+.btn-green-start:active { transform: translateY(3px); box-shadow: 0 2px 0px #1b5e20; }
+#countdownNumber { 
+    font-size: 10rem; 
+    color: #ffd700; 
+    font-weight: 800; 
+    text-shadow: 0 0 30px #000; 
+}
+
+/* --- Feedback --- */
+.correct-box .image-box { border-color: #4caf50 !important; box-shadow: 0 0 20px #4caf50; }
+.wrong-box .image-box { border-color: #f44336 !important; box-shadow: 0 0 20px #f44336; }
+
+/* --- ปรับแต่งหน้าสรุปคะแนน (Result Board) --- */
+.result-board {
+    background-image: url('images/start.png') !important;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    width: 600px;
+    height: 450px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* จัดกึ่งกลางแนวตั้ง */
+    align-items: center;     /* จัดกึ่งกลางแนวนอน */
+    padding-top: 40px;       /* ปรับพื้นที่ด้านบนให้เนื้อหาไม่เบียดขอบไม้ */
+    filter: drop-shadow(0 15px 40px rgba(0,0,0,0.7));
+    margin-left: 0;          /* หน้าสรุปควรอยู่กลางหน้าจอเสมอ */
+}
+
+/* หัวข้อข้อความ (หมดเวลา! / ยอดเยี่ยม!) */
+#resultMessage {
+    color: #af3131;          /* สีแดง */
+    font-size: 3.5rem;       
+    font-weight: 800;
+    margin: 0;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    
+    position: relative;
+    /* --- ปรับตรงนี้เพื่อดันข้อความขึ้น --- */
+    top: -40px;             /* เปลี่ยนจาก 10px เป็น -40px (ยิ่งลบมาก ยิ่งขึ้นสูง) */
+    
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: -20px;    /* ช่วยดึงตัวเลขคะแนนให้ตามขึ้นมาด้วยถ้าต้องการ */
+}
+/* กล่องคะแนน */
+.final-score-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ตัวเลขคะแนน */
+#finalScore {
+    font-size: 8rem;         /* ขนาดใหญ่เด่น */
+    font-weight: 900;
+    color: #ffd700;          /* เปลี่ยนเป็นสีทองเพื่อให้ดูพรีเมียม */
+    text-shadow: 
+        4px 4px 0px #3e2723, /* ขอบสีน้ำตาลเข้ม */
+        0px 0px 30px rgba(255, 215, 0, 0.4); /* รัศมีเรืองแสงสีทอง */
+    line-height: 0.8;        /* ดันตัวเลขให้ชิดกัน */
+    top: -40px;
+}
+
+/* หน่วยคะแนน */
+.score-unit {
+    color: #3e2723;          
+    font-size: 1.8rem;
+    font-weight: 800;
+    margin-top: 10px;
+    padding: 2px 20px;
+    border-radius: 15px;
+}
+
+/* ซ่อน modal-content เดิมที่ไม่จำเป็น */
+#resultModal .modal-content {
+    display: none;
+}
