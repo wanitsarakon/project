@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกมทำลูกชุบกับคุณยาย</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+        <defs>
+            <filter id="goo">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur" />
+                <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -9" result="goo" />
+                <feComposite in="SourceGraphic" in2="goo" operator="atop" />
+            </filter>
+        </defs>
+    </svg>
+
+    <div id="start-screen">
+        <div class="start-container">
+            <div class="npc-side">
+                <div class="intro-bubble">
+                    <p id="introText"></p> 
+                </div>
+                <img src="images/ยาย.png" class="intro-grandma" alt="คุณยาย">
+            </div>
+            <div class="banner-side">
+                <div class="banner-wrapper">
+                    <img src="images/ป้ายด่าน.png" class="stage-banner" alt="ป้ายด่าน">
+                    <div class="banner-inner-content">
+                        <h1>ด่านเกมสอนทำลูกชุบ</h1>
+                        <button id="btn-start">เริ่มทำขนม</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="result-screen" class="hidden">
+        <div class="result-container">
+            <div class="banner-wrapper">
+                <img src="images/ป้ายด่าน.png" class="stage-banner" alt="ป้ายสรุป">
+                <div class="banner-inner-content">
+                    <h1 id="result-grade">คะเเนนรวม</h1>
+                    <div class="score-display">
+                        <span id="result-score">0</span> คะแนน
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="overlay" class="hidden">
+        <div id="countdown-text">5</div>
+    </div>
+    <div id="game-timer" class="hidden">เวลา: 45</div>
+
+    <div class="npc-area">
+        <div class="speech-bubble">
+            <p id="npcText">รอก่อนนะหลาน...</p>
+        </div>
+        <img src="images/ยาย.png" class="grandma" alt="คุณยาย" />
+    </div>
+
+    <div class="table-area">
+        <img src="images/ถั่วเหลือง.png" class="ingredient green-bean" draggable="true" data-name="ถั่วเหลือง">
+        <img src="images/น้ำตาลทรายขาว.png" class="ingredient sugar" draggable="true" data-name="น้ำตาลทรายขาว">
+        <img src="images/กะทิ.png" class="ingredient coconut" draggable="true" data-name="กะทิ">
+        <img src="images/ผงวุ้น.png" class="ingredient agar" draggable="true" data-name="ผงวุ้น">
+        <img src="images/สีผสมอาหาร.png" class="ingredient color" draggable="true" data-name="สีผสมอาหาร">
+        <img src="images/น้ำเปล่า.png" class="ingredient water" draggable="true" data-name="น้ำเปล่า">
+        <img src="images/เกลือ.png" class="ingredient salt" draggable="true" data-name="เกลือ">
+
+        <img src="images/palm_sugar.png" class="ingredient decoy-1" draggable="true" data-name="palm_sugar">
+        <img src="images/ไข่ไก่.png" class="ingredient decoy-2" draggable="true" data-name="ไข่ไก่">
+        <img src="images/น้ำเชื่อม.png" class="ingredient decoy-3" draggable="true" data-name="น้ำเชื่อม">
+        <img src="images/กลิ่นผลไม้.png" class="ingredient decoy-4" draggable="true" data-name="กลิ่นผลไม้">
+
+        <div class="bowl-container" id="mixing-bowl">
+            <div id="stir-progress-container" class="hidden">
+                <div id="stir-bar-bg">
+                    <div id="stir-bar"></div>
+                </div>
+            </div>
+
+      <div id="stir-hint" class="stir-hint-wrapper hidden">
+    <div class="stir-visual-container">
+        <div class="arrow-green arrow-left-dir"></div>
+        <div class="mouse-icon-center">🖱️</div>
+        <div class="arrow-green arrow-right-dir"></div>
+    </div>
+    <div class="stir-message-box">
+        เลื่อนเมาส์ซ้าย-ขวาเพื่อผสม
+    </div>
+</div>
+
+            <img src="images/ถ้วย.png" class="bowl-img bowl-back" alt="ถ้วย">
+
+            <div class="ingredients-visual-wrapper">
+                <img src="images/ถั่วเหลือง_fill.png" id="fill-bean" class="filling-asset">
+                <img src="images/น้ำตาลทรายขาว_fill.png" id="fill-sugar" class="filling-asset">
+                <img src="images/กะทิ_fill.png" id="fill-coconut" class="filling-asset">
+                <img src="images/ผงวุ้น_fill.png" id="fill-agar" class="filling-asset">
+                <img src="images/สีผสมอาหาร_fill.png" id="fill-color" class="filling-asset">
+                <img src="images/น้ำเปล่า_fill.png" id="fill-water" class="filling-asset">
+                <img src="images/เกลือ_fill.png" id="fill-salt" class="filling-asset">
+            </div>
+
+            <img src="images/spatula.png" id="spatula" class="hidden spatula-tool">
+
+            <img src="images/ถ้วย.png" class="bowl-img bowl-front" alt="ถ้วย">
+
+            <p class="bowl-hint">ลากวัตถุดิบมาที่นี่</p>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>

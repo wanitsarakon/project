@@ -1,0 +1,484 @@
+/* ==========================================
+   1. CORE & INTERFACE
+   ========================================== */
+body {
+    margin: 0; width: 100vw; height: 100vh;
+    background: url("images/bg.png") center/cover no-repeat;
+    font-family: "Prompt", sans-serif; overflow: hidden; position: relative;
+}
+
+#overlay {
+    position: fixed; top:0; left:0; width:100%; height:100%;
+    background: rgba(0,0,0,0.8); z-index: 1000;
+    display: flex; justify-content: center; align-items: center;
+}
+#countdown-text { font-size: 150px; color: white; }
+
+#game-timer {
+    position: fixed; top: 20px; left: 20px; font-size: 40px;
+    font-weight: bold; color: #fff; background: rgba(0, 0, 0, 0.6);
+    padding: 10px 20px; border-radius: 10px; border: 3px solid #FFD700; z-index: 500;
+}
+
+/* ==========================================
+   2. START SCREEN (หน้าเริ่มเกมใหม่)
+   ========================================== */
+#start-screen {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(255, 255, 255, 0.1); /* สีขาวบางๆ เพื่อให้ภาพดูสว่างขึ้น */
+    backdrop-filter: blur(8px); /* ทำให้พื้นหลังเบลอ (ปรับเลข 8px มาก-น้อยตามชอบ) */
+    -webkit-backdrop-filter: blur(8px); /* สำหรับรองรับเบราว์เซอร์ Safari */
+    display: flex; justify-content: center; align-items: center;
+    z-index: 3000;
+}
+
+.start-container {
+    display: flex; 
+    align-items: center; /* จัดให้อยู่ตรงกลางแนวตั้ง */
+    justify-content: space-around; 
+    width: 90%; 
+    max-width: 1300px;
+}
+
+/* --- ฝั่งซ้าย: คุณยาย --- */
+.npc-side { 
+    flex: 1; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+}
+.intro-grandma { 
+    width: 240px; /* ปรับขนาดตัวยายในหน้าแรก */
+    filter: drop-shadow(0 10px 20px rgba(0,0,0,0.4));
+    transform: scaleX(-1);
+}
+
+.intro-bubble {
+    background: white; border-radius: 20px; padding: 20px;
+    margin-bottom: 25px; position: relative;
+    font-size: 1.2rem; font-weight: bold; text-align: center;
+    max-width: 350px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+.intro-bubble:after {
+    content: ''; position: absolute; bottom: -15px; left: 50%;
+    transform: translateX(-50%);
+    border-width: 15px 15px 0 15px; border-style: solid;
+    border-color: white transparent transparent transparent;
+}
+
+/* --- ฝั่งขวา: ป้ายด่านตรงกลาง --- */
+.banner-side { 
+    flex: 1.2; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+}
+
+.banner-wrapper {
+    position: relative; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center;
+}
+
+.stage-banner {
+    width: 100%; 
+    max-width: 650px; /* ขนาดของรูปป้ายด่าน */
+    height: auto;
+    filter: drop-shadow(0 15px 25px rgba(0,0,0,0.5));
+}
+
+/* ข้อความและปุ่มบนป้าย */
+.banner-inner-content {
+    position: absolute;
+    top: 50%; /* จัดให้อยู่ตรงกลางแผ่นไม้พอดี */
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    width: 75%;
+}
+
+.banner-inner-content h1 {
+    font-size: 2.2rem; 
+    color: #5d4037; 
+    margin-bottom: 20px;
+    text-shadow: 1px 1px 0px #fff;
+}
+
+#btn-start {
+    padding: 12px 45px; 
+    font-size: 1.8rem; 
+    font-family: 'Prompt', sans-serif;
+    background: linear-gradient(180deg, #FFD700 0%, #FFA500 100%);
+    border: 3px solid #fff; 
+    border-radius: 50px; 
+    color: #fff;
+    cursor: pointer; 
+    font-weight: bold;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+#btn-start:hover { 
+    transform: scale(1.1); 
+    box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+}
+
+/* ==========================================
+   3. GAME INTERFACE (ส่วนระหว่างเล่น)
+   ========================================== */
+.npc-area { position: absolute; right: 150px; bottom: 0px; z-index: 5; }
+.grandma { width: 315px; }
+.speech-bubble {
+    position: absolute; bottom: 530px; right: 240px;
+    background: #ffffff; border-radius: 15px; padding: 20px 30px;
+    text-align: center; color: #4a4a4a; font-size: 1.5rem;
+    font-weight: bold; min-width: 280px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    z-index: 200;
+}
+.speech-bubble:after {
+    content: ''; position: absolute; right: -20px; top: 50%;
+    transform: translateY(-50%);
+    border-width: 15px 0 15px 20px; border-style: solid;
+    border-color: transparent transparent transparent #ffffff;
+}
+
+.table-area {
+    position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; height: 80vh;
+    background: url("images/table.png") center bottom/contain no-repeat;
+    z-index: 10;
+}
+
+.bowl-container {
+    position: absolute; left: 50%; bottom: 47%;
+    transform: translateX(-50%); width: 300px; z-index: 11;
+}
+.bowl-img { width: 100%; position: relative; z-index: 12; }
+.bowl-hint {
+    position: absolute; top: 26%; left: 50%; transform: translate(-50%, -50%);
+    color: rgba(134, 132, 132, 0.53); font-size: 18px;
+    font-weight: bold; pointer-events: none; z-index: 13; white-space: nowrap;
+}
+
+/* ==========================================
+   4. INGREDIENTS
+   ========================================== */
+.ingredient {
+    position: absolute; z-index: 50; transition: transform 0.2s ease, filter 0.3s ease;
+    cursor: grab; object-fit: contain;
+}
+.ingredient:hover {
+    filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.9)) drop-shadow(0 0 5px rgba(255, 223, 0, 0.6));
+    z-index: 100;
+}
+
+.green-bean { width: 150px; left: 2%;  bottom: 32%; }
+.sugar      { width: 350px; left: 10%; bottom: 22%; }
+.coconut    { width: 100px; left: 40%; bottom: 32%; }
+.agar       { width: 230px; left: 56%; bottom: 40%; }
+.color      { width: 110px; left: 70%; bottom: 33%; }
+.water      { width: 110px; left: 90%; bottom: 35%; }
+.salt       { width: 140px; left: 58%; bottom: 30%; transform: translateX(-50%); }
+
+.decoy-1 { width: 350px; left: 5%;  bottom: 40%; opacity: 0.9; }
+.decoy-2 { width: 200px; left: 27%; bottom: 40%; opacity: 0.9; }
+.decoy-3 { width: 110px; left: 70%; bottom: 47%; opacity: 0.9; }
+.decoy-4 { width: 120px; left: 80%; bottom: 35%; opacity: 0.9; }
+
+/* ==========================================
+   5. POURING & EFFECTS
+   ========================================== */
+.pouring-wrapper {
+    position: absolute; z-index: 2000; pointer-events: none;
+    display: flex; justify-content: center; align-items: center;
+}
+.item-pouring {
+    width: 100%; height: 100%; object-fit: contain;
+    transform-origin: 30% 20%; animation: pour-tilt 1.5s ease-in-out forwards;
+}
+
+@keyframes pour-tilt {
+    0%   { transform: rotate(0deg) scale(0); opacity: 0; }
+    20%  { transform: rotate(0deg) scale(1); opacity: 1; }
+    40%  { transform: rotate(-65deg); } 
+    80%  { transform: rotate(-65deg); opacity: 1; }
+    100% { transform: rotate(-30deg) translateY(20px); opacity: 0; }
+}
+.liquid-stream-container {
+    position: absolute;
+    filter: url('#goo'); /* เรียกใช้ filter จาก html */
+    width: 60px;
+    height: 150px;
+    pointer-events: none;
+    z-index: 2001;
+}
+
+.powder-container {
+    position: absolute;
+    width: 80px;
+    pointer-events: none;
+    z-index: 2001;
+}
+
+.grain {
+    position: absolute;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    animation: grain-fall-advanced 1s ease-out forwards;
+}
+
+/* เอฟเฟกต์กระเซ็นตอนตกถึงถ้วย */
+.splash {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    animation: splash-ani 0.5s ease-out forwards;
+}
+
+.drop {
+    position: absolute;
+    width: 20px;
+    height: 25px;
+    border-radius: 50% 50% 45% 45%;
+    /* ใส่เงาสะท้อนขาวๆ เล็กน้อยให้ดูมีความวาวของน้ำ */
+    background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.7) 0%, transparent 70%);
+    /* ใช้ cubic-bezier เพื่อจำลองแรงเร่งการตก */
+    animation: liquid-fall 1.2s cubic-bezier(0.5, 0, 0.7, 0.5) forwards;
+}
+
+@keyframes liquid-fall {
+    0%   { 
+        top: 0; 
+        transform: scale(0.8, 0.8); 
+        opacity: 0; 
+    }
+    10%  { opacity: 1; }
+    /* ช่วงกลาง: สายน้ำจะยืดตัวออกตามความเร็วที่เพิ่มขึ้น */
+    50%  { transform: scale(0.6, 2.2); } 
+    /* ช่วงท้าย: เมื่อกระทบขอบถ้วยจะเริ่มแบนออกและจางไป */
+    100% { 
+        top: var(--ty); 
+        transform: scale(1.5, 0.4); 
+        opacity: 0; 
+    }
+}
+@keyframes grain-fall-advanced {
+    0%   { transform: translate(0, 0) scale(1); opacity: 0; }
+    20%  { opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(0.5); opacity: 0; }
+}
+
+@keyframes splash-ani {
+    0% { transform: scale(1) translateY(0); opacity: 1; }
+    100% { transform: scale(2) translateY(-40px); opacity: 0; }
+}
+.hidden { display: none !important; }
+
+#result-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+ background: rgba(255, 255, 255, 0.1); /* สีขาวบางๆ เพื่อให้ภาพดูสว่างขึ้น */
+    backdrop-filter: blur(8px); /* ทำให้พื้นหลังเบลอ (ปรับเลข 8px มาก-น้อยตามชอบ) */
+    -webkit-backdrop-filter: blur(8px); /* สำหรับรองรับเบราว์เซอร์ Safari */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 5000;
+}
+.result-container {
+    width: 100%;
+    max-width: 650px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#result-label {
+    font-size: 2.5rem;
+    color: #5d4037;
+    margin-top: 35px;
+    margin-bottom: 0px;
+}
+
+.score-display {
+    font-size: 5.5rem; /* คะแนนตัวใหญ่ชัดเจน */
+    color: #d32f2f;
+    font-weight: 900;
+    margin: 15px 0;
+    text-shadow: 2px 2px 0px #fff;
+    animation: score-bounce 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes score-bounce {
+    0% { transform: scale(0); opacity: 0; }
+    60% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.hidden { display: none !important; }
+
+
+
+/* --- การทำให้วัตถุดิบพูนขึ้น (Masking) --- */
+.ingredients-visual-wrapper {
+    position: absolute; bottom: 20%; left: 50%;
+    transform: translateX(-50%);
+    width: 75%; height: 55%;
+    z-index: 11; overflow: hidden;
+    pointer-events: none;
+}
+.filling-content {
+    width: 100%; height: 100%;
+    object-fit: contain;
+    /* ใช้ clip-path เพื่อซ่อนภาพจากบนลงล่าง */
+    clip-path: inset(100% 0 0 0); 
+    transition: clip-path 0.8s cubic-bezier(0.17, 0.67, 0.83, 0.67);
+}
+CSS
+.bowl-container {
+    position: absolute; 
+    left: 50%; 
+    bottom: 47%;
+    transform: translateX(-50%); 
+    width: 300px; /* ขนาดต้องเท่ากับรูปถ้วยจริง */
+    height: auto;
+    z-index: 11;
+}
+
+.bowl-img {
+    width: 100%;
+    display: block;
+}
+
+.bowl-back {
+    z-index: 10;
+    position: relative;
+}
+
+/* --- ตัดถ้วยหน้าให้เท่าใบหลังและโค้งเว้าตามรูป --- */
+.bowl-front {
+    width: 100%;
+    position: absolute;
+    bottom: 0; /* วางทับฐานถ้วยใบหลังให้สนิท */
+    left: 0;
+    z-index: 13; 
+    pointer-events: none;
+    
+    /* วาดเส้นโค้งเว้าปากถ้วย (Q 150,160) และโค้งก้นถ้วย (Q 150,260) */
+    /* พิกัดนี้จะทำให้ขนาดโดยรวมเท่ากับรูปถ้วยต้นฉบับของคุณ */
+clip-path: path('M -60,50 Q 160,160 320,40 L 320,250 Q 160,320 -30,250 Z');
+}
+
+.spatula-tool {
+    z-index: 12;
+    position: absolute;
+    width: 80px;
+    bottom: 55px; /* ระดับความสูงไม้พาย */
+    transform-origin: bottom center;
+    pointer-events: none;
+}
+.ingredients-visual-wrapper {
+    position: absolute;
+    /* วางตำแหน่งให้ฐานอยู่ตรงกับเส้นแดงหรือก้นถ้วย */
+    bottom: 0; 
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 11; /* อยู่หน้าถ้วยหลัง (10) แต่อยู่หลังไม้พาย (12) และถ้วยหน้า (13) */
+    pointer-events: none;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    /* ใช้ clip-path เดียวกับถ้วยหน้าเพื่อให้ส่วนผสมไม่ทะลุออกมาด้านล่าง */
+    clip-path: path('M 0,40 Q 160,160 320,40 L 320,300 L 0,300 Z'); 
+}
+
+#filling-visual {
+    width: 90%; /* ให้แคบกว่าถ้วยนิดหน่อยจะดูสมจริง */
+    /* เริ่มต้นให้จมอยู่ใต้เส้นแดง */
+    transform: translateY(100px); 
+    transition: transform 1s ease-out;
+}
+/* หลอดพลัง */
+#stir-progress-container {
+    position: absolute; left: -50px; bottom: 60%;
+    width: 25px; height: 160px;
+    background: #333; border: 3px solid #FFD700;
+    border-radius: 15px; overflow: hidden; z-index: 100;
+}
+#stir-bar {
+    position: absolute; bottom: 0; width: 100%;
+    height: 0%; background: linear-gradient(to top, #4CAF50, #8BC34A, #CCFF00);
+}
+.stir-label { position: absolute; top: -25px; left: -15px; color: #fff; font-size: 14px; white-space: nowrap; }
+.stir-hint-wrapper {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -70%); /* ปรับตำแหน่งให้อยู่กลางถ้วย */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 1000;
+    pointer-events: none;
+    width: 100%;
+}
+
+.stir-visual-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+/* สร้างลูกศรสีเขียวด้วย CSS Clip-path */
+.arrow-green {
+    width: 70px;
+    height: 40px;
+    background: linear-gradient(180deg, #2ecc71 0%, #27ae60 100%);
+    filter: drop-shadow(0 4px 2px rgba(0,0,0,0.3));
+}
+
+.arrow-left-dir {
+    clip-path: polygon(40% 0%, 40% 25%, 100% 25%, 100% 75%, 40% 75%, 40% 100%, 0% 50%);
+    animation: arrow-push-left 1s infinite ease-in-out;
+}
+
+.arrow-right-dir {
+    clip-path: polygon(0% 25%, 60% 25%, 60% 0%, 100% 50%, 60% 100%, 60% 75%, 0% 75%);
+    animation: arrow-push-right 1s infinite ease-in-out;
+}
+
+.mouse-icon-center {
+    font-size: 2.5rem;
+    filter: drop-shadow(0 0 10px white);
+}
+
+.stir-message-box {
+    background: #3e2723;
+    border: 3px solid #ffd700;
+    border-radius: 50px;
+    color: #ffffff;
+    padding: 12px 45px;
+    font-size: 24px;
+    font-weight: bold;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+    white-space: nowrap;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+}
+/* Animation ลูกศรขยับเข้า-ออก */
+@keyframes arrow-push-left {
+    0%, 100% { transform: translateX(0); opacity: 0.7; }
+    50% { transform: translateX(-15px); opacity: 1; }
+}
+
+@keyframes arrow-push-right {
+    0%, 100% { transform: translateX(0); opacity: 0.7; }
+    50% { transform: translateX(15px); opacity: 1; }
+}
