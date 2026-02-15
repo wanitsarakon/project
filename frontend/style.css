@@ -91,9 +91,9 @@ canvas {
     border: none; 
     box-shadow: none; 
 
-    width: 650px;           
-    height: 480px;          
-    padding-top: 160px; /* ขยับตัวหนังสือลงมาจากขอบบนของแผ่นไม้ */
+    width: 580px;           
+    height: 380px;          
+    padding-top: 120px; /* ขยับตัวหนังสือลงมาจากขอบบนของแผ่นไม้ */
     padding-bottom: 40px;
     padding-left: 40px;
     padding-right: 40px;
@@ -130,10 +130,14 @@ canvas {
 
 /* --- ปุ่มเริ่มเกมแบบ 3D สมูท (ขอบขาวหนา) --- */
 .start-button {
-position: relative;
-    padding: 18px 40px;
-    font-size: 32px;
+    position: relative;
+    /* เปลี่ยนจาก margin เดิม หรือเพิ่มบรรทัดนี้เพื่อดันปุ่มขึ้น */
+    margin-top: -20px; /* ยิ่งค่าติดลบมาก ปุ่มจะยิ่งขยับสูงขึ้น */
+    
+    padding: 10px 30px;
+    font-size: 28px;
     font-weight: 900;
+   
     color: #fff;
     text-transform: uppercase;
     text-decoration: none;
@@ -176,16 +180,6 @@ position: relative;
     box-shadow: 0 2px 0px #1e8449, 0 5px 10px rgba(0,0,0,0.4);
 }
 
-/* --- กล่องคะแนนสีขาวขอบประ (หน้าจบเกม) --- */
-.score-container {
-    background: #fff;
-    border: 5px dashed #C0392B; 
-    border-radius: 30px;
-    padding: 15px 40px;
-    margin: 15px 0;
-    width: 70%;
-    box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
-}
 
 .score-display {
     font-size: 80px;
