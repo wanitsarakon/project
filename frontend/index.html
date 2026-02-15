@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>งานวัดมหาโหด - Professional Dart</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+        <div class="game-container">
+        <div class="top-sign-container">
+            <img src="/static/image/top_sign.png" alt="ป้ายซุ้มเกม" class="top-roof-sign">
+        </div>
+        <div id="start-screen">
+            <div class="sign-wrapper">
+                <img src="/static/image/start_sign.png" alt="ป้ายด่าน" class="start-sign">
+                <div class="sign-content">
+                    <div class="sign-title">ด่านเกมปาโป่ง</div>
+                    <button class="start-btn" onclick="startGame()">เริ่มเกม</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="score-screen" class="ui-hidden">
+            <div class="sign-wrapper">
+                <img src="/static/image/start_sign.png" alt="ป้ายสรุปคะแนน" class="start-sign">
+                <div class="sign-content">
+                    <div class="sign-title">คะแนนรวม</div>
+                    <div id="final-score-display" style="color: #fff; font-size: 5rem; font-weight: 600; text-shadow: 2px 2px 5px rgba(0,0,0,0.6); margin: 20px 0;">0</div>
+                </div>
+            </div>
+        </div>
+
+<div class="ui-layer ui-hidden" id="ui-layer">
+            <div class="stat-box">
+                <img src="/static/image/label_tag.png" alt="ป้ายคะแนน" class="stat-bg">
+                <div class="stat-label">คะแนน: <span id="score">0 (x0)</span></div>
+            </div>
+            <div class="stat-box">
+                <img src="/static/image/label_tag.png" alt="ป้ายเวลา" class="stat-bg">
+                <div class="stat-label" id="wind-info">เวลา: 60s | ลม: 0.0</div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <div class="power-bar-container ui-hidden" id="power-bar">
+            <div id="power-fill"></div>
+            <div class="power-label">POWER</div>
+        </div>
+        
+        <div class="instruction ui-hidden" id="instruction">
+            กด <strong>Spacebar</strong> ค้างเพื่อชาร์จ | ปล่อยเพื่อยิง
+        </div>
+    </div>
+
+    <script src="/static/game.js"></script>
+    <script>
+        function startGame() {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('ui-layer').classList.remove('ui-hidden');
+            document.getElementById('power-bar').classList.remove('ui-hidden');
+            document.getElementById('instruction').classList.remove('ui-hidden');
+            if (typeof initCountdown === "function") {
+                initCountdown();
+            }
+        }
+    </script>
+</body>
+</html>
