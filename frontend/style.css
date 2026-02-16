@@ -13,56 +13,118 @@ body, html {
     position: relative;
     width: 100vw;
     height: 100vh;
+    /* ย้ายพื้นหลังมาไว้ที่นี่แทน */
+    background-image: url('images/bg.png'); 
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    overflow: hidden;
 }
 
 canvas {
     width: 100%;
     height: 100%;
     display: block;
-    background-image: url('images/bg.png'); 
-    background-size: cover;
-    background-position: center;
+    /* เอาพื้นหลังออกจาก canvas เพื่อให้มันโปร่งใส */
+    background-color: transparent; 
     cursor: crosshair;
 }
-
 /* --- HUD: แผงควบคุมด้านบนแบบใช้รูปภาพ --- */
 .ui-panel {
     position: absolute;
     top: 15px;
+    left: 0;
     width: 100%;
     display: flex;
-    justify-content: space-around;
+    justify-content: space-between; 
+    align-items: flex-start; /* ให้ป้ายคะแนนและเวลาชิดขอบบน */
+    padding: 0 30px;
+    box-sizing: border-box;
     z-index: 10;
     pointer-events: none;
 }
 
+.main-header-sign {
+    position: absolute;
+    left: 50%;
+    /* ปรับตำแหน่งความสูงตามต้องการ */
+    top: -100px; 
+    
+    /* กำหนดจุดหมุนให้อยู่ที่กึ่งกลงด้านบนของป้าย */
+    transform-origin: top center;
+    
+    /* เรียกใช้แอนิเมชัน sway: ใช้เวลา 3 วินาที, วนลูปไม่สิ้นสุด, จังหวะนุ่มนวล */
+    animation: sway 3.5s ease-in-out infinite;
+    
+    z-index: 11;
+    pointer-events: none;
+}
+
+/* --- กำหนดการเคลื่อนไหว (Keyframes) --- */
+@keyframes sway {
+    0% {
+        /* เริ่มต้นเอียงซ้ายเล็กน้อย และคงค่า translateX(-50%) เพื่อให้ป้ายอยู่กลางจอ */
+        transform: translateX(-50%) rotate(-3deg);
+    }
+    50% {
+        /* แกว่งไปทางขวา */
+        transform: translateX(-50%) rotate(3deg);
+    }
+    100% {
+        /* กลับมาที่เดิม */
+        transform: translateX(-50%) rotate(-3deg);
+    }
+}
+
+.header-img {
+    width: 420px; /* ปรับขนาดความกว้างของป้ายซุ้ม */
+    height: auto;
+    /* เพิ่มเงาให้ป้ายดูมีมิติ */
+    filter: drop-shadow(0px 8px 15px rgba(0,0,0,0.4));
+}
+
+
+/* --- ปรับตำแหน่งป้ายกระสุน (ขวาล่าง) --- */
+.ammo-container-bottom {
+    position: absolute;
+    bottom: 80px;
+    right: 20px;
+    z-index: 10;
+    pointer-events: none;
+}
+
+/* คงค่า stat-box เดิมไว้ */
 .stat-box {
-    /* เปลี่ยนจากพื้นหลังสีดำเป็นรูปภาพป้ายของคุณ */
-    background-image: url('images/your-hud-bg.png'); /* เปลี่ยนเป็นชื่อไฟล์รูปป้าย HUD ของคุณ */
-    background-size: 100% 100%;
-    background-position: center;
+    background-image: url('images/your-hud-bg.png');
+    background-size: 100% 100%; /* ให้รูปพื้นหลังพอดีกับขนาดป้ายที่เล็กลง */
     background-repeat: no-repeat;
-    background-color: transparent; 
     
-    /* ปรับขนาดให้พอดีกับรูปป้ายไม้ขนาดเล็ก */
-    width: 200px; 
-    height: 80px;
+    /* ลดขนาดความกว้างและความสูงลงจากเดิม (200x80) */
+    width: 160px;  /* ปรับลดความกว้าง */
+    height: 60px;  /* ปรับลดความสูง */
     
-    /* จัดวางตัวหนังสือให้อยู่กึ่งกลางป้าย */
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 8px;
+    gap: 5px;
     
     color: #ffffff; 
-    font-size: 22px;
+    /* คงขนาดตัวหนังสือไว้เท่าเดิม หรือปรับตามความเหมาะสม */
+    font-size: 20px; 
     font-weight: 900;
-    text-shadow: 2px 2px 0px #333; /* เพิ่มเงาให้ตัวหนังสืออ่านง่ายขึ้นบนลายไม้ */
+    text-shadow: 2px 2px 0px #333;
     
     border: none; 
     box-shadow: none;
 }
 
+/* ปรับระยะห่างของกลุ่มป้ายฝั่งขวาให้ชิดกันขึ้นเล็กน้อย */
+.right-stats-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px; /* ลดช่องว่างระหว่างป้ายเวลาและกระสุน */
+    align-items: flex-end;
+}
 .stat-box span#score, 
 .stat-box span#time, 
 .stat-box span#ammo {
@@ -249,4 +311,11 @@ canvas {
     
     /* เพิ่มเงาเล็กน้อยเพื่อให้ป้ายดูนูนออกมาจากพื้นหลัง */
     filter: drop-shadow(4px 4px 8px rgba(0,0,0,0.5));
+}
+.smoke-particle {
+    pointer-events: none;
+    border-radius: 50%;
+    filter: blur(15px);
+    position: absolute;
+    background: rgba(220, 220, 220, 0.8);
 }

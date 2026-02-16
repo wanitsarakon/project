@@ -8,7 +8,8 @@
 </head>
 <body>
     <div class="game-container">
-<div class="score-legend-overlay"></div>
+        <div class="score-legend-overlay"></div>
+        
         <div id="start-menu" class="overlay">
             <div class="cartoon-card">
                 <div class="card-content">
@@ -22,30 +23,35 @@
         <div id="countdown" class="countdown-text hidden"></div>
 
         <div class="ui-panel">
-    <div class="stat-box score-bg">
-        <span class="label">คะแนน:</span> 
-        <span id="score">0</span>
-    </div>
-    <div class="stat-box time-bg">
-        <span class="label">เวลา:</span> 
-        <span id="time">30</span>
-    </div>
-    <div class="stat-box ammo-bg">
-        <span class="label">กระสุน:</span> 
-        <span id="ammo">10</span>/10
-    </div>
-</div>
+            <div class="stat-box score-bg">
+                <span class="label">คะแนน:</span> 
+                <span id="score">0</span>
+            </div>
+
+            <div class="main-header-sign">
+                <img src="images/your-header-logo.png" alt="ป้ายซุ้มเกม" class="header-img">
+            </div>
+
+            <div class="right-stats-group">
+                <div class="stat-box time-bg">
+                    <span class="label">เวลา:</span> 
+                    <span id="time">30</span>
+                </div>
+                <div class="stat-box ammo-bg">
+                    <span class="label">กระสุน:</span> 
+                    <span id="ammo">10</span>/10
+                </div>
+            </div>
+        </div>
+
         <div id="combo-alert" class="combo-text"></div>
 
         <div id="game-over" class="overlay hidden">
             <div class="cartoon-card">
                 <div class="card-content">
                     <h2 class="main-title" style="font-size: 45px; margin-bottom: 5px;">จบเกมแล้ว!</h2>
-                    <div class="score-container">
-                        <p style="margin: 0; color: #5D4037; font-weight: bold; font-size: 18px;">คะแนนที่คุณทำได้</p>
-                        <div id="final-score" class="score-display">0</div>
-                    </div>
-                    </div>
+                    <div id="final-score" class="score-display">0</div>
+                </div>
             </div>
         </div>
 
