@@ -1,0 +1,686 @@
+html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden; /* ป้องกันไม่ให้มีแถบเลื่อน */
+}
+
+body { 
+    margin: 0; 
+    padding: 0; 
+    width: 100vw; 
+    height: 100vh; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    background: #000; 
+    overflow: hidden; /* ป้องกันการเลื่อนจอ */
+    font-family: 'Tahoma', sans-serif; 
+}
+
+#game-container {
+    position: fixed; /* เปลี่ยนเป็น fixed เพื่อให้ล็อกตำแหน่งเทียบกับหน้าต่างเบราว์เซอร์ */
+    top: 0;
+    left: 0;
+    width: 100vw; 
+    height: 100vh;
+    background: url('image/bg-temple.png') no-repeat center center;
+    background-size: 100% 100%; /* บังคับให้รูปยืดจนสุดขอบ */
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+.ui-header { 
+    position: absolute; 
+    top: 2vh; 
+    left: 0; /* เพิ่มเพื่อให้เริ่มจากซ้ายสุด */
+    width: 100%; 
+    display: flex; 
+    justify-content: space-between; 
+    padding: 0 2vw; /* ลด padding ลงเพื่อให้ชิดขอบมากขึ้น */
+    box-sizing: border-box; 
+    z-index: 100; 
+}
+.sign-board { 
+    width: 220px; 
+    height: 100px; 
+    background: url('image/frame-gold.png') no-repeat center/contain; 
+    display: flex; 
+    flex-direction: row; 
+    align-items: center; 
+    justify-content: center; 
+    gap: 15px; 
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
+}
+
+.sign-board .label { 
+    font-size: 18px; 
+    font-weight: bold; 
+    color: #ffd700; 
+    text-shadow: 2px 2px 2px #4b3621; 
+}
+
+.sign-board .value { 
+    font-size: 32px; 
+    font-weight: 900; 
+    font-family: 'Arial Black', sans-serif; 
+    background: linear-gradient(to bottom, #ffffff, #ffcc00); 
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* --- ระบบลูกค้าและการเคลื่อนที่ (สลับซ้าย-ขวา) --- */
+.customer-area { 
+    position: absolute; 
+    bottom: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100vh; 
+    pointer-events: none; 
+    z-index: 5; 
+}
+
+.customer-container {
+    position: absolute; 
+    width: 45vh; 
+    height: 80vh; 
+    bottom: 0;
+    transition: left 1.5s ease-out, right 1.5s ease-out, opacity 1s, transform 0.3s;
+    display: flex; 
+    align-items: flex-end; 
+    pointer-events: auto; 
+    cursor: pointer;
+}
+
+/* จุดเกิดและจุดหยุดเดิน */
+.from-left { left: -50vh; }
+.from-right { right: -50vh; }
+.stop-left { left: 2vw; }
+.stop-right { right: 2vw; }
+
+.customer-container.selected { 
+    filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.8)); 
+    transform: scale(1.05); 
+}
+
+.customer-sprite { 
+    width: 100%; 
+    height: 100%; 
+    background: url('image/npc-customer.png') no-repeat center/contain; 
+}
+
+/* หลอดความอดทนและฟองคำพูด */
+.patience-bar-bg { position: absolute; left: 0; bottom: 20%; width: 12px; height: 40%; background: rgba(0, 0, 0, 0.5); border: 2px solid #fff; border-radius: 10px; overflow: hidden; }
+.patience-bar-fill { position: absolute; bottom: 0; width: 100%; height: 100%; background: linear-gradient(to top, #f44336, #ffeb3b, #4caf50); transition: height 0.1s linear; }
+
+.order-bubble {
+    position: absolute; top: 10%; left: 10%; background: rgba(255, 255, 255, 0.95); border: 4px solid #f9dcc4; border-radius: 30px; padding: 12px;
+    display: none; flex-wrap: wrap; max-width: 180px; justify-content: center; gap: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.2); z-index: 10;
+}
+.order-bubble.show { display: flex; animation: pop 0.4s forwards; }
+.from-right .order-bubble { left: auto; right: 10%; }
+.hint-flower { width: 25px; height: 25px; background-size: contain; background-repeat: no-repeat; }
+
+/* --- ระบบพวงมาลัยทรงกลม (Center Display) --- */
+.garland-display { 
+    position: absolute; 
+    top: 12vh; /* ปรับจาก 5vh เป็น 12vh เพื่อขยับพวงลงมาด้านล่าง */
+    left: 50%; 
+    transform: translateX(-50%); 
+    z-index: 20; 
+}
+.rope { 
+    position: absolute; /* เพิ่มเพื่อให้กำหนดตำแหน่งเทียบกับ container ได้ */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 800px;       /* ปรับความกว้างให้พอดีกับพวงมาลัย (รูปเดิม 800px กว้างไปครับ) */
+    height: 50vh;      /* ความยาวของเชือก */
+    top: -15vh;         /* ดันขึ้นไปด้านบน (ค่าติดลบจะทำให้เชือกทะลุขอบบนขึ้นไป) */
+    background: url('image/rope.png') no-repeat center center/contain; 
+    margin: 0 auto; 
+    border-radius: 0; 
+    z-index: -15;       /* ให้อยู่หลังพวงมาลัยเล็กน้อยแต่หน้าฉากหลัง */
+}
+
+#garland-stack { 
+    position: relative; 
+    width: 250px; /* ขยายความกว้างเล็กน้อยเพื่อให้จัดวงสวย */
+    height: 600px; 
+    margin: 0 auto; 
+    animation: windSwing 5s ease-in-out infinite alternate; 
+    transform-origin: top center; 
+}
+
+.flower-on-garland { 
+    width: 100px; /* ปรับขนาดดอกไม้ให้พอดี */
+    height: 60px; 
+    background: no-repeat center/contain; 
+    position: absolute; 
+    left: 50%; 
+    margin-left: -50px; 
+    animation: pop 0.3s forwards; 
+}
+
+/* ดอกที่ 1-8: วงกลมหลัก (คงเดิม) */
+.flower-on-garland:nth-child(1) { top: 0vh; transform: rotate(0deg); z-index: 10; }
+.flower-on-garland:nth-child(2) { top: 3vh;  left: 35%; transform: rotate(-30deg); z-index: 9; }
+.flower-on-garland:nth-child(3) { top: 9vh;  left: 30%; transform: rotate(-70deg); z-index: 8; }
+.flower-on-garland:nth-child(4) { top: 15vh; left: 35%; transform: rotate(-120deg); z-index: 9; }
+.flower-on-garland:nth-child(5) { top: 3vh;  left: 65%; transform: rotate(30deg); z-index: 9; }
+.flower-on-garland:nth-child(6) { top: 9vh;  left: 70%; transform: rotate(70deg); z-index: 8; }
+.flower-on-garland:nth-child(7) { top: 15vh; left: 65%; transform: rotate(120deg); z-index: 9; }
+.flower-on-garland:nth-child(8) { top: 18vh; transform: rotate(0deg); z-index: 15; }
+
+/* ดอกที่ 9-11: ข้อต่อตรงกลางก่อนแยกแฉก */
+.flower-on-garland:nth-child(9) { top: 23vh; transform: scale(1.0); z-index: 14; } 
+.flower-on-garland:nth-child(10) { top: 27vh; transform: scale(0.9); z-index: 13; } 
+.flower-on-garland:nth-child(11) { top: 31vh; transform: scale(1.1); z-index: 12; } 
+
+/* ดอกที่ 12 เป็นต้นไป: แยกเป็น 2 แฉก (ซ้าย-ขวา) */
+/* แฉกซ้าย */
+.flower-on-garland:nth-child(12) { top: 35vh; left: 40%; transform: rotate(-15deg) scale(0.9); z-index: 11; }
+.flower-on-garland:nth-child(13) { top: 39vh; left: 35%; transform: rotate(-25deg) scale(0.9); z-index: 10; }
+
+/* แฉกขวา */
+.flower-on-garland:nth-child(14) { top: 35vh; left: 60%; transform: rotate(15deg) scale(0.9); z-index: 11; }
+.flower-on-garland:nth-child(15) { top: 39vh; left: 65%; transform: rotate(25deg) scale(0.9); z-index: 10; }
+
+/* ปรับตำแหน่งพู่ปิดท้าย (Tassel Tip) ให้มี 2 อัน */
+/* ใน game.js เราจะสร้าง tassel อันเดียว แต่ใช้ CSS คลุมให้ดูเหมือนแยกแฉกได้ */
+/* หรือปรับให้แสดงผลเมื่อร้อยเสร็จ */
+.tassel-garland { 
+    position: absolute; 
+    top: 44vh; 
+    left: 50%; 
+    width: 140px; 
+    height: 120px; 
+    margin-left: -70px; 
+    background: no-repeat center/contain; 
+    /* ใช้ filter เพื่อจำลองการมีสองแฉกที่ปลาย */
+    filter: drop-shadow(-30px 10px 0px rgba(255,255,255,0.1)) drop-shadow(30px 10px 0px rgba(255,255,255,0.1));
+    z-index: 20; 
+}
+.table-foreground { 
+    position: absolute; 
+    bottom: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; /* ให้คลุมเต็มความสูง */
+    background: url('image/table-front.png') no-repeat bottom center; 
+    background-size: 100% auto; /* ปรับให้กว้างเต็มจอ และความสูงปรับตามสัดส่วนอัตโนมัติ */
+    z-index: 30; 
+    pointer-events: none; 
+}
+
+.controls-container { 
+    position: absolute; 
+    bottom: 15vh; 
+    left: 0; 
+    width: 100%; 
+    display: flex; 
+    justify-content: center; 
+    gap: 2vw; 
+    z-index: 200; 
+}
+
+.btn-flower { 
+    width: 15vh; 
+    height: 20vh; 
+    border: none; 
+    background: transparent no-repeat center/contain; 
+    cursor: pointer; 
+    transition: transform 0.1s;
+}
+
+.btn-flower:active { transform: scale(0.9); }
+
+.f-white { background-image: url('image/flower-white.png'); }
+.f-red { background-image: url('image/flower-red.png'); }
+.f-yellow { background-image: url('image/flower-yellow.png'); }
+.f-green { background-image: url('image/flower-green.png'); }
+.f-purple { background-image: url('image/flower-purple.png'); }
+
+/* --- Animations --- */
+@keyframes swing { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
+@keyframes windSwing { from { transform: rotate(-1.5deg); } to { transform: rotate(1.5deg); } }
+@keyframes pop { from { transform: scale(0); opacity: 0; } to { opacity: 1; transform: scale(1); } }
+
+
+/* เอฟเฟกต์สั่นหน้าจอ */
+.shake {
+    animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+    transform: translate3d(0, 0, 0);
+}
+
+@keyframes shake {
+    10%, 90% { transform: translate3d(-1px, 0, 0); }
+    20%, 80% { transform: translate3d(2px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+    40%, 60% { transform: translate3d(4px, 0, 0); }
+}
+
+/* สัญลักษณ์ตกใจเหนือหัว */
+.angry-mark {
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 40px;
+    color: #ff0000;
+    font-weight: bold;
+    text-shadow: 2px 2px #fff;
+    animation: pop 0.3s ease-out;
+}
+/* การแจ้งเตือนเมื่อลูกค้าใกล้โกรธ */
+.patience-warning {
+    animation: blink-red 0.5s infinite alternate;
+}
+
+@keyframes blink-red {
+    from { filter: drop-shadow(0 0 5px red); }
+    to { filter: drop-shadow(0 0 15px red) brightness(1.2); }
+}
+
+/* Fever Mode Background */
+.fever-active #game-container {
+    animation: fever-bg 0.5s infinite alternate;
+}
+
+@keyframes fever-bg {
+    from { box-shadow: inset 0 0 50px #ff0000; }
+    to { box-shadow: inset 0 0 100px #ffcc00; }
+}
+
+/* เอฟเฟกต์ดอกไม้ตอนร้อยถูก (Perfect Chain) */
+.flower-pop {
+    animation: flower-sparkle 0.4s ease-out;
+}
+
+@keyframes flower-sparkle {
+    0% { transform: scale(0.5); filter: brightness(2); }
+    50% { transform: scale(1.2); filter: brightness(1.5); }
+    100% { transform: scale(1); filter: brightness(1); }
+}
+.order-text {
+    color: #4b3621; /* เปลี่ยนเป็นสีน้ำตาลเข้มให้ดูสุภาพกว่าตอนโกรธ */
+    font-weight: bold; 
+    font-size: 14px; 
+    margin: 0; 
+    text-align: center; 
+    padding: 10px; 
+    background: white; 
+    border-radius: 15px; 
+    border: 3px solid #f9dcc4; /* ใช้สีครีมส้มแทนสีแดงเพื่อให้ดูเป็นการสั่งงานปกติ */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
+    min-width: 140px;
+    line-height: 1.4;
+    animation: popBubble 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.order-bubble {
+    position: absolute; 
+    /* ขยับขึ้นไปด้านบนของหัว */
+    top: -10%; 
+    /* ขยับไปทางขวาของตัวละคร */
+    left: 70%; 
+    transform: none; /* ยกเลิกการจัดกึ่งกลางเดิม */
+    
+    background: rgba(255, 255, 255, 0.95); 
+    border: 4px solid #f9dcc4; 
+    border-radius: 20px; 
+    padding: 10px;
+    display: none; 
+    flex-wrap: wrap; 
+    max-width: 150px; 
+    justify-content: center; 
+    gap: 5px; 
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3); 
+    z-index: 100;
+}
+
+/* สำหรับลูกค้าที่เดินมาจากฝั่งขวา ให้ฟองคำสั่งอยู่ฝั่งซ้ายของหัวแทนเพื่อไม่ให้หลุดขอบจอ */
+.from-right .order-bubble { 
+    left: auto;
+    right: 70%; 
+}
+
+/* ปรับ Animation การปรากฏตัวให้เด้งจากจุดใหม่ */
+.order-bubble.show { 
+    display: flex; 
+    animation: popBubble 0.4s forwards; 
+}
+
+@keyframes popBubble {
+    from { transform: scale(0); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+.overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex; justify-content: center; align-items: center;
+    z-index: 1000;
+}
+
+/* --- ป้ายด่าน --- */
+/* ปรับแต่งป้ายด่าน (Level Board) */
+.level-board {
+    width: 700px;
+    height: 400px; /* เพิ่มความสูงเล็กน้อยเพื่อความสมดุล */
+    background: url('image/frame.png') no-repeat center/contain;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+}
+
+.level-board h2 {
+    margin-top: 10;
+    margin-bottom: 10px;
+    color: #f1c40f;
+    font-size: 35px;
+    font-weight: 700;
+    -webkit-text-stroke: 2px #574803;
+    text-shadow: 4px 4px 0px #c0392b, 6px 6px 0px #333;
+
+}
+#start-btn {
+    padding: 10px 50px;
+    font-size: 28px;
+    font-weight: 900;
+    color: #4b3621; /* สีน้ำตาลเข้มตัดกับปุ่มทอง */
+    background: linear-gradient(to bottom, #ffd700 0%, #ff9900 100%); /* ไล่สีทองเข้ม */
+    border: 4px solid #fff;
+    border-radius: 60px;
+    cursor: pointer;
+    box-shadow: 
+        0 8px 15px rgba(0,0,0,0.4),
+        inset 0 0 10px rgba(255,255,255,0.5); /* เงาด้านในให้ดูนูน */
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    animation: btnPulse 2s infinite; /* เพิ่มแอนิเมชันกะพริบ */
+    margin-top: 20px;
+}
+
+#start-btn:hover {
+    transform: scale(1.1) translateY(-5px); /* ขยายและลอยขึ้นเมื่อชี้ */
+    box-shadow: 0 12px 20px rgba(0,0,0,0.6);
+    background: linear-gradient(to bottom, #fff3b0 0%, #ffcc00 100%); /* สว่างขึ้นเมื่อ hover */
+}
+
+#start-btn:active {
+    transform: scale(0.95); /* ยุบตัวเมื่อกด */
+}
+
+/* แอนิเมชันปุ่มกะพริบเบาๆ */
+@keyframes btnPulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); }
+    70% { box-shadow: 0 0 0 20px rgba(255, 215, 0, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
+}
+/* --- ตัวเลขถอยหลัง --- */
+#countdown-text {
+    font-size: 150px;
+    font-weight: 900;
+    color: #fff;
+    text-shadow: 0 0 20px #ffcc00;
+    animation: zoomInBounce 1s infinite;
+}
+
+@keyframes zoomInBounce {
+    0% { transform: scale(0.5); opacity: 0; }
+    50% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(1); opacity: 0; }
+}
+
+.result-board {
+    background-image: url('image/frame.png'); /* ใช้รูปป้ายเดิม */
+    animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+#final-score-display {
+    background: linear-gradient(to bottom, #ffffff, #ffcc00);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.5));
+}
+
+.customer-container [style*="npc-customer-5.png"] {
+    transform: scale(0.9); /* ปรับขนาดให้ใหญ่ขึ้น 20% (หรือเปลี่ยนเลขตามต้องการ) */
+    transform-origin: bottom center; /* ให้ขยายจากฐานขึ้นไป จะได้ไม่ลอยจากพื้น */
+}
+.customer-container [style*="npc-customer-5-worried.png"] {
+    transform: scale(0.9); /* ปรับขนาดให้ใหญ่ขึ้น 20% (หรือเปลี่ยนเลขตามต้องการ) */
+    transform-origin: bottom center; /* ให้ขยายจากฐานขึ้นไป จะได้ไม่ลอยจากพื้น */
+}
+.customer-container [style*="npc-customer-5-angry.png"] {
+    transform: scale(0.9); /* ปรับขนาดให้ใหญ่ขึ้น 20% (หรือเปลี่ยนเลขตามต้องการ) */
+    transform-origin: bottom center; /* ให้ขยายจากฐานขึ้นไป จะได้ไม่ลอยจากพื้น */
+}
+
+.item-inventory {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    background: rgba(75, 54, 33, 0.8);
+    padding: 10px 20px;
+    border: 2px solid #ffd700;
+    border-radius: 50px;
+    z-index: 101;
+
+    /* --- ส่วนที่เพิ่มเพื่อย้ายตำแหน่งลงมาข้างล่าง --- */
+    position: absolute; 
+    bottom: -80vh;       /* ปรับระยะห่างจากขอบล่าง (2vh คือชิดขอบล่างมาก) */
+    left: 50%;         /* ตั้งค่าให้อยู่กึ่งกลางแนวนอน */
+    transform: translateX(-50%); /* จัดกึ่งกลางให้เป๊ะ */
+}
+
+.item-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: #fff;
+    min-width: 50px;
+}
+
+.item-label { font-size: 12px; color: #ffd700; }
+.item-count { font-size: 20px; font-weight: bold; }
+.water-bg {
+    position: absolute; /* ทำให้ขยับได้อิสระ */
+    bottom: 25vh;       /* ปรับความสูงแยกเฉพาะน้ำอบ */
+    left: 13vw;         /* ปรับตำแหน่งแนวนอนจากฝั่งซ้าย */
+    z-index: 210;
+}
+
+/* --- ขยับตำแหน่งแป้ง (Powder) --- */
+.powder-bg {
+    position: absolute; /* ทำให้ขยับได้อิสระ */
+    bottom: 25vh;       /* ปรับความสูงแยกเฉพาะแป้ง (สูงกว่าน้ำอบ) */
+    right: 12vw;        /* ปรับตำแหน่งแนวนอนจากฝั่งขวา */
+    z-index: 210;
+}
+.btn-use-item {
+    padding: 12px 25px;   
+    border-radius: 30px;
+    border: 3px solid #fff;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    transition: transform 0.2s;
+    position: absolute; /* เพิ่มเพื่อให้ขยับตำแหน่งได้อิสระ */
+    z-index: 210;
+}
+
+.btn-use-item:active { transform: scale(0.9); }
+.water-bg { background: linear-gradient(to bottom, #4facfe, #00f2fe); }
+.powder-bg { background: linear-gradient(to bottom, #ff9a9e, #fecfef); color: #4b3621; }
+
+#game-container::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; 
+    z-index: 4; /* อยู่หลัง NPC และโจทย์ */
+    transition: all 0.8s ease-in-out;
+    opacity: 0;
+    /* สร้าง Texture เกล็ดน้ำแข็งจางๆ ด้วย Gradient */
+    background: 
+        radial-gradient(circle at 0% 0%, rgba(255,255,255,0.2) 0%, transparent 50%),
+        radial-gradient(circle at 100% 100%, rgba(255,255,255,0.2) 0%, transparent 50%);
+}
+
+/* เมื่อใช้งานน้ำอบ (สถานะหยุดเวลา) */
+/* เมื่อใช้งานน้ำอบ (สถานะหยุดเวลา) */
+#game-container.time-frozen::after {
+    opacity: 1;
+    /* เคลือบหน้าจอด้วยสีฟ้าน้ำแข็งจางๆ */
+    background-color: rgba(180, 230, 255, 0.15);
+    
+    /* 1. เพิ่ม Box Shadow หลายชั้นเพื่อถมขอบให้หนาและเต็ม */
+    box-shadow: 
+        inset 0 0 100px rgba(0, 160, 255, 0.6),   /* ขอบสีฟ้าเข้ม */
+        inset 0 0 200px rgba(255, 255, 255, 0.3),  /* เกล็ดหิมะสีขาว */
+        inset 0 0 50px rgba(255, 255, 255, 0.5);   /* แสงวาวที่ขอบสุด */
+    
+    /* 2. ปรับ Border ให้หนาขึ้นและใช้ Gradient ที่แผ่ออกไปกว้างกว่าเดิม */
+    border: 60px solid transparent; 
+    border-image: radial-gradient(
+        circle at center, 
+        transparent 50%, 
+        rgba(150, 220, 255, 0.8) 80%, 
+        rgba(255, 255, 255, 1) 100%
+    ) 60;
+
+    /* 3. บังคับให้ขยายเต็มพื้นที่แน่นอน */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+
+    /* 4. เพิ่มเอฟเฟกต์ฝ้ากระจกที่ขอบจอ */
+    backdrop-filter: blur(2px) saturate(1.2);
+}
+/* ลบอันเดิมทิ้งทั้งหมดแล้วแทนด้วยชุดนี้ */
+#game-container.time-frozen::after {
+    opacity: 1;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100vw; /* บังคับความกว้างเต็ม viewport */
+    height: 100vh; /* บังคับความสูงเต็ม viewport */
+    z-index: 4;
+    pointer-events: none;
+    
+    /* ใช้ Background แทน Border เพื่อให้คลุมเต็มจอ 100% */
+    background: 
+        /* ชั้นที่ 1: ฝ้าขาวที่ขอบสุด */
+        radial-gradient(circle at center, transparent 40%, rgba(255, 255, 255, 0.8) 100%),
+        /* ชั้นที่ 2: ไอเย็นสีฟ้าน้ำแข็ง */
+        radial-gradient(circle at center, transparent 60%, rgba(0, 160, 255, 0.4) 100%);
+    
+    /* บังคับลบขอบที่เบราว์เซอร์อาจจะเว้นไว้ */
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+
+    /* เพิ่มเอฟเฟกต์เบลอขอบเพื่อให้ดูเหมือนน้ำแข็งเกาะกระจก */
+    backdrop-filter: blur(4px) saturate(1.2);
+    -webkit-backdrop-filter: blur(4px) saturate(1.2);
+}
+/* เพิ่มแอนิเมชั่นให้พวงมาลัยหยุดนิ่งสนิทและเปลี่ยนสีเป็นโทนเย็น */
+.time-frozen #garland-stack {
+    animation-play-state: paused; /* หยุดการแกว่ง */
+    filter: drop-shadow(0 0 10px rgba(0, 191, 255, 0.5)) saturate(0.8);
+}
+
+.shake-effect {
+    animation: shake 0.3s ease-in-out;
+}
+
+.angry-text {
+    color: red; 
+    font-weight: bold; 
+    font-size: 14px; 
+    margin: 0; 
+    text-align: center; 
+    padding: 10px; 
+    background: white; 
+    border-radius: 15px; 
+    border: 3px solid red; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
+    min-width: 140px;
+}
+
+/* ปรับปรุงขนาดดอกไม้ในฟองคำพูดสำหรับ Pattern ยาวๆ */
+.hint-flower {
+    width: 20px;
+    height: 20px;
+}
+
+#game-container::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* สำคัญมาก: เพื่อให้ยังกดคลิก NPC ได้ */
+    z-index: 4; /* ให้อยู่เหนือพื้นหลัง (bg-temple) แต่อยู่ใต้ NPC (z-index: 5) และโจทย์ */
+    transition: opacity 0.5s;
+    opacity: 0;
+}
+
+/* เมื่อสถานะหยุดทำงาน */
+#game-container.time-frozen::after {
+    opacity: 1;
+    background: rgba(0, 242, 254, 0.1); /* สีฟ้าจางๆ เคลือบพื้นหลัง */
+    box-shadow: inset 0 0 100px rgba(0, 242, 254, 0.6); /* ขอบน้ำแข็ง */
+    border: 10px solid rgba(173, 216, 230, 0.3); /* ขอบจอสีฟ้าขาว */
+}
+
+/* ปรับ z-index ของ NPC และ โจทย์ให้มั่นใจว่าอยู่เหนือเลเยอร์น้ำแข็ง */
+.customer-area {
+    z-index: 10; /* ดันขึ้นมาให้อยู่เหนือเลเยอร์น้ำแข็ง (z-index: 4) */
+}
+
+.order-bubble {
+    z-index: 110; /* ดันโจทย์ให้อยู่สูงที่สุดเพื่อให้เห็นชัดเจน */
+}
+
+.item-success-text {
+    color: #2e7d32; /* สีเขียวเข้มดูสบายตา */
+    font-weight: bold;
+    font-size: 16px;
+    margin: 0;
+    text-align: center;
+    padding: 5px 10px;
+    animation: pop 0.3s ease-out; /* ใช้ animation pop เดิมที่มีอยู่ */
+}
+
+.patience-bar-bg { 
+    position: absolute; 
+    left: 0; 
+    bottom: 45%; /* เพิ่มค่าจาก 20% เป็น 45% เพื่อให้อยู่เหนือขอบโต๊ะ */
+    width: 12px; 
+    height: 35%; /* ปรับความสูงหลอดให้กะทัดรัดขึ้นเล็กน้อย */
+    background: rgba(0, 0, 0, 0.5); 
+    border: 2px solid #fff; 
+    border-radius: 10px; 
+    overflow: hidden; 
+    z-index: 11; /* ให้อยู่เหนือตัวละครเล็กน้อย */
+}
+
+/* สำหรับลูกค้าที่มาจากฝั่งขวา ให้หลอดพลังอยู่ฝั่งขวาของตัวละครแทนเพื่อไม่ให้โดนบัง */
+.from-right .patience-bar-bg {
+    left: auto;
+    right: 0;
+}

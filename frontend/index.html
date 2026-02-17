@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เกมร้อยพวงมาลัย - ร้านมาลัยหลายคิว</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body style="margin: 0; padding: 0; overflow: hidden;">
+    <audio id="bg-music" loop><source src="audio/background.mp3" type="audio/mpeg"></audio>
+    <audio id="sfx-321"><source src="audio/countdown.mp3" type="audio/mpeg"></audio>
+    <audio id="sfx-start"><source src="audio/start.mp3" type="audio/mpeg"></audio>
+
+    <div id="game-container">
+        <div class="ui-header">
+            <div class="sign-board timer-box">
+                <div class="label">เวลา</div>
+                <div id="timer-val" class="value">120</div>
+            </div>
+
+            <div class="item-inventory">
+                <div class="item-slot">
+                    <span class="item-label">น้ำอบ</span>
+                    <span id="count-water" class="item-count">3</span>
+                </div>
+                <div class="item-slot">
+                    <span class="item-label">ธูป</span>
+                    <span id="count-powder" class="item-count">1</span>
+                </div>
+            </div>
+
+            <div class="sign-board score-box">
+                <div class="label">คะแนน</div>
+                <div id="score-val" class="value">0</div>
+            </div>
+        </div>
+
+        <div id="start-screen" class="overlay">
+            <div class="level-board">
+                <h2 id="level-display">ด่านเกมร้านมาลัยหลายคิว</h2>
+                <button id="start-btn" onclick="startCountdown()">เริ่มเกม</button>
+            </div>
+        </div>
+
+        <div id="result-screen" class="overlay" style="display: none;">
+            <div class="level-board result-board">
+                <h2 style="font-size: 32px; color: #fff;">สรุปคะแนนรวม</h2>
+                <div id="final-score-display" style="font-size: 60px; color: #ffd700; font-weight: 900; text-shadow: 3px 3px 0px #4b3621;">0</div>
+
+            </div>
+        </div>
+
+        <div id="countdown-overlay" class="overlay" style="display: none;">
+            <div id="countdown-text">3</div>
+        </div>
+    
+        <div id="customer-area" class="customer-area"></div>
+
+        <div class="garland-display">
+            <div class="rope"></div>
+            <div id="garland-stack"></div>
+        </div>
+
+        <div class="table-foreground"></div>
+
+        <div class="item-actions">
+            <button class="btn-use-item water-bg" onclick="useWater()">ใช้น้ำอบ</button>
+            <button class="btn-use-item powder-bg" onclick="usePowder()">ใช้ธูป</button>
+        </div>
+
+        <div class="controls-container">
+            <button class="btn-flower f-white" onclick="playAdd('white')"></button>
+            <button class="btn-flower f-red" onclick="playAdd('red')"></button>
+            <button class="btn-flower f-yellow" onclick="playAdd('yellow')"></button>
+            <button class="btn-flower f-green" onclick="playAdd('green')"></button>
+            <button class="btn-flower f-purple" onclick="playAdd('purple')"></button>
+        </div>
+    </div>
+    <script src="game.js"></script>
+</body>
+</html>
