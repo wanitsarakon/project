@@ -483,21 +483,35 @@ body {
     20% { left: 120%; }
     100% { left: 120%; }
 }
-/* --- ตัวเลขถอยหลัง --- */
+/* เลเยอร์พื้นหลังตอนนับถอยหลัง */
+#countdown-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.4); /* มืดลงนิดหน่อยให้ตัวเลขเด่น */
+    display: none; /* คุมด้วย JS */
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+/* ตกแต่งตัวเลขตามที่คุณต้องการ */
 #countdown-text {
-    font-size: 150px;
+    color: #f1c40f;
+    font-size: 180px;
     font-weight: 900;
-    color: #fff;
-    text-shadow: 0 0 20px #ffcc00;
-    animation: zoomInBounce 1s infinite;
+    font-family: 'Kanit', sans-serif;
+    text-shadow: 8px 8px 0px #000;
+    pointer-events: none;
+    /* ใส่ Animation การเด้ง */
+    animation: countBounce 0.5s ease-out forwards;
 }
 
-@keyframes zoomInBounce {
-    0% { transform: scale(0.5); opacity: 0; }
-    50% { transform: scale(1.2); opacity: 1; }
-    100% { transform: scale(1); opacity: 0; }
+@keyframes countBounce {
+    0% { transform: scale(0.3); opacity: 0; }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
 }
-
 
 .customer-container [style*="npc-customer-5.png"] {
     transform: scale(0.9); /* ปรับขนาดให้ใหญ่ขึ้น 20% (หรือเปลี่ยนเลขตามต้องการ) */
