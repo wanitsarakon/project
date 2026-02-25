@@ -16,21 +16,22 @@
             <div class="sign-wrapper">
                 <img src="/static/image/start_sign.png" alt="ป้ายด่าน" class="start-sign">
                 <div class="sign-content">
-                    <div class="sign-title">ด่านเกมปาโป่ง</div>
+                    <div class="sign-title"></div>
                     <button class="start-btn" onclick="startGame()">เริ่มเกม</button>
                 </div>
             </div>
         </div>
 
-        <div id="score-screen" class="ui-hidden">
-            <div class="sign-wrapper">
-                <img src="/static/image/start_sign.png" alt="ป้ายสรุปคะแนน" class="start-sign">
-                <div class="sign-content">
-                    <div class="sign-title">คะแนนรวม</div>
-                    <div id="final-score-display" style="color: #fff; font-size: 5rem; font-weight: 600; text-shadow: 2px 2px 5px rgba(0,0,0,0.6); margin: 20px 0;">0</div>
-                </div>
-            </div>
+       <div id="score-screen" class="ui-hidden">
+    <div class="sign-wrapper">
+        <img src="/static/image/result_sign.png" alt="ป้ายสรุปคะแนน" class="start-sign">
+        <div class="sign-content">
+            <div class="sign-title"></div>
+            <div id="total-score">0</div>
+           
         </div>
+    </div>
+</div>
 
 <div class="ui-layer ui-hidden" id="ui-layer">
             <div class="stat-box">
@@ -46,9 +47,9 @@
         <canvas id="gameCanvas"></canvas>
 
         <div class="power-bar-container ui-hidden" id="power-bar">
-            <div id="power-fill"></div>
-            <div class="power-label">POWER</div>
-        </div>
+    <div id="power-fill"></div>
+    <div class="power-label">หลอดพลัง</div> 
+</div>
         
         <div class="instruction ui-hidden" id="instruction">
             กด <strong>Spacebar</strong> ค้างเพื่อชาร์จ | ปล่อยเพื่อยิง

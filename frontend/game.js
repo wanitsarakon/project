@@ -341,35 +341,59 @@ function update() {
                 sounds.rain.currentTime = 0;
             }
         }
+// ค้นหาและวางทับส่วนจัดการ Auntie ในฟังก์ชัน update()
+if (!auntie.isActive && (timeLeft === 50 || timeLeft === 25)) {
+    auntie.isActive = true; 
+    auntie.appearanceCount++; 
+    auntie.speed = 2.5; 
+    
+    // กำหนดประเภท
+    if (timeLeft === 25) {
+        auntie.currentType = 2; 
+    } else {
+        auntie.currentType = (auntie.appearanceCount % 2 === 1) ? 1 : 2;
+    }
+
+    auntie.direction = Math.random() > 0.5 ? 1 : -1;
+    auntie.x = auntie.direction === 1 ? -400 : window.innerWidth + 400;
+    auntie.walkCycle = 0; // รีเซ็ตจังหวะเดินทุกครั้งที่เริ่มใหม่
+}
+
+if (auntie.isActive) {
+    if (auntieStunTimer <= 0) {
+        // เคลื่อนที่
+        auntie.x += (auntie.speed * difficultyMultiplier) * auntie.direction;
         
-        if (!auntie.isActive && (timeLeft === 50 || timeLeft === 25)) {
-            auntie.isActive = true; 
-            auntie.appearanceCount++; 
-            auntie.speed = 2.5; 
-            
-            if (timeLeft === 25) {
-                auntie.currentType = 2; 
-            } else {
-                auntie.currentType = (auntie.appearanceCount % 2 === 1) ? 1 : 2;
-            }
-
-            auntie.direction = Math.random() > 0.5 ? 1 : -1;
-            auntie.x = auntie.direction === 1 ? -400 : window.innerWidth + 400;
-        }
-
-        if (auntie.isActive) {
-            if (auntieStunTimer <= 0) {
-                auntie.x += (auntie.speed * difficultyMultiplier) * auntie.direction;
-                auntie.walkCycle += 0.12 * difficultyMultiplier;
-            }
-            auntie.y = groundLevel - (auntie.baseHeight * 0.8) - (auntie.currentType === 2 ? 150 : 0); 
-            let imgForRef = (auntie.currentType === 1) ? auntieImg : auntieBalloonImg;
-            auntie.height = auntie.baseHeight * (auntie.currentType === 2 ? 1.3 : 1.0); 
-            auntie.width = auntie.height * (imgForRef.width / imgForRef.height || 1); 
-            if ((auntie.direction === 1 && auntie.x > window.innerWidth + auntie.width) || (auntie.direction === -1 && auntie.x < -auntie.width)) auntie.isActive = false;
+        // --- แก้ไขจังหวะการเดินตรงนี้ ---
+        if (auntie.currentType === 1) {
+            auntie.walkCycle += 0.15; // ยายปกติให้เพิ่มค่าเพื่อโยกตัว
+        } else {
+            auntie.walkCycle = 0; // ยายรถเข็นให้เป็น 0 เพื่อให้นิ่ง
         }
     }
 
+    // คำนวณตำแหน่ง Y และขนาด (คงเดิมตามระบบเกมคุณ)
+    auntie.y = groundLevel - (auntie.baseHeight * 0.8) - (auntie.currentType === 2 ? 70 : 0); 
+   // --- ส่วนที่แก้ไขเพื่อปรับขนาดแยกกัน ---
+if (auntie.currentType === 1) {
+    // ปรับขนาดยายคนแรกที่นี่ (เช่น 1.2 คือใหญ่ขึ้น 20%)
+    auntie.height = auntie.baseHeight * 1.13; 
+} else {
+    // ขนาดยายรถเข็น (Type 2) ให้เป็น 1.3 เท่าเดิมตามโค้ดคุณ
+    auntie.height = auntie.baseHeight * 1.3; 
+}
+
+// บรรทัดนี้คงเดิมเพื่อคำนวณความกว้างให้สัมพันธ์กับรูปภาพ
+let imgForRef = (auntie.currentType === 1) ? auntieImg : auntieBalloonImg;
+auntie.width = auntie.height * (imgForRef.width / imgForRef.height || 1);
+    // เช็คขอบจอเพื่อปิดตัวตน
+    if ((auntie.direction === 1 && auntie.x > window.innerWidth + auntie.width) || 
+        (auntie.direction === -1 && auntie.x < -auntie.width)) {
+        auntie.isActive = false;
+    }
+}
+
+    }
     if (lightningStrike) { lightningStrike.timer--; if (lightningStrike.timer <= 0) lightningStrike = null; }
     if (auntieStunTimer > 0) auntieStunTimer--;
     if (stormWarningTimer > 0) stormWarningTimer--;
@@ -406,57 +430,53 @@ function draw() {
             ctx.restore();
         }
     });
+// ค้นหาส่วนที่วาด Countdown ในฟังก์ชัน draw()
+if (isCountingDown) {
+    ctx.save();
+    // สร้างพื้นหลังมืดจางๆ เพื่อให้ตัวเลขเด่น
+    ctx.fillStyle = "rgba(0,0,0,0.5)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // --- 3-2-1 START! ตกแต่งใหม่ ---
-    if (isCountingDown) {
-        ctx.save();
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        let displayText = countdownValue > 0 ? countdownValue : "START!";
-        let fontSize = countdownValue > 0 ? 200 : 180;
-        ctx.shadowBlur = 30;
-        ctx.shadowColor = "rgba(255, 215, 0, 0.8)";
-        let grad = ctx.createLinearGradient(0, canvas.height/2 - 100, 0, canvas.height/2 + 100);
-        grad.addColorStop(0, "#ffffff");
-        grad.addColorStop(0.5, "#ffcc00");
-        grad.addColorStop(1, "#ff6600");
-        ctx.font = `bold ${fontSize}px Kanit`;
-        ctx.lineWidth = 15;
-        ctx.strokeStyle = "rgba(0,0,0,0.5)";
-        ctx.strokeText(displayText, canvas.width / 2, canvas.height / 2);
-        ctx.fillStyle = grad;
-        ctx.fillText(displayText, canvas.width / 2, canvas.height / 2);
-        ctx.restore();
-    }
+    ctx.font = "bold 150px Kanit";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
     
-    // --- Combo แสดงผลกลางจอและคูณเลข ---
+    // กำหนดข้อความที่จะแสดง
+    let displayTxt = countdownValue;
+    if (countdownValue === 0) {
+        displayTxt = "เริ่ม!"; // เปลี่ยนเลข 0 ให้เป็นคำว่า "เริ่ม!"
+        ctx.fillStyle = "#FFD700"; // เปลี่ยนสีเป็นสีทองสำหรับคำว่า เริ่ม!
+    } else {
+        ctx.fillStyle = "#ffffff";
+    }
+
+    // วาดเงาให้ตัวอักษร
+    ctx.shadowColor = "rgba(0,0,0,0.8)";
+    ctx.shadowBlur = 15;
+    
+    ctx.fillText(displayTxt, canvas.width / 2, canvas.height / 2);
+    ctx.restore();
+}
     if (gameActive && comboCount >= 5) {
         ctx.save();
         ctx.textAlign = "center";
-        // ขนาดใหญ่ขึ้นเรื่อยๆ ตาม Combo
-        let comboSize = 60 + (Math.min(comboCount, 30) * 3); 
+        let comboSize = 40 + (Math.min(comboCount, 20) * 2);
         ctx.font = `bold ${comboSize}px Kanit`;
         
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = "rgba(255, 68, 68, 0.8)";
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = "#ff4444";
         
-        let comboGrad = ctx.createLinearGradient(0, canvas.height/2 - 50, 0, canvas.height/2 + 50);
-        comboGrad.addColorStop(0, "#fff");
-        comboGrad.addColorStop(0.5, "#ff4444");
-        comboGrad.addColorStop(1, "#880000");
+        let comboGrad = ctx.createLinearGradient(0, 40, 0, 100);
+        comboGrad.addColorStop(0, "#ff0000");
+        comboGrad.addColorStop(1, "#ffaa00");
         
         ctx.fillStyle = comboGrad;
         ctx.strokeStyle = "white";
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 2;
         
-        let shake = Math.sin(Date.now() / 30) * (comboCount * 0.5);
-        ctx.strokeText(`${comboCount} COMBO!`, canvas.width / 2 + shake, canvas.height / 2 - 100);
-        ctx.fillText(`${comboCount} COMBO!`, canvas.width / 2 + shake, canvas.height / 2 - 100);
-        
-        // แสดงตัวคูณคะแนนด้านล่าง Combo
-        ctx.font = `bold 40px Kanit`;
-        ctx.fillStyle = "#ffd700";
-        ctx.fillText(`SCORE X${comboCount}`, canvas.width / 2, canvas.height / 2 - 30);
+        let shake = Math.sin(Date.now() / 50) * 3;
+        ctx.strokeText(`${comboCount} COMBO!`, canvas.width / 2 + shake, 180);
+        ctx.fillText(`${comboCount} COMBO!`, canvas.width / 2 + shake, 180);
         ctx.restore();
     }
 
@@ -465,33 +485,35 @@ function draw() {
         ctx.textAlign = "center";
         ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
         ctx.fillRect(0, canvas.height/2 - 80, canvas.width, 160);
+
         ctx.font = "bold 80px Kanit";
         let pulse = Math.sin(Date.now() / 150) * 10;
         ctx.shadowBlur = 20 + pulse;
         ctx.shadowColor = "red";
+        
         let grad = ctx.createLinearGradient(0, canvas.height/2 - 40, 0, canvas.height/2 + 40);
         grad.addColorStop(0, "#FF0000");
         grad.addColorStop(1, "#FFFF00");
         ctx.fillStyle = grad;
+        
         ctx.fillText("⚠️ พายุกำลังเข้าระวัง!!!!! ⚠️", canvas.width / 2, canvas.height / 2 + 20);
         ctx.restore();
     }
 
-    // --- Golden Time ย้ายลงมาไว้ข้างล่างจอ ---
     if (doubleScoreTimer > 0) {
         ctx.save();
         ctx.textAlign = "center";
-        ctx.font = "bold 45px Kanit";
-        let pulse = Math.sin(Date.now() / 100) * 8;
-        ctx.shadowBlur = 20 + pulse;
-        ctx.shadowColor = "#ffaa00";
+        ctx.font = "bold 40px Kanit";
+        let pulse = Math.sin(Date.now() / 100) * 5;
+        ctx.shadowBlur = 15 + pulse;
+        ctx.shadowColor = "gold";
         
-        let grad = ctx.createLinearGradient(0, canvas.height - 120, 0, canvas.height - 60);
+        let grad = ctx.createLinearGradient(0, 80, 0, 130);
         grad.addColorStop(0, "#FFF700");
         grad.addColorStop(1, "#FFA200");
         ctx.fillStyle = grad;
         
-        ctx.fillText(`✨ GOLDEN TIME: ${Math.ceil(doubleScoreTimer)}s (x2 SCORE) ✨`, canvas.width / 2, canvas.height - 110);
+        ctx.fillText(`✨ GOLDEN TIME: ${Math.ceil(doubleScoreTimer)}s (x2 SCORE) ✨`, canvas.width / 2, 110);
         ctx.restore();
     }
 
@@ -511,6 +533,7 @@ function draw() {
         ctx.save(); 
         ctx.globalAlpha = t.opacity; 
         ctx.translate(t.x, t.y); 
+        
         if (t.isBonus) {
             ctx.font = "bold 45px Kanit";
             ctx.shadowBlur = 15;
@@ -521,24 +544,53 @@ function draw() {
             ctx.shadowBlur = 5;
             ctx.shadowColor = "black";
         }
+        
         ctx.textAlign = "center"; 
         ctx.fillStyle = t.color; 
         ctx.fillText(t.text, 0, 0); 
         ctx.restore(); 
     });
 
-    if (auntie.isActive) {
-        ctx.save(); ctx.translate(auntie.x + auntie.width/2, auntie.y + auntie.height); 
-        let imgToDraw = (auntieStunTimer > 0) ? (auntie.currentType === 1 ? auntieMadImg : auntieBalloonMadImg) : (auntie.currentType === 1 ? auntieImg : auntieBalloonImg);
-        if (imgToDraw.complete) {
-            if (auntie.direction === 1) ctx.scale(-1, 1);
-            if (auntieStunTimer <= 0) ctx.rotate(Math.sin(auntie.walkCycle) * 0.05);
-            ctx.drawImage(imgToDraw, -auntie.width/2, -auntie.height, auntie.width, auntie.height);
-        }
-        ctx.restore();
-        if (auntieStunTimer > 0) drawSpeechBubble(ctx, auntie.x, auntie.y, auntieSpeech, auntie.currentType === 2 ? "side" : "top");
-    }
+// วางทับส่วนวาด Auntie ในฟังก์ชัน draw() ของไฟล์ game.js
+if (auntie.isActive) {
+    ctx.save(); 
+    // ย้ายจุดหมุนไปที่ฐานของคุณยาย
+    ctx.translate(auntie.x + auntie.width/2, auntie.y + auntie.height); 
+    
+    // เลือกรูปภาพตามสถานะโกรธและประเภทของยาย
+    let imgToDraw = (auntieStunTimer > 0) ? 
+        (auntie.currentType === 1 ? auntieMadImg : auntieBalloonMadImg) : 
+        (auntie.currentType === 1 ? auntieImg : auntieBalloonImg);
 
+    if (imgToDraw.complete) {
+        // หันหน้าซ้าย-ขวาตามทิศทางการเดิน
+        if (auntie.direction === 1) ctx.scale(-1, 1);
+        
+        // --- เงื่อนไขการโยก: เฉพาะยายคนแรก (Type 1) และตอนที่ไม่โดนสตัน ---
+        if (auntieStunTimer <= 0 && auntie.currentType === 1) {
+            ctx.rotate(Math.sin(auntie.walkCycle) * 0.05);
+        }
+        
+        // วาดตัวละคร
+        ctx.drawImage(imgToDraw, -auntie.width/2, -auntie.height, auntie.width, auntie.height);
+    }
+    ctx.restore();
+
+    // --- ส่วนของบทพูด (Speech Bubble) ---
+    if (auntieStunTimer > 0) {
+        // คำนวณตำแหน่ง X ใหม่: ถ้าเป็นยายรถเข็น (Type 2) ให้ขยับไปทางขวา 250 พิกเซล
+        let bubbleX = auntie.x + (auntie.currentType === 2 ? 250 : 0);
+        
+        // เรียกใช้ฟังก์ชันวาดบทพูดโดยใช้ bubbleX
+        drawSpeechBubble(
+            ctx, 
+            bubbleX, 
+            auntie.y, 
+            auntieSpeech, 
+            auntie.currentType === 2 ? "side" : "top"
+        );
+    }
+}
     const startX = canvas.width - 100, startY = 150;
     ctx.strokeStyle = "#5d4037"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(startX, startY); ctx.lineTo(startX, startY + 80); ctx.stroke();
     ctx.fillStyle = (Math.abs(wind) > 1.5) ? "#ff4444" : "#ffcc00";
@@ -578,24 +630,40 @@ function initCountdown() {
     if (isCountingDown) return; 
     isCountingDown = true; 
     countdownValue = 3;
-    playSfx(sounds.count);
+
+    // ฟังก์ชันช่วยเล่นเสียงแบบตัดจบของเก่าทันที
+    const playCleanSfx = (audio) => {
+        if (!audio) return;
+        audio.pause();           // หยุดเสียงเดิม
+        audio.currentTime = 0;   // ย้อนกลับไปเริ่มต้น
+        audio.play().catch(e => console.log("Audio play failed"));
+    };
+
+    // เล่นเสียง "3" ครั้งแรก
+    playCleanSfx(sounds.count);
+
     const countdownInterval = setInterval(() => {
         countdownValue--;
+
         if (countdownValue > 0) {
-            playSfx(sounds.count);
-        } else if (countdownValue === 0) { 
-            playSfx(sounds.start);
-            setTimeout(() => {
-                isCountingDown = false; 
-                gameActive = true; 
-                clearInterval(countdownInterval); 
+            // เล่นเสียง "2" และ "1"
+            playCleanSfx(sounds.count);
+        } else if (countdownValue === 0) {
+            // เล่นเสียง "เริ่ม!" (sounds.start)
+            playCleanSfx(sounds.start);
+        } else if (countdownValue < 0) {
+            // เคลียร์ Interval และเริ่มเกมจริง
+            clearInterval(countdownInterval);
+            isCountingDown = false; 
+            gameActive = true; 
+            if (sounds.bgm) {
+                sounds.bgm.currentTime = 0;
                 sounds.bgm.play();
-                startMainTimer(); 
-            }, 800); 
+            }
+            startMainTimer();
         }
     }, 1000);
 }
-
 let mainTimerInterval = null;
 function startMainTimer() {
     if (mainTimerInterval) clearInterval(mainTimerInterval);
@@ -614,15 +682,21 @@ function startMainTimer() {
         } 
     }, 1000);
 }
+// ค้นหาฟังก์ชัน showScoreScreen ใน game.js แล้วเปลี่ยนเป็นแบบนี้
 function showScoreScreen() {
     document.getElementById('ui-layer').classList.add('ui-hidden');
     document.getElementById('power-bar').classList.add('ui-hidden');
     document.getElementById('instruction').classList.add('ui-hidden');
+    
     const scoreScreen = document.getElementById('score-screen');
     scoreScreen.classList.remove('ui-hidden');
-    document.getElementById('final-score-display').innerText = totalScore.toLocaleString();
+    
+    // แสดงคะแนนใน id="total-score" ที่เราสร้างไว้
+    const finalScoreDisplay = document.getElementById('total-score');
+    if (finalScoreDisplay) {
+        finalScoreDisplay.innerText = totalScore.toLocaleString();
+    }
 }
-
 resize(); 
 generateBalloons(); 
 loop();
