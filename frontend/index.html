@@ -11,14 +11,15 @@
         <div class="score-legend-overlay"></div>
         
         <div id="start-menu" class="overlay">
-            <div class="cartoon-card">
-                <div class="card-content">
-                    <h1 class="main-title">ด่านเกมยิงตุ๊กตา</h1>
-                    <p class="sub-text">ยิงตุ๊กตาให้ได้คะแนนสูงสุด ระวังกระสุนหมดนะ!</p>
-                    <button id="start-btn" class="start-button">เริ่มเกม</button>
-                </div>
-            </div>
+    <div class="cartoon-card start-card"> 
+        <div class="card-content">
+            <h1 class="main-title"></h1>
+            <p class="sub-text"></p>
+            <button id="start-btn" class="start-button">เริ่มเกม</button>
         </div>
+    </div>
+</div>
+
 
         <div id="countdown" class="countdown-text hidden"></div>
 
@@ -35,7 +36,7 @@
             <div class="right-stats-group">
                 <div class="stat-box time-bg">
                     <span class="label">เวลา:</span> 
-                    <span id="time">30</span>
+                    <span id="time">60</span>
                 </div>
                 <div class="stat-box ammo-bg">
                     <span class="label">กระสุน:</span> 
@@ -45,16 +46,13 @@
         </div>
 
         <div id="combo-alert" class="combo-text"></div>
-
-        <div id="game-over" class="overlay hidden">
-            <div class="cartoon-card">
-                <div class="card-content">
-                    <h2 class="main-title" style="font-size: 45px; margin-bottom: 5px;">จบเกมแล้ว!</h2>
-                    <div id="final-score" class="score-display">0</div>
-                </div>
-            </div>
+<div id="game-over" class="overlay hidden">
+    <div class="cartoon-card game-over-card">
+        <div class="card-content" style="height: 100%; position: relative;">
+            <div id="total-score">0</div>
         </div>
-
+    </div>
+</div>
         <canvas id="gameCanvas"></canvas>
         
         <div class="instructions">

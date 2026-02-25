@@ -143,9 +143,9 @@ canvas {
     z-index: 100;
 }
 
-/* --- Cartoon Card: แผ่นไม้หลัก --- */
+/* --- แก้ไข Class หลัก: เอาพื้นหลังออก --- */
 .cartoon-card {
-    background-image: url('images/your-frame-bg.png');
+    /* เอา background-image เดิมออก */
     background-size: 100% 100%;
     background-position: center;
     background-repeat: no-repeat;
@@ -155,7 +155,7 @@ canvas {
 
     width: 580px;           
     height: 380px;          
-    padding-top: 120px; /* ขยับตัวหนังสือลงมาจากขอบบนของแผ่นไม้ */
+    padding-top: 120px; 
     padding-bottom: 40px;
     padding-left: 40px;
     padding-right: 40px;
@@ -167,6 +167,18 @@ canvas {
     justify-content: flex-start; 
     text-align: center;
     box-sizing: border-box;
+}
+
+/* --- กำหนดรูปภาพแยกกันตาม Class --- */
+
+/* รูปสำหรับป้ายเริ่มเกม */
+.start-card {
+    background-image: url('images/your-frame-bg.png'); /* เปลี่ยนชื่อไฟล์ตามที่ต้องการ */
+}
+
+/* รูปสำหรับป้ายสรุปคะแนน */
+.game-over-card {
+    background-image: url('images/your-frame-bg2.png'); /* เปลี่ยนชื่อไฟล์ตามที่ต้องการ */
 }
 
 /* --- หัวข้อหลักบนแผ่นไม้ --- */
@@ -190,58 +202,56 @@ canvas {
         0px 0px 8px rgba(0, 0, 0, 0.6);
 }
 
-/* --- ปุ่มเริ่มเกมแบบ 3D สมูท (ขอบขาวหนา) --- */
-.start-button {
-    position: relative;
-    /* เปลี่ยนจาก margin เดิม หรือเพิ่มบรรทัดนี้เพื่อดันปุ่มขึ้น */
-    margin-top: -20px; /* ยิ่งค่าติดลบมาก ปุ่มจะยิ่งขยับสูงขึ้น */
-    
-    padding: 10px 30px;
+.start-button{
+    padding: 15px 40px;
     font-size: 28px;
-    font-weight: 900;
-   
-    color: #fff;
-    text-transform: uppercase;
-    text-decoration: none;
-    background: linear-gradient(to bottom, #53f323 0%, #2bb10c 100%); /* สีเขียวสด */
-    border: none;
-    border-radius: 50px;
+    font-family: 'Kanit', sans-serif;
+    font-weight: bold;
+    color: white;
+    /* ไล่เฉดสีจากส้มไปแดง ให้ดูมีมิติ */
+    background: linear-gradient(180deg, #ffcc00 0%, #ff8800 50%, #ff4400 100%);
+    border: 4px solid #fff;
+    border-radius: 50px; /* ทรงแคปซูล */
     cursor: pointer;
+    outline: none;
+    margin-top: 40px;
+    /* เงาใต้ปุ่มและแสงฟุ้งรอบๆ */
+    box-shadow: 0 8px 0 #992200, 0 15px 20px rgba(0,0,0,0.5);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
     
-    /* เงาและขอบแบบ 3D */
-    box-shadow: 
-        0 8px 0 #2f8d56,        /* เงาหนาด้านล่างทำให้ดูนูน */
-        0 15px 20px rgba(0,0,0,0.35); 
-    
-    transition: all 0.15s ease;
-    text-shadow: 2px 2px 0px rgba(101, 94, 94, 0.685);
+    transition: all 0.2s ease; /* หน่วงเวลาตอนกดให้ดูนุ่มนวล */
+    position: relative;
     overflow: hidden;
 }
 
-.start-button:after{
-    content: '';
-    position: absolute;
-    top: -50%;
-    left: -50%;
-    width: 200%;
-    height: 200%;
-    background: rgba(255, 255, 255, 0.2);
-    transform: rotate(30deg);
-    transition: 0.5s;
-    pointer-events: none;
-}
-.start-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 0 #1e8449, 0 15px 25px rgba(0,0,0,0.4);
-    filter: brightness(1.1);
-}
 
+.start-button:hover {
+   transform: translateY(-3px) scale(1.05); /* ขยายใหญ่ขึ้นนิดนึง */
+    background: linear-gradient(180deg, #ffe066 0%, #ffa500 50%, #ff5500 100%);
+    box-shadow: 0 10px 0 #992200, 0 20px 25px rgba(0,0,0,0.6);
+}
 
 .start-button:active {
-    transform: translateY(4px);
-    box-shadow: 0 2px 0px #1e8449, 0 5px 10px rgba(0,0,0,0.4);
+    transform: translateY(4px); /* ปุ่มยุบลงเหมือนกดจริง */
+    box-shadow: 0 2px 0 #992200, 0 5px 10px rgba(0,0,0,0.5);
 }
-
+.start-button:after {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -60%;
+    width: 20%;
+    height: 200%;
+    background: rgba(255, 255, 255, 0.4);
+    transform: rotate(30deg);
+    transition: all 0.5s;
+    animation: shine 3s infinite;
+}
+@keyframes shine {
+    0% { left: -60%; }
+    20% { left: 120%; }
+    100% { left: 120%; }
+}
 
 .score-display {
     font-size: 80px;
@@ -318,4 +328,39 @@ canvas {
     filter: blur(15px);
     position: absolute;
     background: rgba(220, 220, 220, 0.8);
+}
+/* --- สไตล์คะแนนสรุป (Game Over) --- */
+#total-score {
+    position: absolute;      /* ทำให้ขยับได้อิสระ ไม่โดนดีด */
+    left: 50%;               /* กึ่งกลางแนวนอน */
+    transform: translateX(-50%); /* ปรับสมดุลกึ่งกลาง */
+    
+    /* --- ปรับตำแหน่งตรงนี้ --- */
+    top: 70px;              /* เพิ่มเลขนี้เพื่อดันลงมาอีก เช่น 200px หรือ 220px */
+    
+    font-size: 110px;        /* ขนาดตัวเลข */
+    font-family: 'Kanit', sans-serif;
+    font-weight: 900;
+    margin: 0;
+    line-height: 1;
+    white-space: nowrap;     /* ป้องกันเลขบรรทัดแตก */
+
+    /* สีไล่เฉดขาว-ทอง-ส้ม ตามที่คุณแต่ง */
+    background: linear-gradient(180deg, #FFFFFF 30%, #FFD700 60%, #FF8C00 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    
+    /* ขอบตัวอักษรสีน้ำตาลเข้มและเงา */
+    filter: drop-shadow(5px 5px 0px #632b00) 
+            drop-shadow(0px 0px 15px rgba(255, 140, 0, 0.5));
+    
+    z-index: 99;             /* ให้อยู่หน้าสุด */
+    
+    /* Animation ตอนแสดงผล */
+    animation: scorePop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes scorePop {
+    0% { transform: translateX(-50%) scale(0.5); opacity: 0; }
+    100% { transform: translateX(-50%) scale(1); opacity: 1; }
 }

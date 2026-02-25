@@ -217,7 +217,7 @@ function startCountdown() {
             countdownEl.innerText = count; playSfx('tick');
             triggerPulse(countdownEl); count--;
         } else if (count === 0) {
-            countdownEl.innerText = "START!"; playSfx('start');
+            countdownEl.innerText = "เริ่ม!"; playSfx('start');
             triggerPulse(countdownEl); count--;
         } else {
             clearInterval(interval); countdownEl.classList.add('hidden'); actualStart(); 
