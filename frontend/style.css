@@ -215,8 +215,9 @@ body {
 
 .controls-container { 
     position: absolute; 
-    bottom: 15vh; 
+    bottom: 20vh; 
     left: 0; 
+    padding-left: 2vw;
     width: 100%; 
     display: flex; 
     justify-content: center; 
@@ -309,7 +310,9 @@ body {
     margin: 0; 
     text-align: center; 
     padding: 10px; 
-    background: white; 
+   background: transparent !important; /* ห้ามมีสีพื้นหลัง */
+    border: none !important;           /* ห้ามมีขอบ */
+    box-shadow: none !important;
     border-radius: 15px; 
     border: 3px solid #f9dcc4; /* ใช้สีครีมส้มแทนสีแดงเพื่อให้ดูเป็นการสั่งงานปกติ */
     box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
@@ -337,13 +340,56 @@ body {
     box-shadow: 0 5px 15px rgba(0,0,0,0.3); 
     z-index: 100;
 }
+/* --- ส่วนของหางฟองคำพูด --- */
 
-/* สำหรับลูกค้าที่เดินมาจากฝั่งขวา ให้ฟองคำสั่งอยู่ฝั่งซ้ายของหัวแทนเพื่อไม่ให้หลุดขอบจอ */
-.from-right .order-bubble { 
-    left: auto;
-    right: 70%; 
+/* หางชิ้นที่ 1 (ตัวขอบ) */
+.order-bubble::before {
+    content: "";
+    position: absolute;
+    bottom: -18px; /* ปรับให้ยื่นลงมาพ้นขอบกล่อง */
+    left: 25px;    /* ตำแหน่งหาง (ขยับได้ตามชอบ) */
+    border-width: 18px 12px 0 12px; /* ขนาดของหาง */
+    border-style: solid;
+    border-color: #f9dcc4 transparent transparent transparent; /* สีเดียวกับขอบกล่อง */
+    z-index: 99;
 }
 
+/* หางชิ้นที่ 2 (ตัวพื้นหลังสีขาว - วางทับตัวขอบเพื่อให้ดูเหมือนมีขอบแค่ด้านข้าง) */
+.order-bubble::after {
+    content: "";
+    position: absolute;
+    bottom: -12px; /* ยื่นน้อยกว่าตัวขอบเล็กน้อย */
+    left: 27px;    /* ปรับให้กึ่งกลางตัวขอบ */
+    border-width: 15px 10px 0 10px;
+    border-style: solid;
+    border-color: rgba(255, 255, 255, 0.98) transparent transparent transparent; /* สีเดียวกับพื้นหลังกล่อง */
+    z-index: 101;
+}
+
+/* --- สำหรับลูกค้าทั่วไปที่มาจากฝั่งขวา (รวม NPC 1, 2, 3, 4) --- */
+.from-right .order-bubble {
+    left: auto;
+    right: 40%; /* ค่ามาตรฐาน ให้ฟองคำพูดอยู่เยื้องขวานิดๆ ตามปกติ */
+    top: -5%;    /* ความสูงมาตรฐาน */
+}
+
+/* --- เจาะจงเฉพาะ NPC ตัวที่ 5 (ไม่ว่าจะอยู่ซ้ายหรือขวา) --- */
+.npc-5-special .order-bubble {
+    top: 15% !important; /* ปรับให้ต่ำลงมาเพื่อไม่ให้บังหัวหรือหลุดจอ */
+}
+
+/* --- เจาะจงเฉพาะ NPC ตัวที่ 5 ที่โผล่มาจากฝั่งขวาเท่านั้น --- */
+.from-right.npc-5-special .order-bubble {
+    left: auto;
+    right: 75% !important; /* ผลักกล่องข้อความไปทางซ้ายของตัวละคร (มากกว่าปกติ) */
+}
+
+/* ปรับแต่งหางฟองคำพูดเฉพาะของตัวที่ 5 ฝั่งขวา */
+.from-right.npc-5-special .order-bubble::before,
+.from-right.npc-5-special .order-bubble::after {
+    left: auto;
+    right: 20px; /* ให้หางชี้กลับมาที่ตัวละคร */
+}
 /* ปรับ Animation การปรากฏตัวให้เด้งจากจุดใหม่ */
 .order-bubble.show { 
     display: flex; 
@@ -388,38 +434,54 @@ body {
 
 }
 #start-btn {
-    padding: 10px 50px;
+    padding: 15px 40px;
     font-size: 28px;
-    font-weight: 900;
-    color: #4b3621; /* สีน้ำตาลเข้มตัดกับปุ่มทอง */
-    background: linear-gradient(to bottom, #ffd700 0%, #ff9900 100%); /* ไล่สีทองเข้ม */
+    font-family: 'Kanit', sans-serif;
+    font-weight: bold;
+    color: white;
+    /* ไล่เฉดสีจากส้มไปแดง ให้ดูมีมิติ */
+    background: linear-gradient(180deg, #ffcc00 0%, #ff8800 50%, #ff4400 100%);
     border: 4px solid #fff;
-    border-radius: 60px;
+    border-radius: 50px; /* ทรงแคปซูล */
     cursor: pointer;
-    box-shadow: 
-        0 8px 15px rgba(0,0,0,0.4),
-        inset 0 0 10px rgba(255,255,255,0.5); /* เงาด้านในให้ดูนูน */
-    transition: all 0.3s ease;
-    text-transform: uppercase;
-    animation: btnPulse 2s infinite; /* เพิ่มแอนิเมชันกะพริบ */
-    margin-top: 20px;
+    outline: none;
+    margin-top: 60px;
+    /* เงาใต้ปุ่มและแสงฟุ้งรอบๆ */
+    box-shadow: 0 8px 0 #992200, 0 15px 20px rgba(0,0,0,0.5);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    
+    transition: all 0.2s ease; /* หน่วงเวลาตอนกดให้ดูนุ่มนวล */
+    position: relative;
+    overflow: hidden;
 }
 
+
 #start-btn:hover {
-    transform: scale(1.1) translateY(-5px); /* ขยายและลอยขึ้นเมื่อชี้ */
-    box-shadow: 0 12px 20px rgba(0,0,0,0.6);
-    background: linear-gradient(to bottom, #fff3b0 0%, #ffcc00 100%); /* สว่างขึ้นเมื่อ hover */
+   transform: translateY(-3px) scale(1.05); /* ขยายใหญ่ขึ้นนิดนึง */
+    background: linear-gradient(180deg, #ffe066 0%, #ffa500 50%, #ff5500 100%);
+    box-shadow: 0 10px 0 #992200, 0 20px 25px rgba(0,0,0,0.6);
 }
 
 #start-btn:active {
-    transform: scale(0.95); /* ยุบตัวเมื่อกด */
+    transform: translateY(4px); /* ปุ่มยุบลงเหมือนกดจริง */
+    box-shadow: 0 2px 0 #992200, 0 5px 10px rgba(0,0,0,0.5);
 }
-
-/* แอนิเมชันปุ่มกะพริบเบาๆ */
-@keyframes btnPulse {
-    0% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0.7); }
-    70% { box-shadow: 0 0 0 20px rgba(255, 215, 0, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(255, 215, 0, 0); }
+#start-btn:after {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -60%;
+    width: 20%;
+    height: 200%;
+    background: rgba(255, 255, 255, 0.4);
+    transform: rotate(30deg);
+    transition: all 0.5s;
+    animation: shine 3s infinite;
+}
+@keyframes shine {
+    0% { left: -60%; }
+    20% { left: 120%; }
+    100% { left: 120%; }
 }
 /* --- ตัวเลขถอยหลัง --- */
 #countdown-text {
@@ -436,17 +498,6 @@ body {
     100% { transform: scale(1); opacity: 0; }
 }
 
-.result-board {
-    background-image: url('image/frame.png'); /* ใช้รูปป้ายเดิม */
-    animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-
-#final-score-display {
-    background: linear-gradient(to bottom, #ffffff, #ffcc00);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.5));
-}
 
 .customer-container [style*="npc-customer-5.png"] {
     transform: scale(0.9); /* ปรับขนาดให้ใหญ่ขึ้น 20% (หรือเปลี่ยนเลขตามต้องการ) */
@@ -488,37 +539,53 @@ body {
 
 .item-label { font-size: 12px; color: #ffd700; }
 .item-count { font-size: 20px; font-weight: bold; }
-.water-bg {
-    position: absolute; /* ทำให้ขยับได้อิสระ */
-    bottom: 25vh;       /* ปรับความสูงแยกเฉพาะน้ำอบ */
-    left: 13vw;         /* ปรับตำแหน่งแนวนอนจากฝั่งซ้าย */
-    z-index: 210;
+/* --- ปุ่มน้ำอบ (Water) - สีฟ้าสดใสแบบ Crystal --- */
+.water-bg { 
+    background: linear-gradient(135deg, #00c6ff 0%, #0072ff 100%); 
+    position: absolute;
+    bottom: 30vh;
+    left: 14vw;
 }
 
-/* --- ขยับตำแหน่งแป้ง (Powder) --- */
-.powder-bg {
-    position: absolute; /* ทำให้ขยับได้อิสระ */
-    bottom: 25vh;       /* ปรับความสูงแยกเฉพาะแป้ง (สูงกว่าน้ำอบ) */
-    right: 12vw;        /* ปรับตำแหน่งแนวนอนจากฝั่งขวา */
-    z-index: 210;
+/* --- ปุ่มธูป/แป้ง (Powder) - สีชมพูทองแบบ Elegant --- */
+.powder-bg { 
+    background: linear-gradient(135deg, #ff9a9e 0%, #f6416c 100%); 
+    color: white; /* เปลี่ยนเป็นสีขาวเพื่อให้อ่านง่ายกว่าสีน้ำตาล */
+    position: absolute;
+    bottom: 31vh;
+    right: 13vw;
 }
 .btn-use-item {
     padding: 12px 25px;   
-    border-radius: 30px;
-    border: 3px solid #fff;
+    border-radius: 50px; /* เพิ่มความโค้งให้ดูนุ่มนวลขึ้น */
+    border: 2px solid rgba(255, 255, 255, 0.8);
     color: white;
-    font-weight: bold;
+    font-size: 18px;
+    font-weight: 800;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5); /* เพิ่มเงาให้ตัวหนังสืออ่านง่าย */
     cursor: pointer;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    transition: transform 0.2s;
-    position: absolute; /* เพิ่มเพื่อให้ขยับตำแหน่งได้อิสระ */
+    /* เงาแบบหลายชั้น: เงาล่างช่วยให้ดูนูน + เงาแสงฟุ้งช่วยให้ดูเด่น */
+    box-shadow: 0 6px 0 rgba(0,0,0,0.2), 0 10px 20px rgba(0,0,0,0.3); 
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: absolute;
     z-index: 210;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.btn-use-item:active { transform: scale(0.9); }
-.water-bg { background: linear-gradient(to bottom, #4facfe, #00f2fe); }
-.powder-bg { background: linear-gradient(to bottom, #ff9a9e, #fecfef); color: #4b3621; }
+/* เอฟเฟกต์เมื่อเอาเมาส์ไปวาง */
+.btn-use-item:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 9px 0 rgba(0,0,0,0.15), 0 15px 25px rgba(0,0,0,0.4);
+    filter: brightness(1.1);
+}
 
+/* เอฟเฟกต์เมื่อกด */
+.btn-use-item:active {
+    transform: translateY(3px) scale(0.95);
+    box-shadow: 0 2px 0 rgba(0,0,0,0.2);
+}
 #game-container::after {
     content: "";
     position: absolute;
@@ -613,13 +680,23 @@ body {
     margin: 0; 
     text-align: center; 
     padding: 10px; 
-    background: white; 
+    background: transparent !important;
     border-radius: 15px; 
     border: 3px solid red; 
     box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
     min-width: 140px;
 }
+/* เมื่อกล่องคำพูดอยู่ในสถานะโกรธ */
+.order-bubble.bubble-angry {
+    border-color: #ff0000;       /* เปลี่ยนขอบกล่องหลักเป็นแดง */
+    background: #fff0f0;         /* เปลี่ยนพื้นหลังเป็นชมพูระเรื่อ */
+    box-shadow: 0 0 15px rgba(255, 0, 0, 0.4); /* เงาสีแดง */
+}
 
+/* ปรับหางกล่องตอนโกรธให้เป็นสีแดงตามไปด้วย */
+.order-bubble.bubble-angry::before {
+    border-color: #ff0000 transparent transparent transparent;
+}
 /* ปรับปรุงขนาดดอกไม้ในฟองคำพูดสำหรับ Pattern ยาวๆ */
 .hint-flower {
     width: 20px;
@@ -683,4 +760,191 @@ body {
 .from-right .patience-bar-bg {
     left: auto;
     right: 0;
+}
+#total-score {
+    font-size: 90px;          /* ขนาดตัวเลขที่ใหญ่สะใจ */
+    font-family: 'Kanit', sans-serif;
+    font-weight: 900;          /* ใช้ความหนาสูงสุด */
+    margin: 0;
+    /* การไล่เฉดสีจากขาวไปเหลืองทอง */
+    background: linear-gradient(180deg, #FFFFFF 30%, #FFD700 60%, #FF8C00 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    /* ใส่ขอบตัวอักษรสีน้ำตาลเข้ม/ดำ เพื่อให้ตัดกับป้าย */
+    filter: drop-shadow(4px 4px 0px #632b00) 
+            drop-shadow(0px 0px 15px rgba(255, 140, 0, 0.5));
+    transform: translateY(50px);
+    /* เพิ่ม Animation เล็กๆ ให้ตัวเลขดูมีชีวิต */
+    animation: scorePop 0.5s ease-out;
+}
+
+/* เอฟเฟกต์ตอนคะแนนปรากฏ */
+@keyframes scorePop {
+    0% { transform: scale(0.5); opacity: 0; }
+    80% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+}
+.result-text-overlay {
+    position: absolute;
+    /* ปรับค่า top/left เพื่อให้เข้ากึ่งกลางพื้นที่ว่างของป้าย */
+    top: 52%; 
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+#result-screen {
+    display: none; /* ซ่อนไว้ก่อนเริ่ม */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.7); /* พื้นหลังดำจางๆ */
+    z-index: 9999; /* ให้อยู่หน้าสุด */
+    justify-content: center;
+    align-items: center;
+}
+
+/* ปรับขนาดป้ายสรุปผล และ ป้ายหน้าเริ่มเกม ให้เท่ากัน */
+#result-banner {
+    /* ลองปรับค่าตัวเลขนี้ (เช่น 600px, 700px หรือ 80vw) */
+    /* ให้เท่ากับขนาดที่คุณตั้งไว้ให้ป้ายหน้าเริ่มเกม */
+    width: 600px; 
+    
+    height: auto; /* ให้ความสูงปรับตามสัดส่วนรูปอัตโนมัติ */
+    display: block;
+    margin: 0 auto;
+    filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5)); /* เพิ่มเงาให้ดูมีมิติเหมือนกัน */
+}
+
+/* ตรวจสอบว่า container ของมันไม่ได้บีบรูปไว้ */
+.result-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+#tutorial-overlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); /* พื้นหลังดำจางๆ */
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.tutorial-step {
+    position: absolute;
+    bottom: 110px; /* อยู่เหนือปุ่มไอเทม */
+    display: flex;
+    flex-direction: column-reverse; /* ให้ลูกศรอยู่ล่าง กล่องอยู่บน */
+    align-items: center;
+    text-align: center;
+}
+
+/* ตำแหน่งสำหรับน้ำอบ (ซ้าย) */
+#tutorial-water { left: 20%; }
+/* ตำแหน่งสำหรับธูป (ขวา) */
+#tutorial-powder { right: 20%; }
+
+.tutorial-box {
+    background: white;
+    border: 3px solid #632b00;
+    padding: 10px;
+    border-radius: 15px;
+    width: 180px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.tutorial-box h4 { margin: 0 0 5px 0; color: #d32f2f; }
+.tutorial-box p { margin: 0; font-size: 14px; color: #333; }
+
+.arrow {
+    font-size: 40px;
+    color: #ffd700;
+    font-weight: bold;
+    text-shadow: 2px 2px 0 #632b00;
+    animation: arrowBounce 0.6s infinite alternate; /* ลูกศรกระโดด */
+}
+
+@keyframes arrowBounce {
+    from { transform: translateY(0); }
+    to { transform: translateY(15px); }
+}
+
+#close-tutorial {
+    padding: 10px 30px;
+    font-size: 20px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    margin-top: 100px;
+}
+/* 1. กำหนดให้ปุ่มเป็นจุดอ้างอิง */
+.btn-use-item {
+    position: absolute; /* ตาม CSS เดิมของคุณ */
+    z-index: 210;
+    cursor: pointer;
+}
+
+/* 2. สร้างกล่องข้อความ (จะปรากฏเหนือปุ่ม) */
+.btn-use-item::after {
+    content: attr(data-tooltip); /* ดึงข้อความจาก data-tooltip มาแสดง */
+    position: absolute;
+    bottom: 130%; /* ระยะห่างจากปุ่ม */
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    
+    /* สไตล์กล่องข้อความสไตล์งานวัด */
+    background: #632b00; /* สีน้ำตาลเข้ม */
+    color: #ffd700;    /* ตัวหนังสือสีทอง */
+    padding: 8px 15px;
+    border-radius: 12px;
+    border: 2px solid #ffd700;
+    font-size: 14px;
+    white-space: nowrap;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.4);
+    
+    /* การแสดงผล */
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease-out;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+/* 3. สร้างติ่งลูกศรใต้กล่อง */
+.btn-use-item::before {
+    content: '';
+    position: absolute;
+    bottom: 115%;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    border-width: 8px 8px 0;
+    border-style: solid;
+    border-color: #ffd700 transparent transparent;
+    
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s ease-out;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+/* 4. เมื่อ Hover (เมาส์ชี้) ให้แสดงผล */
+.btn-use-item:hover::after,
+.btn-use-item:hover::before {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0); /* เลื่อนขึ้นนิ่มๆ */
 }

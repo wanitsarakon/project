@@ -103,6 +103,7 @@ function startRound() {
     }
 }
 
+JavaScript
 function createCustomer(id, npcImage) {
     const area = document.getElementById('customer-area');
     if (!area) return;
@@ -112,8 +113,11 @@ function createCustomer(id, npcImage) {
     container.id = `cust-${id}`;
     const isLeft = id % 2 === 0;
     const offset = Math.floor(id / 2) * 12; 
-    container.className = `customer-container ${isLeft ? 'from-left' : 'from-right'} npc-${profile.type}`;
     
+    // --- ส่วนที่แก้ไข: เพิ่มการเช็คว่าเป็น NPC ตัวที่ 5 หรือไม่ ---
+ // เปลี่ยนจาก .includes เป็นการเช็คชื่อไฟล์ลงท้าย หรือเช็คตรงๆ
+const isNPC5 = npcImage === 'npc-customer-5.png';
+    container.className = `customer-container ${isLeft ? 'from-left' : 'from-right'} npc-${profile.type} ${isNPC5 ? 'npc-5-special' : ''}`;
     let minLength = 11;
     let patternLength = Math.min(15, Math.max(minLength, (round + 10) + profile.lengthMod)); 
     let colorVariety = Math.min(5, 3 + Math.floor(round / 4));
@@ -451,10 +455,29 @@ function endGame() {
     const gc = document.getElementById('game-container');
     if(gc) gc.classList.remove('time-frozen');
     document.body.classList.remove('fever-active');
+
+    // --- จุดที่ต้องแก้ไขให้ชื่อ ID ตรงกับ HTML ---
     const resultScreen = document.getElementById('result-screen');
-    const finalScoreText = document.getElementById('final-score-display');
+    const finalScoreText = document.getElementById('total-score'); // แก้จาก final-score-display เป็น total-score
+
     if (resultScreen && finalScoreText) {
-        finalScoreText.innerText = score;
-        resultScreen.style.display = 'flex';
+        finalScoreText.innerText = score; 
+        resultScreen.style.display = 'flex'; // สั่งแสดงหน้าจอ
+    }
+}
+function showTutorial() {
+    const tutorial = document.getElementById('tutorial-overlay');
+    if (tutorial) {
+        tutorial.style.display = 'flex';
+        gameActive = false; // หยุดเกมไว้ก่อน
+    }
+}
+
+function hideTutorial() {
+    const tutorial = document.getElementById('tutorial-overlay');
+    if (tutorial) {
+        tutorial.style.display = 'none';
+        gameActive = true; 
+        initGame(); // เริ่มเกมจริงๆ ทันทีที่กดปิด
     }
 }

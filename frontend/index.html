@@ -37,19 +37,18 @@
 
         <div id="start-screen" class="overlay">
             <div class="level-board">
-                <h2 id="level-display">ด่านเกมร้านมาลัยหลายคิว</h2>
+                <h2 id="level-display"></h2>
                 <button id="start-btn" onclick="startCountdown()">เริ่มเกม</button>
             </div>
         </div>
 
-        <div id="result-screen" class="overlay" style="display: none;">
-            <div class="level-board result-board">
-                <h2 style="font-size: 32px; color: #fff;">สรุปคะแนนรวม</h2>
-                <div id="final-score-display" style="font-size: 60px; color: #ffd700; font-weight: 900; text-shadow: 3px 3px 0px #4b3621;">0</div>
-
-            </div>
+    <div id="result-screen" style="display:none;"> <div class="result-container">
+        <img src="image/result_summary_banner.png" id="result-banner"> 
+        <div class="result-text-overlay">
+            <h1 id="total-score">0</h1>
         </div>
-
+    </div>
+</div>
         <div id="countdown-overlay" class="overlay" style="display: none;">
             <div id="countdown-text">3</div>
         </div>
@@ -63,19 +62,38 @@
 
         <div class="table-foreground"></div>
 
-        <div class="item-actions">
-            <button class="btn-use-item water-bg" onclick="useWater()">ใช้น้ำอบ</button>
-            <button class="btn-use-item powder-bg" onclick="usePowder()">ใช้ธูป</button>
+          <div class="item-actions">
+            <button class="btn-use-item water-bg" onclick="useWater()" data-tooltip="น้ำอบ: ช่วยหยุดหลอดความอดทนเป็นเวลา 5 วินาที">ใช้น้ำอบ</button>
+            <button class="btn-use-item powder-bg" onclick="usePowder()" data-tooltip="ธูป: ช่วยให้ร้อยพวงมาลัยเสร็จทันที">ใช้ธูป</button>
         </div>
 
         <div class="controls-container">
-            <button class="btn-flower f-white" onclick="playAdd('white')"></button>
-            <button class="btn-flower f-red" onclick="playAdd('red')"></button>
-            <button class="btn-flower f-yellow" onclick="playAdd('yellow')"></button>
-            <button class="btn-flower f-green" onclick="playAdd('green')"></button>
-            <button class="btn-flower f-purple" onclick="playAdd('purple')"></button>
+            <button class="btn-flower f-white" onclick="playAdd('white')" title="ดอกมะลิ"></button>
+            <button class="btn-flower f-red" onclick="playAdd('red')" title="ดอกกุหลาบ"></button>
+            <button class="btn-flower f-yellow" onclick="playAdd('yellow')" title="ดอกจำปา"></button>
+            <button class="btn-flower f-green" onclick="playAdd('green')" title="ใบแก้ว"></button>
+            <button class="btn-flower f-purple" onclick="playAdd('purple')" title="ดอกรักม่วง"></button>
+        </div>
+
+        <div id="tutorial-overlay" style="display: none;">
+            <div class="tutorial-step" id="tutorial-water">
+                <div class="tutorial-box">
+                    <h4>💧 น้ำอบ</h4>
+                    <p>น้ำอบ: ช่วยหยุดหลอดความอดทนเป็นเวลา 5 วินาที</p>
+                </div>
+                <div class="arrow">↓</div>
+            </div>
+            <div class="tutorial-step" id="tutorial-powder">
+                <div class="tutorial-box">
+                    <h4>🕯️ ธูป</h4>
+                    <p>ธูป: ช่วยให้ร้อยพวงมาลัยเสร็จทันที</p>
+                </div>
+                <div class="arrow">↓</div>
+            </div>
+            <button id="close-tutorial" onclick="hideTutorial()">เข้าใจแล้ว!</button>
         </div>
     </div>
+
     <script src="game.js"></script>
 </body>
 </html>
