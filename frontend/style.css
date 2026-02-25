@@ -936,3 +936,26 @@ body, html {
     border: 1px solid rgba(255, 215, 0, 0.4);
     z-index: 1005;
 }
+
+#countdown-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.4); /* มืดลงนิดหน่อยให้ตัวเลขเด่น */
+    display: none; /* คุมด้วย JS */
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+/* ตกแต่งตัวเลขตามที่คุณต้องการ */
+#countdown-text {
+    color: #f1c40f;
+    font-size: 180px;
+    font-weight: 900;
+    font-family: 'Kanit', sans-serif;
+    text-shadow: 8px 8px 0px #000;
+    pointer-events: none;
+    /* ใส่ Animation การเด้ง */
+    animation: countBounce 0.5s ease-out forwards;
+}

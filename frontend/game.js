@@ -443,51 +443,7 @@ function updateStaminaUI() {
 }
 
 
-function startCountdown() {
-    const countdownOverlay = document.createElement('div');
-    countdownOverlay.id = 'countdown-overlay';
-    Object.assign(countdownOverlay.style, {
-        position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-        fontSize: '150px', fontWeight: 'bold', color: '#fff', textShadow: '0 0 20px rgba(0,0,0,0.8)',
-        zIndex: '9999', pointerEvents: 'none', transition: 'all 0.5s ease-out'
-    });
-    document.body.appendChild(countdownOverlay);
 
-    let count = 3;
-    const timer = setInterval(() => {
-        if (count > 0) {
-            // --- เล่นเสียงนับถอยหลัง ---
-            countSound.currentTime = 0;
-            countSound.play().catch(e => console.log("Audio play error:", e));
-            
-            countdownOverlay.innerText = count;
-            countdownOverlay.style.transform = 'translate(-50%, -50%) scale(1.5)';
-            countdownOverlay.style.opacity = '1';
-            setTimeout(() => {
-                countdownOverlay.style.transform = 'translate(-50%, -50%) scale(1)';
-                countdownOverlay.style.opacity = '0.5';
-            }, 500);
-            count--;
-        } else {
-            clearInterval(timer);
-            
-            // --- เล่นเสียงเริ่มเกม ---
-            startGoSound.currentTime = 0;
-            startGoSound.play().catch(e => console.log("Audio play error:", e));
-            
-            countdownOverlay.innerText = "เริ่ม!";
-            countdownOverlay.style.transform = 'translate(-50%, -50%) scale(1.8)'; // ขยายขนาดคำว่าเริ่มให้เด่นขึ้น
-            countdownOverlay.style.opacity = '1';
-
-            setTimeout(() => {
-                countdownOverlay.remove();
-                isPlaying = true; 
-                // ถ้าในโค้ดเดิมของคุณมี lastTime หรือ requestAnimationFrame อย่าลืมใส่ไว้ตรงนี้ด้วยครับ
-                if (typeof lastTime !== 'undefined') lastTime = performance.now();
-            }, 800);
-        }
-    }, 1000);
-}
 
 function gameLoop(timestamp) {
     if (isPlaying) {
@@ -1102,4 +1058,62 @@ function useMuscleCrampSkill() {
         canUseSkillD = true;
         if (btnD) btnD.classList.remove('key-cooldown');
     }, 5000); 
+}
+function startCountdown() {
+    // 1. สร้าง Overlay และตัวเลข (ถ้ายังไม่มีใน index.html)
+    let overlay = document.getElementById('countdown-overlay');
+    let textDisplay = document.getElementById('countdown-text');
+
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'countdown-overlay';
+        textDisplay = document.createElement('div');
+        textDisplay.id = 'countdown-text';
+        overlay.appendChild(textDisplay);
+        document.body.appendChild(overlay);
+    }
+
+    // เตรียมตัวแปร
+    let count = 3;
+    overlay.style.display = 'flex'; // แสดง Overlay
+    isPlaying = false; // ป้องกันการกดระหว่างนับ
+
+    const timer = setInterval(() => {
+        // รีเซ็ต Animation ของตัวเลขทุกครั้งที่เปลี่ยนเลข (Trick: ลบแล้วใส่ใหม่)
+        textDisplay.style.animation = 'none';
+        void textDisplay.offsetWidth; // บังคับให้ Browser รีเฟรช DOM
+        textDisplay.style.animation = 'countBounce 0.5s ease-out forwards';
+
+        if (count > 0) {
+            // --- เล่นเสียงนับถอยหลัง ---
+            if (typeof countSound !== 'undefined') {
+                countSound.currentTime = 0;
+                countSound.play().catch(e => console.log(e));
+            }
+            
+            textDisplay.innerText = count;
+            textDisplay.style.color = "#f1c40f"; // สีเหลืองปกติ
+            count--;
+        } else {
+            clearInterval(timer);
+            
+            // --- เล่นเสียงเริ่มเกม ---
+            if (typeof startGoSound !== 'undefined') {
+                startGoSound.currentTime = 0;
+                startGoSound.play().catch(e => console.log(e));
+            }
+            
+            textDisplay.innerText = "เริ่ม!";
+            textDisplay.style.color = "#f1c40f"; // เปลี่ยนเป็นสีเขียวให้ดูสดชื่น
+            
+            setTimeout(() => {
+                overlay.style.display = 'none'; // ซ่อนหน้าจอ
+                isPlaying = true; // อนุญาตให้เริ่มเกม
+                if (typeof lastTime !== 'undefined') lastTime = performance.now();
+                
+                // เริ่ม Loop เกมถ้าคุณใช้ requestAnimationFrame
+                // requestAnimationFrame(gameLoop); 
+            }, 800);
+        }
+    }, 1000);
 }
