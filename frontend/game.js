@@ -430,33 +430,8 @@ function draw() {
             ctx.restore();
         }
     });
-// ค้นหาส่วนที่วาด Countdown ในฟังก์ชัน draw()
-if (isCountingDown) {
-    ctx.save();
-    // สร้างพื้นหลังมืดจางๆ เพื่อให้ตัวเลขเด่น
-    ctx.fillStyle = "rgba(0,0,0,0.5)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+// ค้นหาส่วนที่วาด Countdown ในฟังก์ชัน draw(
 
-    ctx.font = "bold 150px Kanit";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    
-    // กำหนดข้อความที่จะแสดง
-    let displayTxt = countdownValue;
-    if (countdownValue === 0) {
-        displayTxt = "เริ่ม!"; // เปลี่ยนเลข 0 ให้เป็นคำว่า "เริ่ม!"
-        ctx.fillStyle = "#FFD700"; // เปลี่ยนสีเป็นสีทองสำหรับคำว่า เริ่ม!
-    } else {
-        ctx.fillStyle = "#ffffff";
-    }
-
-    // วาดเงาให้ตัวอักษร
-    ctx.shadowColor = "rgba(0,0,0,0.8)";
-    ctx.shadowBlur = 15;
-    
-    ctx.fillText(displayTxt, canvas.width / 2, canvas.height / 2);
-    ctx.restore();
-}
     if (gameActive && comboCount >= 5) {
         ctx.save();
         ctx.textAlign = "center";
@@ -631,31 +606,49 @@ function initCountdown() {
     isCountingDown = true; 
     countdownValue = 3;
 
-    // ฟังก์ชันช่วยเล่นเสียงแบบตัดจบของเก่าทันที
+    const overlay = document.getElementById('countdown-overlay');
+    const textEl = document.getElementById('countdown-text');
+
+    if (overlay) overlay.style.display = 'flex';
+    
+    // ล้างค่าเก่าทิ้งทันทีป้องกันการซ้อน
+    if (textEl) {
+        textEl.innerText = ""; 
+        textEl.innerText = countdownValue;
+    }
+
     const playCleanSfx = (audio) => {
         if (!audio) return;
-        audio.pause();           // หยุดเสียงเดิม
-        audio.currentTime = 0;   // ย้อนกลับไปเริ่มต้น
-        audio.play().catch(e => console.log("Audio play failed"));
+        audio.pause();
+        audio.currentTime = 0;
+        audio.play().catch(e => {});
     };
 
-    // เล่นเสียง "3" ครั้งแรก
-    playCleanSfx(sounds.count);
+    if (sounds.count) playCleanSfx(sounds.count);
 
     const countdownInterval = setInterval(() => {
         countdownValue--;
 
+        // บังคับ Animation เริ่มใหม่
+        if (textEl) {
+            textEl.style.animation = 'none';
+            textEl.offsetHeight; 
+            textEl.style.animation = null;
+        }
+
         if (countdownValue > 0) {
-            // เล่นเสียง "2" และ "1"
-            playCleanSfx(sounds.count);
+            textEl.innerText = countdownValue;
+            if (sounds.count) playCleanSfx(sounds.count);
         } else if (countdownValue === 0) {
-            // เล่นเสียง "เริ่ม!" (sounds.start)
-            playCleanSfx(sounds.start);
-        } else if (countdownValue < 0) {
-            // เคลียร์ Interval และเริ่มเกมจริง
+            textEl.innerText = "เริ่ม!";
+            if (sounds.start) playCleanSfx(sounds.start);
+        } else {
             clearInterval(countdownInterval);
+            if (overlay) overlay.style.display = 'none';
+            
             isCountingDown = false; 
             gameActive = true; 
+            
             if (sounds.bgm) {
                 sounds.bgm.currentTime = 0;
                 sounds.bgm.play();

@@ -1,7 +1,7 @@
 body {
     margin: 0;
     padding: 0;
-    background: #0d0d0d;
+    background: #0d0d0dc3;
     overflow: hidden; 
     font-family: 'Kanit', sans-serif;
     user-select: none; 
@@ -182,7 +182,6 @@ body {
     max-width: 80vw; /* ป้องกันภาพล้นในมือถือ */
     height: auto;
     object-fit: contain;
-    filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.4));
     transform: scale(0.95);
 }
 
@@ -316,27 +315,36 @@ body {
     text-align: center;
     width: 80%;
 }
-
-.combo-text {
-    position: absolute;
-    top: 40%; left: 50%;
-    transform: translate(-50%, -50%);
-    color: #f00101dc;
-    font-size: 80px;
-    font-weight: 900;
-    text-shadow: 4px 4px 0px #fff, 6px 6px 0px #000;
-    pointer-events: none;
-    z-index: 5;
+/* 1. แผ่นพื้นหลังดำครอบจอ (Overlay) */
+#countdown-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.8) !important; /* ดำทึบเพื่อบังทุกอย่างที่ซ้อน */
+    display: none; 
+    justify-content: center;
+    align-items: center;
+    z-index: 9999; /* อยู่บนสุดทับทุกเลเยอร์ */
 }
 
-.countdown-text {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    color: #f1c40f;
-    font-size: 180px;
+/* 2. ตัวเลข 3 2 1 (ไม่มีสีขาวซ้อน) */
+#countdown-text {
+    font-family: 'Kanit', sans-serif;
+    font-size: 250px;
     font-weight: 900;
-    text-shadow: 8px 8px 0px #000;
-    z-index: 50;
+    color: #f1c40f; /* สีเหลืองทอง */
+    text-shadow: 10px 10px 0px #000; /* ขอบคมชัดสีดำ */
+    
+    /* ล้างค่าตำแหน่งเดิมที่ทำให้ซ้อน */
+    position: relative; 
+    margin: 0;
+    padding: 0;
+    line-height: 1;
     pointer-events: none;
+    
+    /* แอนิเมชันเด้งตอนเปลี่ยนเลข */
+    animation: countBounce 0.5s ease-out forwards;
 }
+
