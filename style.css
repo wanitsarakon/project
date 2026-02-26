@@ -1,0 +1,94 @@
+/*ตกเเต่งนับถอยหลัง 321 เริ่ม*/
+
+#countdown-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.4); /* มืดลงนิดหน่อยให้ตัวเลขเด่น */
+    display: none; /* คุมด้วย JS */
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+/* ตกแต่งตัวเลขตามที่คุณต้องการ */
+#countdown-text {
+    color: #f1c40f;
+    font-size: 180px;
+    font-weight: 900;
+    font-family: 'Kanit', sans-serif;
+    text-shadow: 8px 8px 0px #000;
+    pointer-events: none;
+    /* ใส่ Animation การเด้ง */
+    animation: countBounce 0.5s ease-out forwards;
+}
+
+/*ตกเเต่งคะเเนน*/
+#total-score {
+    font-size: 90px;          /* ขนาดตัวเลขที่ใหญ่สะใจ */
+    font-family: 'Kanit', sans-serif;
+    font-weight: 900;          /* ใช้ความหนาสูงสุด */
+    margin: 0;
+    /* การไล่เฉดสีจากขาวไปเหลืองทอง */
+    background: linear-gradient(180deg, #FFFFFF 30%, #FFD700 60%, #FF8C00 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    /* ใส่ขอบตัวอักษรสีน้ำตาลเข้ม/ดำ เพื่อให้ตัดกับป้าย */
+    filter: drop-shadow(4px 4px 0px #632b00) 
+            drop-shadow(0px 0px 15px rgba(255, 140, 0, 0.5));
+    transform: translateY(50px);
+    /* เพิ่ม Animation เล็กๆ ให้ตัวเลขดูมีชีวิต */
+    animation: scorePop 0.5s ease-out;
+}
+
+/*ตกเเต่งปุ่มเริ่มเกม*/
+#start-btn {
+    padding: 15px 40px;
+    font-size: 28px;
+    font-family: 'Kanit', sans-serif;
+    font-weight: bold;
+    color: white;
+    /* ไล่เฉดสีจากส้มไปแดง ให้ดูมีมิติ */
+    background: linear-gradient(180deg, #ffcc00 0%, #ff8800 50%, #ff4400 100%);
+    border: 4px solid #fff;
+    border-radius: 50px; /* ทรงแคปซูล */
+    cursor: pointer;
+    outline: none;
+    margin-top: 60px;
+    /* เงาใต้ปุ่มและแสงฟุ้งรอบๆ */
+    box-shadow: 0 8px 0 #992200, 0 15px 20px rgba(0,0,0,0.5);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    
+    transition: all 0.2s ease; /* หน่วงเวลาตอนกดให้ดูนุ่มนวล */
+    position: relative;
+    overflow: hidden;
+}
+
+
+#start-btn:hover {
+   transform: translateY(-3px) scale(1.05); /* ขยายใหญ่ขึ้นนิดนึง */
+    background: linear-gradient(180deg, #ffe066 0%, #ffa500 50%, #ff5500 100%);
+    box-shadow: 0 10px 0 #992200, 0 20px 25px rgba(0,0,0,0.6);
+}
+
+#start-btn:active {
+    transform: translateY(4px); /* ปุ่มยุบลงเหมือนกดจริง */
+    box-shadow: 0 2px 0 #992200, 0 5px 10px rgba(0,0,0,0.5);
+}
+#start-btn:after {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -60%;
+    width: 20%;
+    height: 200%;
+    background: rgba(255, 255, 255, 0.4);
+    transform: rotate(30deg);
+    transition: all 0.5s;
+    animation: shine 3s infinite;
+}
+@keyframes shine {
+    0% { left: -60%; }
+    20% { left: 120%; }
+    100% { left: 120%; }
+}
