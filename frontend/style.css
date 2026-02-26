@@ -38,55 +38,62 @@ body {
     width: 100%; 
     max-width: 1000px; /* ลดตัวเลขนี้เพื่อดึงป้ายทั้งสองเข้าหากัน */
     margin: 0 auto;   /* จัดกลุ่มป้ายให้อยู่กลางหน้าจอ */
-    
-    /* หากต้องการเลื่อนลงจากขอบบนหน้าจอ */
-    margin-top:  5px; 
+    margin-top: -30px;
 }
 
-/* สไตล์ร่วมของป้ายทั้งสอง */
+/* --- ปรับแต่งกล่อง HUD (เวลาและคะแนน) --- */
 .hud-box {
-    background-color: transparent !important; 
-    border: none !important;
-    box-shadow: none !important;
-    background-image: url('images/counttime.png'); 
+    background-image: url('images/counttime.png'); /* ตรวจสอบว่ามีรูปป้ายขนาดเล็ก */
     background-size: 100% 100%;
-    background-repeat: no-repeat;
-    background-position: center;
-    width: 180px;
-    height: 145px;
+    width: 250px;
+    height: 180px;
     display: flex;
     justify-content: center;
     align-items: center;
-    box-sizing: border-box;
+    filter: drop-shadow(0 8px 15px rgba(0,0,0,0.4));
+    transition: transform 0.2s ease;
 }
 
-/* [แยกปรับ] เฉพาะป้ายเวลา */
-#timer-box {
-    transform: translateY(-20px);  /* ปรับตัวเลขนี้เพื่อเลื่อนเวลาขึ้น-ลง */
-    padding-left: 5px;   /* ปรับตัวเลขนี้เพื่อเลื่อนเวลาซ้าย-ขวา */
-}
-
-/* [แยกปรับ] เฉพาะป้ายคะแนน */
-#score-box {
-    transform: translateY(-20px); /* ปรับตัวเลขนี้เพื่อเลื่อนคะแนนขึ้น-ลง */
-    padding-left: 5px;   /* ปรับตัวเลขนี้เพื่อเลื่อนคะแนนซ้าย-ขวา */
-}
-
-/* สไตล์ตัวเลข */
+/* --- ตกแต่งตัวอักษร เวลา และ คะแนน --- */
 .hud-value {
-    font-size: 2.0rem !important;
-    font-weight: 900;
-    text-shadow: 2px 2px 0px #fff;
-    line-height: 1;
+    font-family: 'Sarabun', sans-serif; /* หรือ 'Kanit' ถ้าคุณลงไว้ */
+    font-size: 1.5rem;
+    font-weight: 600;
+    
+    /* การไล่เฉดสีทองแบบพรีเมียม */
+    background: linear-gradient(180deg, #ffffff 0%, #ffd700 50%, #f39c12 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    
+    /* ใส่ขอบตัวอักษรเข้มๆ ให้ตัดกับป้ายไม้ */
+    filter: drop-shadow(2px 2px 0px #3e2723) 
+            drop-shadow(-1px -1px 0px #3e2723)
+            drop-shadow(1px -1px 0px #3e2723)
+            drop-shadow(-1px 1px 0px #3e2723);
+            
+    letter-spacing: 1px;
+    margin-top: -15px;
+}
 
-    /* --- ส่วนที่ทำให้ขยับเฉพาะเลขได้อิสระ --- */
-    position: relative; 
-    
-    /* ค่าติดลบ = ดันขึ้น | ค่าบวก = ดันลง */
-    top: -6px;  /* ลองเปลี่ยนจาก -15px เป็น -20px หรือ -30px เพื่อดันขึ้นให้สูงขึ้นอีก */
-    
-    /* ค่าบวก = ขยับไปขวา | ค่าติดลบ = ขยับไปซ้าย */
-    left: 0px;   
+/* --- เอฟเฟกต์เวลาคะแนนเพิ่มขึ้น (จะใช้คู่กับ JS) --- */
+.score-pop {
+    animation: scoreBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes scoreBounce {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.3); filter: brightness(1.2); }
+    100% { transform: scale(1); }
+}
+
+/* ปรับระยะห่างป้ายซ้าย-ขวาให้สวยงาม */
+.hud-header {
+    width: 100%;
+    max-width: 1100px;
+    padding: 20px 50px;
+    display: flex;
+    justify-content: space-between;
+    pointer-events: none; /* เพื่อไม่ให้บังการลากการ์ด */
 }
 
 #timer { color: #d32f2f; } /* เวลาสีแดง */
@@ -114,32 +121,90 @@ body {
 
 .progress-fill { 
     height: 100%; 
-    background: linear-gradient(to right, #66bb6a, #2e7d32); 
+    /* ใช้ Gradient สีเขียวมรกตไล่ระดับ พร้อมเงาสะท้อนสีขาวด้านบน */
+    background: linear-gradient(
+        180deg, 
+        rgba(255,255,255,0.4) 0%, 
+        #4caf50 20%, 
+        #2e7d32 80%, 
+        #1b5e20 100%
+    ); 
     width: 0%; 
-    transition: width 0.3s ease; 
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+    border-radius: 12px 0 0 12px;
+    
+    /* เพิ่มเอฟเฟกต์แสงเงาวิ่งผ่านหลอด */
+    position: relative;
+    overflow: hidden;
 }
 
+/* เพิ่มแสงวิ้งๆ วิ่งในหลอด (Optional) */
+.progress-fill::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; bottom: 0; right: 0;
+    background: linear-gradient(
+        90deg,
+        rgba(255,255,255,0) 0%,
+        rgba(255,255,255,0.2) 50%,
+        rgba(255,255,255,0) 100%
+    );
+    animation: barShine 2s infinite;
+}
+
+@keyframes barShine {
+    from { transform: translateX(-100%); }
+    to { transform: translateX(100%); }
+}
+/* --- ตกแต่งข้อความคำแนะนำ (Instruction) --- */
+.instruction { 
+    font-family: 'Sarabun', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 800;
+    
+    /* การไล่เฉดสีทองแบบพรีเมียม */
+    background: linear-gradient(180deg, #ffffff 0%, #ffd700 50%, #f39c12 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    
+    /* ใส่ขอบตัวอักษรเข้มๆ 4 ทิศทาง ให้ดูมีมิติคมชัด */
+    filter: drop-shadow(2px 2px 0px #3e2723) 
+            drop-shadow(-1px -1px 0px #3e2723)
+            drop-shadow(1px -1px 0px #3e2723)
+            drop-shadow(-1px 1px 0px #3e2723);
+            
+    letter-spacing: 1px;
+    margin-bottom: 25px;
+    background-color: transparent; /* เอาพื้นหลังสีดำเดิมออก */
+}
+
+/* --- ตกแต่งข้อความความคืบหน้า (Progress Text) --- */
 .progress-text { 
     position: absolute; 
-    top: -24px; 
+    top: -30px; 
     left: 0; 
     width: 100%; 
     text-align: center; 
-    color: #ffd700; 
-    font-weight: bold; 
-    font-size: 1.2rem; 
-    text-shadow: 1px 1px 2px black; 
-}
+    font-family: 'Sarabun', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
 
-.instruction { 
-    color: #ffd700; 
-    font-size: 1.3rem; 
-    font-weight: bold; 
-    text-shadow: 2px 2px 4px #000; 
-    margin-bottom: 20px; 
-    background: rgba(0,0,0,0.5); 
-    padding: 4px 20px; 
-    border-radius: 20px; 
+    /* การไล่เฉดสีทอง (แบบเดียวกับ HUD) */
+    background: linear-gradient(180deg, #ffffff 0%, #ffd700 50%, #f39c12 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    
+    filter: drop-shadow(2px 2px 0px #3e2723) 
+            drop-shadow(-1px -1px 0px #3e2723)
+            drop-shadow(1px -1px 0px #3e2723)
+            drop-shadow(-1px 1px 0px #3e2723);
+            
+    letter-spacing: 1px;
+}
+/* เน้นตัวเลขจำนวนการ์ดให้เป็นสีส้มทอง */
+#placedCount {
+    -webkit-text-fill-color: #ffca28; /* สีเหลืองทองสว่าง */
+    font-size: 1.5rem;
 }
 
 .card-container {
@@ -222,8 +287,13 @@ body {
     cursor: grab; 
     filter: drop-shadow(0 3px 4px rgba(0,0,0,0.5));
     transition: transform 0.1s; 
-    height: 70px !important; 
+    height: 70px !important; /* ปรับลดขนาดเพื่อให้วาง 7 ป้ายได้พอดี */
     width: auto;
+}
+
+.deck-area {
+    gap: 12px; /* กระชับระยะห่าง */
+    padding: 10px 15px;
 }
 
 .modal-overlay { 
@@ -261,56 +331,30 @@ body {
     0%, 100% { transform: translateY(0) rotate(0deg); }
     50% { transform: translateY(-12px) rotate(2deg); }
 }
-/* --- หน้าเริ่มเกมแบบใช้รูปพื้นหลัง --- */
-/* --- ปรับแต่งกระดานเริ่มเกมหลัก --- */
 .start-board {
-    position: relative; /* สำคัญ: เพื่อให้กล่องข้อความอ้างอิงตำแหน่งกับป้ายนี้ */
+    position: relative;
     background-image: url('images/start.png');
     background-size: 100% 100%;
-    width: 550px;
-    height: 340px;
+    width: 700px;
+    height: 450px;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     padding-top: 60px;
     filter: drop-shadow(0 15px 30px rgba(0,0,0,0.6));
-    /* ขยับป้ายไปทางขวาตามที่คุณต้องการ */
-    margin-left: 250px; 
-    margin-bottom: -50px;
+    
+    /* แก้ไขตรงนี้ */
+    margin: 0 auto; /* จัดกลางแนวนอน */
+    margin-bottom: 0; 
 }
 
-
-/* --- ฟองคำพูด: ลอยอยู่ข้างบนป้ายด่านเกม --- */
-.speech-bubble {
-    position: absolute;
-    top: -130px; /* ลอยขึ้นไปเหนือหัวป้ายด่านเกม */
-    left: 10%;
-    transform: translateX(-50%); /* จัดให้อยู่กึ่งกลางแนวนอน */
-    background: #ffffff;
-    border: 4px solid #3e2723;
-    border-radius: 20px;
-    padding: 15px 25px;
-    width: 400px;
-    text-align: center;
-    font-weight: bold;
-    color: #3e2723;
-    font-size: 1.1rem;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-    z-index: 100;
+/* และตรวจสอบว่าตัวคลุมจัดกลางไว้หรือยัง */
+#startScreen.modal-overlay {
+    display: flex;
+    justify-content: center; /* จัดกลางแนวนอน */
+    align-items: center;     /* จัดกลางแนวตั้ง */
 }
-
-/* หางฟองคำพูดชี้ลง */
-.speech-bubble:after {
-    content: '';
-    position: absolute;
-    bottom: -18px;
-    left: 20%; /* ให้หางชี้ไปทางฝั่ง NPC */
-    border-width: 18px 15px 0;
-    border-style: solid;
-    border-color: #fffcfb transparent;
-}
-
 /* กลุ่มเนื้อหาข้อความและปุ่ม */
 .start-content-wrapper {
     display: flex;
@@ -350,27 +394,56 @@ body {
     50% { opacity: 0.5; }
     100% { opacity: 1; }
 }
+
 .btn-green-start {
-    background: linear-gradient(to bottom, #4CAF50, #2E7D32);
-    color: white; 
-    border: 3px solid #fff; 
-    border-radius: 50px;
-    padding: 5px 30px; 
-    font-size: 2rem; 
-    font-weight: 800;
-    cursor: pointer; 
-    box-shadow: 0 5px 0px #1b5e20;
-    transition: all 0.2s;
-    margin-top: 20px;
+    padding: 15px 40px;
+    font-size: 28px;
+    font-family: 'Kanit', sans-serif;
+    font-weight: bold;
+    color: white;
+    /* ไล่เฉดสีจากส้มไปแดง ให้ดูมีมิติ */
+    background: linear-gradient(180deg, #ffcc00 0%, #ff8800 50%, #ff4400 100%);
+    border: 4px solid #fff;
+    border-radius: 50px; /* ทรงแคปซูล */
+    cursor: pointer;
+    outline: none;
+    margin-top: 40px;
+    /* เงาใต้ปุ่มและแสงฟุ้งรอบๆ */
+    box-shadow: 0 8px 0 #992200, 0 15px 20px rgba(0,0,0,0.5);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    
+    transition: all 0.2s ease; /* หน่วงเวลาตอนกดให้ดูนุ่มนวล */
+    position: relative;
+    overflow: hidden;
 }
 
-.btn-green-start:hover { transform: scale(1.05); box-shadow: 0 8px 0px #1b5e20; }
-.btn-green-start:active { transform: translateY(3px); box-shadow: 0 2px 0px #1b5e20; }
-#countdownNumber { 
-    font-size: 10rem; 
-    color: #ffd700; 
-    font-weight: 800; 
-    text-shadow: 0 0 30px #000; 
+
+.btn-green-start :hover {
+   transform: translateY(-3px) scale(1.05); /* ขยายใหญ่ขึ้นนิดนึง */
+    background: linear-gradient(180deg, #ffe066 0%, #ffa500 50%, #ff5500 100%);
+    box-shadow: 0 10px 0 #992200, 0 20px 25px rgba(0,0,0,0.6);
+}
+
+.btn-green-start :active {
+    transform: translateY(4px); /* ปุ่มยุบลงเหมือนกดจริง */
+    box-shadow: 0 2px 0 #992200, 0 5px 10px rgba(0,0,0,0.5);
+}
+.btn-green-start :after {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -60%;
+    width: 20%;
+    height: 200%;
+    background: rgba(255, 255, 255, 0.4);
+    transform: rotate(30deg);
+    transition: all 0.5s;
+    animation: shine 3s infinite;
+}
+@keyframes shine {
+    0% { left: -60%; }
+    20% { left: 120%; }
+    100% { left: 120%; }
 }
 
 /* --- Feedback --- */
@@ -379,68 +452,124 @@ body {
 
 /* --- ปรับแต่งหน้าสรุปคะแนน (Result Board) --- */
 .result-board {
-    background-image: url('images/start.png') !important;
+    background-image: url('images/start2.png') !important;
     background-size: 100% 100%;
     background-repeat: no-repeat;
-    width: 600px;
+    width: 700px;
     height: 450px;
+    
+    /* ใช้ Flexbox จัดกึ่งกลางทั้งแนวตั้งและแนวนอน */
     display: flex;
-    flex-direction: column;
-    justify-content: center; /* จัดกึ่งกลางแนวตั้ง */
-    align-items: center;     /* จัดกึ่งกลางแนวนอน */
-    padding-top: 40px;       /* ปรับพื้นที่ด้านบนให้เนื้อหาไม่เบียดขอบไม้ */
+    justify-content: center; 
+    align-items: center;     
+    
     filter: drop-shadow(0 15px 40px rgba(0,0,0,0.7));
-    margin-left: 0;          /* หน้าสรุปควรอยู่กลางหน้าจอเสมอ */
+    position: relative;
 }
 
-/* หัวข้อข้อความ (หมดเวลา! / ยอดเยี่ยม!) */
-#resultMessage {
-    color: #af3131;          /* สีแดง */
-    font-size: 3.5rem;       
-    font-weight: 800;
-    margin: 0;
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-    
-    position: relative;
-    /* --- ปรับตรงนี้เพื่อดันข้อความขึ้น --- */
-    top: -40px;             /* เปลี่ยนจาก 10px เป็น -40px (ยิ่งลบมาก ยิ่งขึ้นสูง) */
-    
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    margin-bottom: -20px;    /* ช่วยดึงตัวเลขคะแนนให้ตามขึ้นมาด้วยถ้าต้องการ */
-}
-/* กล่องคะแนน */
+/* จัดการกล่องหุ้มตัวเลข */
 .final-score-box {
     display: flex;
-    flex-direction: column;
-    align-items: center;
     justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
 }
 
-/* ตัวเลขคะแนน */
+/* ค้นหาส่วน #finalScore แล้วปรับค่า translateY */
 #finalScore {
-    font-size: 8rem;         /* ขนาดใหญ่เด่น */
+    font-size: 120px; 
+    font-family: 'Kanit', sans-serif;
     font-weight: 900;
-    color: #ffd700;          /* เปลี่ยนเป็นสีทองเพื่อให้ดูพรีเมียม */
-    text-shadow: 
-        4px 4px 0px #3e2723, /* ขอบสีน้ำตาลเข้ม */
-        0px 0px 30px rgba(255, 215, 0, 0.4); /* รัศมีเรืองแสงสีทอง */
-    line-height: 0.8;        /* ดันตัวเลขให้ชิดกัน */
-    top: -40px;
+    margin: 0;
+    
+    background: linear-gradient(180deg, #FFFFFF 30%, #FFD700 60%, #FF8C00 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    
+    filter: drop-shadow(6px 6px 0px #632b00) 
+            drop-shadow(0px 0px 20px rgba(255, 140, 0, 0.4));
+            
+    /* --- ปรับตรงนี้เพื่อขยับลง --- */
+    /* ลองเปลี่ยนจาก -10px เป็น 40px หรือมากกว่าจนกว่าจะพอใจครับ */
+    transform: translateY(40px); 
+    
+    /* อย่าลืมแก้ใน Animation ด้วยเพื่อให้ตอนจบมันหยุดที่ตำแหน่งเดียวกัน */
+    animation: scorePop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
-/* หน่วยคะแนน */
-.score-unit {
-    color: #3e2723;          
-    font-size: 1.8rem;
-    font-weight: 800;
-    margin-top: 10px;
-    padding: 2px 20px;
-    border-radius: 15px;
+/* แก้ไข Animation ให้สอดคล้องกัน */
+@keyframes scorePop {
+    0% { transform: scale(0) translateY(40px); opacity: 0; }
+    80% { transform: scale(1.1) translateY(40px); opacity: 1; }
+    100% { transform: scale(1) translateY(40px); opacity: 1; }
 }
 
-/* ซ่อน modal-content เดิมที่ไม่จำเป็น */
-#resultModal .modal-content {
-    display: none;
+/* ตรวจสอบ Modal Overlay ให้แน่ใจว่าจัดกึ่งกลางหน้าจอ */
+#resultModal.modal-overlay {
+    display: none; /* ควบคุมด้วย JS */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    justify-content: center; /* กลางแนวนอน */
+    align-items: center;     /* กลางแนวตั้ง */
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(8px);
+    z-index: 2000;
+}
+#countdown-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.4); /* มืดลงนิดหน่อยให้ตัวเลขเด่น */
+    display: none; /* คุมด้วย JS */
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+/* ตกแต่งตัวเลขตามที่คุณต้องการ */
+#countdown-text {
+    color: #f1c40f;
+    font-size: 180px;
+    font-weight: 900;
+    font-family: 'Kanit', sans-serif;
+    text-shadow: 8px 8px 0px #000;
+    pointer-events: none;
+    /* ใส่ Animation การเด้ง */
+    animation: countBounce 0.5s ease-out forwards;
+}
+/* เพิ่มส่วนนี้ไว้ท้ายไฟล์ style.css */
+@keyframes countBounce {
+    0% { transform: scale(0.5); opacity: 0; }
+    50% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+}
+/* เพิ่มไว้ท้ายไฟล์ style.css */
+@keyframes shake {
+    0% { transform: translate(1px, 1px) rotate(0deg); }
+    10% { transform: translate(-1px, -2px) rotate(-1deg); }
+    20% { transform: translate(-3px, 0px) rotate(1deg); }
+    30% { transform: translate(3px, 2px) rotate(0deg); }
+    40% { transform: translate(1px, -1px) rotate(1deg); }
+    50% { transform: translate(-1px, 2px) rotate(-1deg); }
+    60% { transform: translate(-3px, 1px) rotate(0deg); }
+    70% { transform: translate(3px, 1px) rotate(-1deg); }
+    80% { transform: translate(-1px, -1px) rotate(1deg); }
+    90% { transform: translate(1px, 2px) rotate(0deg); }
+    100% { transform: translate(1px, -2px) rotate(-1deg); }
+}
+
+/* เพิ่ม Transition ให้ Container ขยับไปมานุ่มนวลเวลาสลับที่ */
+.card-container {
+    transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+}
+/* คลาสสำหรับบดบังป้ายชื่อเมื่ออยู่ใน Drop Zone */
+.invisible-card {
+    filter: brightness(0) !important; /* ปรับให้เป็นสีดำสนิท */
+    opacity: 0.7; /* ให้พอเห็นร่องรอยว่ามีของวางอยู่ */
+    pointer-events: none; /* ป้องกันการคลิกซ้ำซ้อน */
+    transition: filter 0.3s ease; /* เพิ่มความนุ่มนวลตอนเปลี่ยนสี */
 }

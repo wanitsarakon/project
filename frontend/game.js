@@ -5,7 +5,10 @@ const moves = [
     { id: 4, imgColor: "images/ท่ามวยสี4.png", imgShadow: "images/ท่ามวยเงา4.png", imgName: "images/ป้าย4.png" },
     { id: 5, imgColor: "images/ท่ามวยสี5.png", imgShadow: "images/ท่ามวยเงา5.png", imgName: "images/ป้าย6.png" }
 ];
-
+const decoys = [
+    { id: 99, imgName: "images/ป้ายหลอก1.png" },
+    { id: 100, imgName: "images/ป้ายหลอก2.png" }
+];
 let timeLeft = 20;
 let playTime = 15;
 let isPlaying = false;
@@ -114,40 +117,42 @@ function startGame() {
 }
 
 async function startCountdown() {
-    const overlay = document.getElementById('countdownOverlay');
-    const numberDisplay = document.getElementById('countdownNumber');
+    // 1. เปลี่ยนชื่อ ID ให้มีขีดตาม CSS
+    const overlay = document.getElementById('countdown-overlay');
+    const numberDisplay = document.getElementById('countdown-text');
+    
     const count321 = document.getElementById('countdownAudio');
     const startGo = document.getElementById('startGo');
     
     overlay.style.display = 'flex';
 
-    // 1. เล่นไฟล์เสียงนับถอยหลัง 3-2-1
     if (count321) {
         count321.currentTime = 0;
-        count321.play().catch(e => console.log("321 Audio blocked"));
+        count321.play().catch(e => console.log("Audio blocked"));
     }
 
-    // ลูปแสดงตัวเลข 3 2 1
     for (let i = 3; i > 0; i--) {
         numberDisplay.innerText = i;
-        numberDisplay.style.transform = 'scale(1.5)';
-        setTimeout(() => { numberDisplay.style.transform = 'scale(1)'; }, 100);
+        
+        // 2. สั่งให้เล่น Animation ซ้ำทุกครั้งที่เปลี่ยนเลข
+        numberDisplay.style.animation = 'none';
+        void numberDisplay.offsetWidth; // บังคับรีเฟรชแอนิเมชัน
+        numberDisplay.style.animation = 'countBounce 0.5s ease-out forwards';
+        
         await wait(1000);
     }
 
-    // 2. เล่นไฟล์เสียง "เริ่ม!" แยกต่างหาก
-    if (startGo) {
-        startGo.currentTime = 0;
-        startGo.play().catch(e => console.log("Start Audio blocked"));
-    }
-
+    if (startGo) startGo.play();
     numberDisplay.innerText = "เริ่ม!";
     
-    // --- จุดที่แก้ไข: รอให้เสียง "เริ่ม" ดังขึ้นก่อน แล้วค่อยเปิดเพลงพื้นหลัง ---
-    await wait(800); 
-    playBGM(); // สั่งให้เพลง BGM เริ่มดังตรงนี้
+    // ใส่แอนิเมชันให้คำว่าเริ่มด้วย
+    numberDisplay.style.animation = 'none';
+    void numberDisplay.offsetWidth;
+    numberDisplay.style.animation = 'countBounce 0.5s ease-out forwards';
 
+    await wait(800); 
     overlay.style.display = 'none';
+    playBGM(); 
     actualStartGame(); 
 }function actualStartGame() {
     moves.forEach(move => {
@@ -172,16 +177,41 @@ function createNameCard(move) {
     card.addEventListener('dragstart', drag);
     return card;
 }
+async function triggerMidGameShuffle() {
+    const instruction = document.getElementById('instruction');
+    const board = document.getElementById('board');
+    const containers = Array.from(board.querySelectorAll('.card-container'));
 
+    // แจ้งเตือนผู้เล่น
+    instruction.innerText = "⚠️ ระวัง! ท่ามวยสลับตำแหน่ง!";
+    instruction.style.filter = "drop-shadow(0 0 10px #ff0000)"; // เพิ่มแสงสีแดงเตือน
+
+    // ใส่ Effect สั่นเล็กน้อยก่อนสลับ
+    board.style.animation = "shake 0.5s";
+    await wait(500);
+    board.style.animation = "";
+
+    // สลับตำแหน่งใน DOM (สลับที่ Container)
+    containers.sort(() => Math.random() - 0.5);
+    containers.forEach(container => board.appendChild(container));
+
+    // เอฟเฟกต์แฟลชสีขาวตอนสลับเสร็จ
+    board.style.backgroundColor = "rgba(255,255,255,0.3)";
+    await wait(100);
+    board.style.backgroundColor = "transparent";
+}
 function startMemorizeTimer() {
     timeLeft = 20;
-    document.getElementById('timer').innerText = timeLeft;
+    // แก้บรรทัดล่างนี้
+    document.getElementById('timer').innerText = "เวลา:" + timeLeft; 
     document.getElementById('instruction').innerText = "ช่วงจดจำ: จำรูปท่าและชื่อให้แม่น!";
     document.getElementById('instruction').style.color = "#ffd700";
+    
     if (timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(() => {
         timeLeft--;
-        document.getElementById('timer').innerText = timeLeft;
+        // และแก้บรรทัดนี้ด้วย
+        document.getElementById('timer').innerText = "เวลา:" + timeLeft; 
         if(timeLeft <= 0) {
             clearInterval(timerInterval);
             animateShuffle(); 
@@ -253,31 +283,49 @@ async function animateShuffle() {
 function startGameplay() {
     isPlaying = true;
     playTime = 15;
-    document.getElementById('instruction').innerText = "เริ่มได้! ลากป้ายชื่อวางที่รูปเงา!";
-    document.getElementById('instruction').style.color = "#ff5252"; 
+    document.getElementById('instruction').innerText = "ระวังป้ายหลอก! ลากป้ายที่ถูกต้องวางที่รูปเงา!";
+    document.getElementById('instruction').style.color = ""; 
+    
     const deck = document.getElementById('deck');
     deck.style.display = 'flex';
     deck.innerHTML = ''; 
-    const allCardsData = [...moves];
+
+    // รวมการ์ดจริง 5 ใบ + การ์ดหลอก 2 ใบ เป็น 7 ใบ
+    const allCardsData = [...moves, ...decoys];
+    
+    // สลับตำแหน่งการ์ดทั้งหมด
     allCardsData.sort(() => Math.random() - 0.5);
+
     allCardsData.forEach(move => {
         const card = createNameCard(move);
         card.setAttribute('draggable', 'true');
         deck.appendChild(card);
     });
+
     updateProgress();
     startPlayTimer();
 }
+let hasShuffledMidGame = false;
 
 function startPlayTimer() {
     if (timerInterval) clearInterval(timerInterval);
-    document.getElementById('timer').innerText = playTime;
+    hasShuffledMidGame = false; // รีเซ็ตสถานะทุกครั้งที่เริ่มเล่นใหม่
+    
+    document.getElementById('timer').innerText = "เวลา:" + playTime;
     timerInterval = setInterval(() => {
         playTime--;
-        document.getElementById('timer').innerText = playTime;
-        if(playTime <= 0) {
+        document.getElementById('timer').innerText = "เวลา:" + playTime;
+
+        // --- เพิ่มระบบสลับการ์ดตอน 5 วินาทีสุดท้าย ---
+        if (playTime === 5 && !hasShuffledMidGame) {
+            triggerMidGameShuffle();
+            hasShuffledMidGame = true;
+        }
+        // ---------------------------------------
+
+        if (playTime <= 0) {
             clearInterval(timerInterval);
-            checkAnswer(true); 
+            checkAnswer(true);
         }
     }, 1000);
 }
@@ -317,54 +365,52 @@ function updateProgress() {
 async function checkAnswer(isTimeUp = false) {
     clearInterval(timerInterval);
     isPlaying = false; 
+    
+    // หยุดเพลงพื้นหลังเมื่อจบเกม
+    stopBGM();
+
     document.querySelectorAll('.name-card-img').forEach(c => c.setAttribute('draggable', 'false'));
     const containers = document.querySelectorAll('.card-container');
     let score = 0;
-    let correctCount = 0;
+
     containers.forEach(container => {
         const correctId = parseInt(container.dataset.slotId);
         const dropZone = container.querySelector('.drop-zone');
         let isCorrect = false;
+        
         if(dropZone.children.length > 0) {
             const answerId = parseInt(dropZone.children[0].dataset.id);
             if(answerId === correctId) {
                 score += 10;
-                correctCount++;
                 isCorrect = true;
             }
         }
+        
+        // แสดงผลลัพธ์ ถูก/ผิด บนการ์ด
         container.classList.remove('correct-box', 'wrong-box');
         container.classList.add(isCorrect ? 'correct-box' : 'wrong-box');
+        
+        // เผยรูปสีจริง
         const img = container.querySelector('.real-img');
         const moveData = moves.find(m => m.id === correctId);
         if(img && moveData) img.src = moveData.imgColor;
     });
-    document.getElementById('score').innerText = score;
+
+    document.getElementById('score').innerText = `คะแนน:${score}`;
+
+    // แสดงหน้าจอสรุปผล
     setTimeout(() => {
         const modal = document.getElementById('resultModal');
-        const msgTitle = document.getElementById('resultMessage');
         const scoreDisplay = document.getElementById('finalScore');
-        if (isTimeUp) {
-            msgTitle.innerText = "⏰ หมดเวลา!";
-            msgTitle.style.color = "#d32f2f";
-        } else if (score === 50) {
-            msgTitle.innerText = "🏆 ยอดเยี่ยม!";
-            msgTitle.style.color = "#2e7d32";
-        } else {
-            msgTitle.innerText = `คุณตอบถูก ${correctCount} ท่า`;
-            msgTitle.style.color = "#3e2723";
+        
+        if (modal && scoreDisplay) {
+            scoreDisplay.innerText = score; // ใส่ตัวเลขคะแนน
+            modal.style.display = 'flex';   // เปิด Modal
         }
-        scoreDisplay.innerText = score;
-        modal.style.display = 'flex';
     }, 800);
-    document.getElementById('deck').style.display = 'none';
 
-    async function checkAnswer(isTimeUp = false) {
-    clearInterval(timerInterval);
-    isPlaying = false; 
-    
-    // หยุดเพลงพื้นหลังเมื่อจบเกม
-    stopBGM();
+    document.getElementById('deck').style.display = 'none';
 }
-}
+
+// เรียกใช้งานฟังก์ชันเริ่มเกมครั้งแรก
 initGame();

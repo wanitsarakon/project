@@ -15,34 +15,23 @@
 <audio id="bgMusic" src="sounds/bg_music.mp3" loop preload="auto"></audio>
 
 <div id="startScreen" class="modal-overlay" style="display: flex;">
-    <div class="npc-container">
-        <img src="images/npc.png" alt="NPC" class="npc-character">
-    </div>
     <div class="start-board">
-        <div class="speech-bubble" id="npcSpeech">
-            </div>
-
         <div class="start-content-wrapper">
-            <h1 class="start-title">ด่านเกมจำท่ามวยไทย</h1>
+            
             <button class="btn-green-start" onclick="startGame()">เริ่มเล่นเกม</button>
         </div>
     </div>
 </div>
-
-<div id="countdownOverlay" class="modal-overlay" style="display: none; background: rgba(0,0,0,0.7); z-index: 2000;">
-    <div id="countdownNumber"></div>
+<div id="countdown-overlay" class="modal-overlay" style="display: none;">
+    <div id="countdown-text"></div>
 </div>
-
 <div id="resultModal" class="modal-overlay">
-    <div class="start-board result-board">
-        <h2 id="resultMessage" class="start-title">สรุปผลการแข่งขัน</h2>
+    <div class="result-board">
         <div class="final-score-box">
             <span id="finalScore">0</span>
-            <span class="score-unit">คะแนน</span>
         </div>
     </div>
 </div>
-
 <div class="main-container">
     <div class="hud-header">
         <div class="hud-box" id="timer-box">
