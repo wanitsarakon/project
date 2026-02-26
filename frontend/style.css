@@ -106,28 +106,61 @@ body {
 }
 
 #btn-start {
-    padding: 12px 45px; 
-    font-size: 1.8rem; 
-    font-family: 'Prompt', sans-serif;
-    background: linear-gradient(180deg, #FFD700 0%, #FFA500 100%);
-    border: 3px solid #fff; 
-    border-radius: 50px; 
-    color: #fff;
-    cursor: pointer; 
+    padding: 15px 40px;
+    font-size: 28px;
+    font-family: 'Kanit', sans-serif;
     font-weight: bold;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.4);
-    transition: transform 0.2s, box-shadow 0.2s;
+    color: white;
+    /* ไล่เฉดสีจากส้มไปแดง ให้ดูมีมิติ */
+    background: linear-gradient(180deg, #ffcc00 0%, #ff8800 50%, #ff4400 100%);
+    border: 4px solid #fff;
+    border-radius: 50px; /* ทรงแคปซูล */
+    cursor: pointer;
+    outline: none;
+    margin-top: 90px;
+    /* เงาใต้ปุ่มและแสงฟุ้งรอบๆ */
+    box-shadow: 0 8px 0 #992200, 0 15px 20px rgba(0,0,0,0.5);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    
+    transition: all 0.2s ease; /* หน่วงเวลาตอนกดให้ดูนุ่มนวล */
+    position: relative;
+    overflow: hidden;
 }
 
-#btn-start:hover { 
-    transform: scale(1.1); 
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+
+#btn-start:hover {
+   transform: translateY(-3px) scale(1.05); /* ขยายใหญ่ขึ้นนิดนึง */
+    background: linear-gradient(180deg, #ffe066 0%, #ffa500 50%, #ff5500 100%);
+    box-shadow: 0 10px 0 #992200, 0 20px 25px rgba(0,0,0,0.6);
 }
+
+#btn-start:active {
+    transform: translateY(4px); /* ปุ่มยุบลงเหมือนกดจริง */
+    box-shadow: 0 2px 0 #992200, 0 5px 10px rgba(0,0,0,0.5);
+}
+#btn-start:after {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -60%;
+    width: 20%;
+    height: 200%;
+    background: rgba(255, 255, 255, 0.4);
+    transform: rotate(30deg);
+    transition: all 0.5s;
+    animation: shine 3s infinite;
+}
+@keyframes shine {
+    0% { left: -60%; }
+    20% { left: 120%; }
+    100% { left: 120%; }
+}
+
 
 /* ==========================================
    3. GAME INTERFACE (ส่วนระหว่างเล่น)
    ========================================== */
-.npc-area { position: absolute; right: 150px; bottom: 0px; z-index: 5; }
+.npc-area { position: absolute; right: 150px; bottom: 70px; z-index: 5; }
 .grandma { width: 315px; }
 .speech-bubble {
     position: absolute; bottom: 530px; right: 240px;
@@ -173,9 +206,9 @@ body {
     z-index: 100;
 }
 
-.green-bean { width: 150px; left: 2%;  bottom: 32%; }
-.sugar      { width: 350px; left: 10%; bottom: 22%; }
-.coconut    { width: 100px; left: 40%; bottom: 32%; }
+.green-bean { width: 150px; left: 2%;  bottom: 35%; }
+.sugar      { width: 350px; left: 10%; bottom: 25%; }
+.coconut    { width: 100px; left: 40%; bottom: 35%; }
 .agar       { width: 230px; left: 56%; bottom: 40%; }
 .color      { width: 110px; left: 70%; bottom: 33%; }
 .water      { width: 110px; left: 90%; bottom: 35%; }
@@ -283,28 +316,72 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
- background: rgba(255, 255, 255, 0.1); /* สีขาวบางๆ เพื่อให้ภาพดูสว่างขึ้น */
-    backdrop-filter: blur(8px); /* ทำให้พื้นหลังเบลอ (ปรับเลข 8px มาก-น้อยตามชอบ) */
-    -webkit-backdrop-filter: blur(8px); /* สำหรับรองรับเบราว์เซอร์ Safari */
-    display: flex;
+    background: rgba(0, 0, 0, 0.7); /* เพิ่มความมืดพื้นหลังให้ป้ายเด่น */
+    display: none; /* ปิดไว้ก่อน เริ่มต้นด้วย JS */
     justify-content: center;
     align-items: center;
-    z-index: 5000;
+    z-index: 9999; /* มั่นใจว่าอยู่หน้าสุดเหนือทุกเลเยอร์ */
 }
+
+#total-score {
+    font-size: 100px;
+    font-family: 'Kanit', sans-serif;
+    font-weight: 900;
+    background: linear-gradient(180deg, #FFFFFF 30%, #FFD700 60%, #FF8C00 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(4px 4px 0px #632b00);
+    
+    display: block;
+    /* นำ translateY ออกจากตรงนี้ เพราะเราจะไปใส่ใน Animation แทนเพื่อให้มันทำงานได้จริง */
+    animation: scorePop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes scorePop {
+    /* ต้องระบุ translateY(150px) ในทุกจุดของ Animation เพื่อล็อกตำแหน่งให้ขยับลงมา */
+    0% { 
+        transform: scale(0.5) translateY(60px); 
+        opacity: 0; 
+    }
+    80% { 
+        transform: scale(1.1) translateY(60px); 
+    }
+    100% { 
+        transform: scale(1) translateY(60px); 
+        opacity: 1; 
+    }
+}
+/* ตรวจสอบว่า Class hidden ไม่ไปขัดขวางการโชว์หน้าสรุป */
+.hidden { display: none !important; }
+/* ค้นหาและแก้ไขส่วน .result-container */
 .result-container {
-    width: 100%;
-    max-width: 650px;
+    width: 90%; /* ปรับให้เท่ากับ .start-container */
+    max-width: 1300px; /* ปรับให้เท่ากับ .start-container */
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-#result-label {
-    font-size: 2.5rem;
-    color: #5d4037;
-    margin-top: 35px;
-    margin-bottom: 0px;
+/* ค้นหาและแก้ไขส่วน .result-banner */
+.result-banner {
+    width: 100%; 
+    max-width: 650px; /* ปรับให้เท่ากับ .stage-banner เพื่อให้ขนาดเท่ากันเป๊ะ */
+    height: auto;
+    filter: drop-shadow(0 15px 25px rgba(0,0,0,0.5));
 }
+
+/* ปรับตำแหน่งเนื้อหาภายในป้ายสรุปให้สมดุล */
+#result-screen .banner-inner-content {
+    position: absolute;
+    top: 50%; 
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    width: 75%; /* ปรับให้เท่ากับ .banner-inner-content ของหน้าแรก */
+}
+/* ตรวจสอบว่า Class hidden ไม่ไปขัดขวางการโชว์หน้าสรุป */
+.hidden { display: none !important; }
+/* ค้นหาและแก้ไขส่วน .result-container */
 
 .score-display {
     font-size: 5.5rem; /* คะแนนตัวใหญ่ชัดเจน */
@@ -481,4 +558,27 @@ clip-path: path('M -60,50 Q 160,160 320,40 L 320,250 Q 160,320 -30,250 Z');
 @keyframes arrow-push-right {
     0%, 100% { transform: translateX(0); opacity: 0.7; }
     50% { transform: translateX(15px); opacity: 1; }
+}
+
+
+#countdown-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.4); 
+    display: none; /* ใช้ flex เมื่อสั่งโชว์ผ่าน JS */
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+#countdown-text {
+    color: #f1c40f;
+    font-size: 180px;
+    font-weight: 900;
+    font-family: 'Kanit', sans-serif;
+    text-shadow: 8px 8px 0px #000;
+    pointer-events: none;
+    /* ใส่ Animation */
+    animation: countBounce 0.5s ease-out forwards;
 }

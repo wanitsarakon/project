@@ -14,9 +14,10 @@ const ingredientVisualMap = {
 };
 
 // ส่วนของเสียง (Audio)
-const sfxCount = new Audio('sounds/count.mp3'); // เสียงนับ 3, 2, 1
-const bgm = new Audio('sounds/bgm.mp3');        // เพลงพื้นหลังขณะเล่น
-bgm.loop = true;                                // วนลูปเพลง
+const sfxCount = new Audio('sounds/count.mp3');
+const sfxGo = new Audio('sounds/start_game.mp3');
+const bgm = new Audio('sounds/bgm.mp3');   
+bgm.loop = true;
 
 let steps = []; 
 let isGameActive = false;
@@ -24,7 +25,6 @@ let gameTimeLeft = 45;
 let gameInterval;
 let isFinishing = false; 
 
-// ระบบสะสมวัตถุดิบและการคน
 let currentY = 180; 
 let stirProgress = 0;
 let lastAngle = null;
@@ -79,7 +79,6 @@ function createSplash(parent, color, fallDist) {
 function startPourEffect(parent, name, color, fallDist) {
     const container = document.createElement('div');
     container.className = isLiquid(name) ? 'liquid-stream-container' : 'powder-container';
-    
     let pourPosition = (name === "น้ำตาลทรายขาว" || name === "palm_sugar") ? "150px" : "calc(50% - 30px)"; 
     container.style.left = pourPosition; 
     container.style.top = '35%'; 
@@ -109,7 +108,6 @@ function startPourEffect(parent, name, color, fallDist) {
             }
         }
     }, 15);
-
     return interval; 
 }
 
@@ -120,7 +118,6 @@ function startPourEffect(parent, name, color, fallDist) {
 function updateFillVisual(ingredientName) {
     const visualId = ingredientVisualMap[ingredientName];
     const el = document.getElementById(visualId);
-    
     if (el) {
         el.style.opacity = "1";
         currentY -= 20; 
@@ -131,16 +128,14 @@ function updateFillVisual(ingredientName) {
 
 function handleStirring(e) {
     if (!isStirringEnabled || !isGameActive) return;
-
     const rect = bowl.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
-
     const dx = e.clientX - centerX;
     const dy = e.clientY - centerY;
     const currentAngle = Math.atan2(dy, dx);
-
     const spatula = document.getElementById("spatula");
+
     if (spatula) {
         let moveX = (e.clientX - rect.left) - 40;
         moveX = Math.max(60, Math.min(180, moveX)); 
@@ -156,14 +151,10 @@ function handleStirring(e) {
         let delta = currentAngle - lastAngle;
         if (delta > Math.PI) delta -= Math.PI * 2;
         if (delta < -Math.PI) delta += Math.PI * 2;
-
         stirProgress += Math.abs(delta) * 2.5; 
         const bar = document.getElementById("stir-bar");
         if (bar) bar.style.height = Math.min(stirProgress, 100) + "%";
-
-        if (stirProgress >= 100) {
-            finishStirringStep();
-        }
+        if (stirProgress >= 100) finishStirringStep();
     }
     lastAngle = currentAngle;
 }
@@ -172,21 +163,16 @@ function finishStirringStep() {
     isStirringEnabled = false;
     stirProgress = 0;
     lastAngle = null;
-
     document.getElementById("stir-progress-container").classList.add("hidden");
     document.getElementById("spatula").classList.add("hidden");
-    
     const stirHint = document.getElementById("stir-hint");
     if (stirHint) stirHint.classList.add("hidden"); 
 
     if (steps.length === 3) {
         if (npcText && npcText.parentElement) npcText.parentElement.classList.remove("hidden");
-        
         typeEffect(npcText, "ดีมากหลาน! ผสมเข้ากันดีแล้ว ใส่ส่วนผสมที่เหลือต่อได้เลยจ่ะ", 40).then(() => {
             setTimeout(() => {
-                if (npcText && npcText.parentElement) {
-                    npcText.parentElement.classList.add("hidden");
-                }
+                if (npcText && npcText.parentElement) npcText.parentElement.classList.add("hidden");
             }, 2000);
         });
     } else if (steps.length === 7) {
@@ -195,8 +181,9 @@ function finishStirringStep() {
 }
 
 // ==========================================
-// 4. MAIN GAMEPLAY (DROP EVENT)
+// 4. MAIN GAMEPLAY
 // ==========================================
+
 ingredients.forEach((item, index) => {
     item.addEventListener('dragstart', (e) => {
         if (!isGameActive || isStirringEnabled) return e.preventDefault();
@@ -218,10 +205,8 @@ bowl.addEventListener('drop', (e) => {
         steps.push(name);
         const bowlHint = document.querySelector('.bowl-hint');
         if (bowlHint) bowlHint.classList.add('hidden');
-
         const rect = sourceItem.getBoundingClientRect();
         sourceItem.style.visibility = "hidden";
-
         const bowlRect = bowl.getBoundingClientRect();
         const wrapper = document.createElement('div');
         wrapper.className = 'pouring-wrapper';
@@ -229,7 +214,6 @@ bowl.addEventListener('drop', (e) => {
         wrapper.style.height = rect.height + "px";
         wrapper.style.left = (bowlRect.left + bowlRect.width / 2 - rect.width / 2) + "px";
         wrapper.style.top = (bowlRect.top - 130) + "px"; 
-
         document.body.appendChild(wrapper);
 
         const img = document.createElement('img');
@@ -238,10 +222,7 @@ bowl.addEventListener('drop', (e) => {
         wrapper.appendChild(img);
 
         let pourTimer;
-        setTimeout(() => {
-            pourTimer = startPourEffect(wrapper, name, getStreamColor(name), 180); 
-        }, 400);
-
+        setTimeout(() => { pourTimer = startPourEffect(wrapper, name, getStreamColor(name), 180); }, 400);
         setTimeout(() => {
             if (pourTimer) clearInterval(pourTimer);
             updateFillVisual(name); 
@@ -253,22 +234,15 @@ bowl.addEventListener('drop', (e) => {
                 setTimeout(() => {
                     isStirringEnabled = true;
                     stirProgress = 0;
-                    const bar = document.getElementById("stir-bar");
-                    if (bar) bar.style.height = "0%";
-
+                    document.getElementById("stir-bar").style.height = "0%";
                     document.getElementById("stir-progress-container").classList.remove("hidden");
                     document.getElementById("spatula").classList.remove("hidden");
-                    
-                    const stirHint = document.getElementById("stir-hint");
-                    if (stirHint) stirHint.classList.remove("hidden");
-
+                    document.getElementById("stir-hint").classList.remove("hidden");
                     const msg = (steps.length === 3) 
                         ? "ใส่ครบสามอย่างแล้ว อย่าลืมคนผสมให้เข้ากันก่อนนะหลาน!" 
                         : "รอบสุดท้ายแล้ว คนให้เนื้อเนียนเลยนะจ๊ะ ขนมจะได้สวยๆ";
-                    
                     if (npcText && npcText.parentElement) npcText.parentElement.classList.remove("hidden");
                     typeEffect(npcText, msg, 40);
-                    
                     bowl.addEventListener('mousemove', handleStirring);
                 }, 500);
             }
@@ -277,99 +251,67 @@ bowl.addEventListener('drop', (e) => {
 });
 
 // ==========================================
-// 5. FLOW CONTROL
+// 5. FLOW & FINISH
 // ==========================================
+
 function speak(text, duration) {
     return new Promise(resolve => { 
-        typeEffect(npcText, text, 40).then(() => {
-            // รอเพิ่มอีกเล็กน้อยตามค่า duration เพื่อให้ผู้เล่นมีเวลาอ่านก่อนไปขั้นตอนถัดไป
-            setTimeout(resolve, duration); 
-        });
+        typeEffect(npcText, text, 40).then(() => setTimeout(resolve, duration));
     });
 }
 
 async function startGameFlow() {
-    // 1. รีเซ็ตค่าเริ่มต้นของเกม
-    steps = []; 
-    isFinishing = false; 
-    gameTimeLeft = 45;
-    currentY = 180;
-    stirProgress = 0;
-    
-    bgm.pause();
-    bgm.currentTime = 0;
-
-    const stirHint = document.getElementById("stir-hint");
-    if (stirHint) stirHint.classList.add("hidden");
-
+    steps = []; isFinishing = false; gameTimeLeft = 45; currentY = 180; stirProgress = 0;
+    bgm.pause(); bgm.currentTime = 0;
+    document.getElementById("stir-hint").classList.add("hidden");
     document.querySelectorAll('.filling-asset').forEach(el => {
         el.style.opacity = "0";
         el.style.transform = "translateY(180px)";
     });
-    
     ingredients.forEach(img => img.style.visibility = "visible");
-    const bowlHint = document.querySelector('.bowl-hint');
-    if (bowlHint) bowlHint.classList.remove('hidden');
-    
+    document.querySelector('.bowl-hint').classList.remove('hidden');
     if (npcText && npcText.parentElement) npcText.parentElement.classList.remove("hidden");
     
-    // 2. ลำดับการพูดของคุณยาย (รอให้พูดจบทีละประโยค)
     await speak("มาหลาน... ยายจะบอกสูตรลูกชุบให้ฟังนะ ตั้งใจฟังล่ะ", 2000);
-    
-    for (let i = 0; i < recipe.length; i++) {
-        await speak(`ขั้นตอนที่ ${i + 1}: ใส่ "${recipe[i]}"`, 1000);
-    }
-    
-    // 3. ประโยคสุดท้ายก่อนเริ่มนับถอยหลัง
-    // ใช้ await เพื่อให้พิมพ์ประโยคนี้จนจบ และรออีก 2 วินาทีให้คนอ่านจบจริงๆ
+    for (let i = 0; i < recipe.length; i++) { await speak(`ขั้นตอนที่ ${i + 1}: ใส่ "${recipe[i]}"`, 1000); }
     await speak("ใส่ส่วนผสมแล้ว อย่าลืมคนให้เข้ากันตามที่ยายบอกด้วยนะหลาน... เริ่มได้!", 2000);
     
-    // 4. หลังจากยายพูดจบประโยคสุดท้ายแล้ว จึงเริ่มนับถอยหลัง 3 2 1
     await startCountdown();
-    
-    // 5. เริ่มเข้าสู่ช่วงเล่นเกมและจับเวลา
     startGameplay();
 }
 
 function startCountdown() {
     return new Promise(resolve => {
-        const overlay = document.getElementById("overlay");
+        const overlay = document.getElementById("countdown-overlay");
         const cdText = document.getElementById("countdown-text");
-        
-        // ซ่อนกล่องข้อความยายทันทีที่เริ่มนับถอยหลังเพื่อความสะอาดตา
         if (npcText && npcText.parentElement) npcText.parentElement.classList.add("hidden");
-        
-        overlay.classList.remove("hidden");
-        
-        let count = 3; 
-        cdText.innerText = count;
-        
-        // เล่นเสียงเลข 3
-        sfxCount.currentTime = 0;
-        sfxCount.play().catch(e => console.log("Audio blocked"));
-
+        overlay.style.display = "flex"; 
+        const counts = [3, 2, 1, "เริ่ม!"];
+        let index = 0;
         const interval = setInterval(() => {
-            count--;
-            if (count > 0) {
-                cdText.innerText = count;
-                sfxCount.currentTime = 0;
-                sfxCount.play().catch(e => console.log("Audio blocked"));
+            if (index < counts.length) {
+                cdText.innerText = counts[index];
+                cdText.style.animation = 'none';
+                cdText.offsetHeight; 
+                cdText.style.animation = 'countBounce 0.5s ease-out forwards';
+                if (typeof counts[index] === 'number') {
+                    sfxCount.currentTime = 0; sfxCount.play().catch(e => {});
+                } else {
+                    sfxGo.currentTime = 0; sfxGo.play().catch(e => {});
+                }
+                index++;
             } else { 
                 clearInterval(interval); 
-                overlay.classList.add("hidden"); 
-                
-                // เริ่มเพลงพื้นหลัง
-                bgm.currentTime = 0;
-                bgm.play().catch(e => console.log("BGM blocked"));
-                
+                overlay.style.display = "none"; 
+                bgm.play().catch(e => {});
                 resolve(); 
             }
         }, 1000);
     });
 }
+
 function startGameplay() {
     isGameActive = true;
-    if (npcText && npcText.parentElement) npcText.parentElement.classList.add("hidden");
     const timerDisp = document.getElementById("game-timer");
     timerDisp.classList.remove("hidden");
     timerDisp.innerText = `เวลา: ${gameTimeLeft}`;
@@ -382,27 +324,21 @@ function startGameplay() {
 
 function finishGame(isTimeout) {
     if (isFinishing) return;
-    isFinishing = true; 
-    isGameActive = false;
+    isFinishing = true; isGameActive = false;
     clearInterval(gameInterval);
     
-    bgm.pause();
+    // bgm.pause();  <-- ลบบรรทัดนี้ออก หรือใส่ // ไว้ข้างหน้า
 
     document.getElementById("game-timer").classList.add("hidden");
     document.getElementById("stir-progress-container").classList.add("hidden");
     document.getElementById("spatula").classList.add("hidden");
-    const stirHint = document.getElementById("stir-hint");
-    if (stirHint) stirHint.classList.add("hidden");
-
-    const delayTime = isTimeout ? 0 : 1000; 
+    document.getElementById("stir-hint").classList.add("hidden");
 
     setTimeout(() => {
         if (npcText && npcText.parentElement) npcText.parentElement.classList.remove("hidden");
-        const msg = isTimeout ? "หมดเวลาแล้วจ๊ะ! มัวแต่คนเพลินหรือเปล่านี่ยเรา" : "ทำเสร็จแล้วรึ? ไหนยายดูซิว่าคนจนเนียนดีหรือยัง...";
-        typeEffect(npcText, msg, 40).then(() => {
-            setTimeout(sendCheckRequest, 1000);
-        });
-    }, delayTime);
+        const msg = isTimeout ? "หมดเวลาแล้วจ๊ะ! มัวแต่คนเพลินหรือเปล่านี่เรา" : "ทำเสร็จแล้วรึ? ไหนยายดูซิว่าคนจนเนียนดีหรือยัง...";
+        typeEffect(npcText, msg, 40).then(() => setTimeout(sendCheckRequest, 1000));
+    }, isTimeout ? 0 : 1000);
 }
 
 function sendCheckRequest() {
@@ -414,104 +350,32 @@ function sendCheckRequest() {
     .then(res => res.json())
     .then(data => { 
         typeEffect(npcText, data.text, 40).then(() => {
-            setTimeout(() => { showResultScreen(data); }, 2000);
+            setTimeout(() => { showResultScreen(data); }, 1500);
         });
     })
-    .catch(() => { npcText.innerText = "ยายดูไม่ออก... (Error)"; });
+    .catch(() => { showResultScreen({ score: 0 }); });
 }
 
 function showResultScreen(data) {
     const resultScreen = document.getElementById("result-screen");
-    const resultScore = document.getElementById("result-score");
-    const resultGradeText = document.getElementById("result-text-summary");
-    resultScore.innerText = data.score;
-    if (resultGradeText) resultGradeText.innerText = data.grade; 
-    resultScreen.classList.remove("hidden");
+    const resultScore = document.getElementById("total-score");
+    
+    // หยุดเพลง BGM เมื่อหน้าสรุปคะแนนปรากฏขึ้น
+    bgm.pause(); 
+    
+    if (resultScore) {
+        resultScore.innerText = data.score;
+    }
+
+    if (resultScreen) {
+        resultScreen.classList.remove("hidden");
+        resultScreen.style.display = "flex"; 
+    }
 }
 
 window.onload = () => {
-    const introElem = document.getElementById("introText");
     const startBtn = document.getElementById('btn-start');
     const startScreen = document.getElementById('start-screen');
-    if (introElem) {
-        const introMsg = "ยินดีต้อนรับสู่ครัวไทยจ๊ะหลาน! วันนี้ยายจะสอนทำ 'ลูกชุบ' สูตรโบราณนะจ๊ะ พร้อมหรือยัง?";
-        typeEffect(introElem, introMsg, 40);
-    }
-    if (startBtn && startScreen) {
-        startBtn.onclick = () => {
-            startScreen.classList.add('hidden');
-            startGameFlow(); 
-        };
-    }
-};
-
-function startGameplay() {
-    isGameActive = true;
-    if (npcText && npcText.parentElement) npcText.parentElement.classList.add("hidden");
-    const timerDisp = document.getElementById("game-timer");
-    timerDisp.classList.remove("hidden");
-    timerDisp.innerText = `เวลา: ${gameTimeLeft}`;
-    gameInterval = setInterval(() => {
-        gameTimeLeft--;
-        timerDisp.innerText = `เวลา: ${gameTimeLeft}`;
-        if (gameTimeLeft <= 0) finishGame(true);
-    }, 1000);
-}
-
-function finishGame(isTimeout) {
-    if (isFinishing) return;
-    isFinishing = true; 
-    isGameActive = false;
-    clearInterval(gameInterval);
-    document.getElementById("game-timer").classList.add("hidden");
-    document.getElementById("stir-progress-container").classList.add("hidden");
-    document.getElementById("spatula").classList.add("hidden");
-    const stirHint = document.getElementById("stir-hint");
-    if (stirHint) stirHint.classList.add("hidden");
-
-    const delayTime = isTimeout ? 0 : 1000; 
-
-    setTimeout(() => {
-        if (npcText && npcText.parentElement) npcText.parentElement.classList.remove("hidden");
-        const msg = isTimeout ? "หมดเวลาแล้วจ๊ะ! มัวแต่คนเพลินหรือเปล่านี่ยเรา" : "ทำเสร็จแล้วรึ? ไหนยายดูซิว่าคนจนเนียนดีหรือยัง...";
-        typeEffect(npcText, msg, 40).then(() => {
-            setTimeout(sendCheckRequest, 1000);
-        });
-    }, delayTime);
-}
-
-function sendCheckRequest() {
-    fetch('/check', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ steps: steps, timeLeft: gameTimeLeft }),
-    })
-    .then(res => res.json())
-    .then(data => { 
-        typeEffect(npcText, data.text, 40).then(() => {
-            setTimeout(() => { showResultScreen(data); }, 2000);
-        });
-    })
-    .catch(() => { npcText.innerText = "ยายดูไม่ออก... (Error)"; });
-}
-
-function showResultScreen(data) {
-    const resultScreen = document.getElementById("result-screen");
-    const resultScore = document.getElementById("result-score");
-    const resultGradeText = document.getElementById("result-text-summary");
-    resultScore.innerText = data.score;
-    if (resultGradeText) resultGradeText.innerText = data.grade; 
-    resultScreen.classList.remove("hidden");
-}
-
-window.onload = () => {
-    const introElem = document.getElementById("introText");
-    const startBtn = document.getElementById('btn-start');
-    const startScreen = document.getElementById('start-screen');
-    if (introElem) {
-        const introMsg = "ยินดีต้อนรับสู่ครัวไทยจ๊ะหลาน! วันนี้ยายจะสอนทำ 'ลูกชุบ' สูตรโบราณนะจ๊ะ พร้อมหรือยัง?";
-        typeEffect(introElem, introMsg, 40);
-    }
     if (startBtn && startScreen) {
         startBtn.onclick = () => {
             startScreen.classList.add('hidden');

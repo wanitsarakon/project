@@ -18,42 +18,33 @@
     </svg>
 
     <div id="start-screen">
-        <div class="start-container">
-            <div class="npc-side">
-                <div class="intro-bubble">
-                    <p id="introText"></p> 
-                </div>
-                <img src="images/ยาย.png" class="intro-grandma" alt="คุณยาย">
-            </div>
-            <div class="banner-side">
-                <div class="banner-wrapper">
-                    <img src="images/ป้ายด่าน.png" class="stage-banner" alt="ป้ายด่าน">
-                    <div class="banner-inner-content">
-                        <h1>ด่านเกมสอนทำลูกชุบ</h1>
-                        <button id="btn-start">เริ่มทำขนม</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="result-screen" class="hidden">
-        <div class="result-container">
+    <div class="start-container">
+        <div class="banner-side">
             <div class="banner-wrapper">
-                <img src="images/ป้ายด่าน.png" class="stage-banner" alt="ป้ายสรุป">
+                <img src="images/ป้ายด่าน.png" class="stage-banner" alt="ป้ายด่าน">
                 <div class="banner-inner-content">
-                    <h1 id="result-grade">คะเเนนรวม</h1>
-                    <div class="score-display">
-                        <span id="result-score">0</span> คะแนน
-                    </div>
+                    
+                    <button id="btn-start">เริ่มทำขนม</button>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <div id="overlay" class="hidden">
-        <div id="countdown-text">5</div>
+   <div id="result-screen" class="hidden">
+    <div class="result-container">
+        <div class="banner-wrapper">
+            <img src="images/ป้ายด่าน2.png" class="result-banner" alt="ป้ายสรุป">
+            <div class="banner-inner-content">
+                <span id="total-score">0</span>
+            </div>
+        </div>
     </div>
+</div>
+
+    <div id="countdown-overlay">
+    <div id="countdown-text"></div>
+</div>
     <div id="game-timer" class="hidden">เวลา: 45</div>
 
     <div class="npc-area">
