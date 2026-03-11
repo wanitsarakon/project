@@ -1,276 +1,503 @@
-import Phaser from "phaser";
-import Spoon from "./components/Spoon";
+import Phaser from "phaser"
+import Spoon from "./components/Spoon.js"
 
-/* =====================
-   CONSTANTS
-===================== */
-const GAME_TIME = 60;
-const CONFIRM_TIME = 500;
+/* ===== IMPORT ASSETS ===== */
 
-const FISH_SCORE = { normal: 1, gold: 3 };
+import bgImg from "./assetsFish/BGfish.png"
 
-export default class FishScoopingScene extends Phaser.Scene {
-  constructor() {
-    super({ key: "FishScoopingScene" });
+import fish1 from "./assetsFish/1.png"
+import fish2 from "./assetsFish/2.png"
+import fish3 from "./assetsFish/3.png"
+import fish4 from "./assetsFish/4.png"
+import fish5 from "./assetsFish/5.png"
 
-    this.timeLeft = GAME_TIME;
-    this.score = 0;
+import spoonImg from "./assetsFish/Spoon.png"
+import bucketImg from "./assetsFish/WaterBowl.png"
 
-    this.failHit = 0;
-    this.pendingFish = null;
-    this.pendingTimer = null;
+import startSign from "./assetsFish/fish_start.png"
+import scoreSign from "./assetsFish/fish_score.png"
 
-    this.baseFishSpeed = 70;
-    this.spawnDelay = 900;
+import startSound from "./sounds/start.mp3"
+import countdownSound from "./sounds/countdown.mp3"
 
-    this.isDragging = false;
-    this.ended = false;
-  }
+/* ===================== */
 
-  init(data = {}) {
-    this.player = data.player ?? null;
-    this.onGameEnd = data.onGameEnd ?? null;
+const GAME_TIME = 60
+const CONFIRM_TIME = 650
 
-    this.timeLeft = GAME_TIME;
-    this.score = 0;
-    this.failHit = 0;
-    this.pendingFish = null;
-    this.pendingTimer = null;
+const FISH_SCORE = { normal:1 , gold:3 }
 
-    this.baseFishSpeed = 70;
-    this.spawnDelay = 900;
+const ESCAPE_DISTANCE = 55
+const ESCAPE_FORCE = 22
 
-    this.isDragging = false;
-    this.ended = false;
-  }
+const MAX_FISH = 7
+const FISH_LIFE = 7000
 
-  preload() {
-    this.load.image("bg", "/assets/BGfish.jpg");
-    this.load.image("fish", "/assets/Fish.png");
-    this.load.image("fish_gold", "/assets/Fish_gold.png");
-    this.load.image("spoon", "/assets/Spoon.png");
-    this.load.image("bucket", "/assets/water_bowl.png");
-  }
+/* ===================== */
 
-  create() {
-    const { width, height } = this.scale;
+export default class FishScoopingScene extends Phaser.Scene{
 
-    this.add.image(width / 2, height / 2, "bg");
+constructor(){
+super({key:"FishScoopingScene"})
+}
 
-    this.scoreText = this.add.text(16, 16, "คะแนน: 0", {
-      color: "#fff",
-      fontSize: "20px",
-    });
+/* ================= INIT ================= */
 
-    this.timeText = this.add
-      .text(width - 16, 16, `เวลา: ${GAME_TIME}`, {
-        color: "#fff",
-        fontSize: "20px",
-      })
-      .setOrigin(1, 0);
+init(data={})
 
-    this.bucket = this.physics.add
-      .staticImage(width / 2, height - 55, "bucket")
-      .setScale(0.4);
+{
 
-    this.spoon = new Spoon(this, width / 2, height / 2);
+this.player=data.player ?? null
+this.onGameEnd=data.onGameEnd ?? null
 
-    /* ===== INPUT ===== */
-    this.input.on("pointermove", (p) => {
-      if (!this.ended) this.spoon.moveTo(p.x, p.y);
-    });
+this.timeLeft=GAME_TIME
+this.score=0
 
-    this.input.on("pointerdown", () => {
-      if (this.ended) return;
+this.failHit=0
 
-      const fish = this.pendingFish;
-      if (!fish || fish.following) return;
+this.pendingFish=null
+this.pendingTimer=null
 
-      this.isDragging = true;
+this.baseFishSpeed=90
+this.spawnDelay=1100
 
-      this.pendingFish = null;
-      this.pendingTimer?.remove();
-      this.pendingTimer = null;
+this.isDragging=false
+this.ended=false
 
-      fish.pending = false;
-      fish.following = true;
-      fish.caught = true;
-    });
+}
 
-    this.input.on("pointerup", () => {
-      this.isDragging = false;
-    });
+/* ================= PRELOAD ================= */
 
-    /* ===== FISH GROUP ===== */
-    this.fishes = this.physics.add.group({ allowGravity: false });
+preload(){
 
-    this.physics.add.overlap(
-      this.spoon,
-      this.fishes,
-      this.tryCatchFish,
-      null,
-      this
-    );
+this.load.image("bg",bgImg)
 
-    /* ===== TIMERS ===== */
-    this.spawnTimer = this.time.addEvent({
-      delay: this.spawnDelay,
-      loop: true,
-      callback: () => this.spawnFish(),
-    });
+this.load.image("fish1",fish1)
+this.load.image("fish2",fish2)
+this.load.image("fish3",fish3)
+this.load.image("fish4",fish4)
+this.load.image("fish5",fish5)
 
-    this.timer = this.time.addEvent({
-      delay: 1000,
-      loop: true,
-      callback: () => this.tick(),
-    });
-  }
+this.load.image("spoon",spoonImg)
+this.load.image("bucket",bucketImg)
 
-  updateDifficulty() {
-    const elapsed = GAME_TIME - this.timeLeft;
-    const level = Math.floor(elapsed / 10);
+this.load.image("startSign",startSign)
+this.load.image("scoreSign",scoreSign)
 
-    this.baseFishSpeed = 70 + level * 15;
-    this.spawnDelay = Phaser.Math.Clamp(900 - level * 80, 350, 900);
+this.load.audio("startSound",startSound)
+this.load.audio("countdownSound",countdownSound)
 
-    if (this.spawnTimer) {
-      this.spawnTimer.delay = this.spawnDelay;
-    }
-  }
+}
 
-  spawnFish() {
-    if (this.ended) return;
+/* ================= CREATE ================= */
 
-    const type = Math.random() < 0.66 ? "normal" : "gold";
-    const tex = type === "gold" ? "fish_gold" : "fish";
+create(){
 
-    const fromLeft = Math.random() < 0.5;
-    const dir = fromLeft ? 1 : -1;
+const {width,height}=this.scale
 
-    const fish = this.fishes.create(
-      fromLeft ? -80 : this.scale.width + 80,
-      Phaser.Math.Between(150, 420),
-      tex
-    );
+/* background */
 
-    fish.setScale(type === "gold" ? 0.13 : 0.11);
-    fish.setFlipX(!fromLeft);
+const bg=this.add.image(width/2,height/2,"bg")
 
-    fish.type = type;
-    fish.value = FISH_SCORE[type];
+const scaleX=width/bg.width
+const scaleY=height/bg.height
 
-    fish.following = false;
-    fish.caught = false;
-    fish.scored = false;
-    fish.pending = false; // 🔑 สำคัญ
+bg.setScale(Math.max(scaleX,scaleY))
 
-    fish.speed = this.baseFishSpeed + Phaser.Math.Between(-10, 15);
-    fish.setVelocity(dir * fish.speed, 0);
-  }
+/* ===== start screen ===== */
 
-  update(time) {
-    if (this.ended) return;
+this.showStartSign()
 
-    this.spoon.update?.();
+}
 
-    const netX = this.spoon.x;
-    const netY = this.spoon.y;
+/* ================= START SCREEN ================= */
 
-    this.fishes.getChildren().forEach((fish) => {
-      if (!fish.body) return;
+showStartSign(){
 
-      if (
-        fish.x < -150 ||
-        fish.x > this.scale.width + 150
-      ) {
-        if (this.pendingFish === fish) {
-          this.pendingFish = null;
-          this.pendingTimer?.remove();
-          this.pendingTimer = null;
-        }
-        fish.destroy();
-        return;
-      }
+const {width,height}=this.scale
 
-      if (fish.following) {
-        fish.setPosition(netX, netY - 6);
-        this.checkDropIntoBucket(fish);
-      } else {
-        fish.setVelocityY(
-          Math.sin((time + fish.y) * 0.005) *
-            (20 + this.baseFishSpeed * 0.15)
-        );
-      }
-    });
-  }
+const sign=this.add.image(
+width/2,
+height/2,
+"startSign"
+)
+.setDepth(500)
+.setScale(0.8)
 
-  /* =====================
-     FIXED TRY CATCH
-  ===================== */
-  tryCatchFish(spoon, fish) {
-    if (fish.following || fish.caught || fish.pending || this.isDragging) return;
+sign.setInteractive()
 
-    fish.pending = true;
-    this.pendingFish = fish;
+sign.once("pointerdown",()=>{
 
-    this.pendingTimer?.remove();
-    this.pendingTimer = this.time.delayedCall(CONFIRM_TIME, () => {
-      if (this.pendingFish === fish && !fish.following) {
-        this.pendingFish = null;
-        fish.pending = false;
+this.sound.play("startSound")
 
-        this.failHit++;
-        if (this.failHit >= 3) {
-          this.spoon.breakNet?.();
-          this.failHit = 0;
-        }
-      }
-    });
-  }
+sign.destroy()
 
-  checkDropIntoBucket(fish) {
-    if (!fish.caught || fish.scored) return;
-    if (this.isDragging) return;
+this.startGame()
 
-    if (this.bucket.getBounds().contains(fish.x, fish.y)) {
-      this.scoreFish(fish);
-    }
-  }
+})
 
-  scoreFish(fish) {
-    fish.scored = true;
+}
 
-    this.score += fish.value;
-    this.scoreText.setText(`คะแนน: ${this.score}`);
+/* ================= START GAME ================= */
 
-    fish.destroy();
-    this.failHit = 0;
-  }
+startGame(){
 
-  tick() {
-    if (this.ended) return;
+const {width,height}=this.scale
 
-    this.timeLeft--;
-    this.timeText.setText(`เวลา: ${this.timeLeft}`);
+/* pool */
 
-    this.updateDifficulty();
+this.poolCenterX=width/2
+this.poolCenterY=height*0.60
+this.poolRadius=height*0.19
 
-    if (this.timeLeft <= 0) {
-      this.endGame();
-    }
-  }
+/* UI */
 
-  endGame() {
-    if (this.ended) return;
-    this.ended = true;
+this.scoreText=this.add.text(
+16,16,
+"คะแนน: 0",
+{fontSize:"20px",color:"#fff"}
+)
 
-    this.spawnTimer?.remove();
-    this.timer?.remove();
-    this.input.enabled = false;
+this.timeText=this.add.text(
+width-16,
+16,
+`เวลา: ${GAME_TIME}`,
+{fontSize:"20px",color:"#fff"}
+).setOrigin(1,0)
 
-    this.onGameEnd?.({
-      player_id: this.player?.id ?? null,
-      score: this.score,
-    });
-  }
+/* bucket */
+
+this.bucket=this.physics.add
+.staticImage(width*0.22,height-60,"bucket")
+.setScale(0.42)
+
+/* spoon */
+
+this.spoon=new Spoon(this,width/2,height/2)
+this.spoon.setDepth(5)
+
+/* input */
+
+this.input.on("pointermove",(p)=>{
+
+if(!this.ended && this.spoon?.active){
+
+this.spoon.moveTo(p.x,p.y)
+
+}
+
+})
+
+this.input.on("pointerdown",()=>{
+
+if(this.ended)return
+
+const fish=this.pendingFish
+
+if(!fish || fish.following)return
+
+this.isDragging=true
+
+this.pendingFish=null
+
+fish.pending=false
+fish.following=true
+fish.caught=true
+
+fish.setVelocity(0)
+
+})
+
+this.input.on("pointerup",()=>{
+
+this.isDragging=false
+
+})
+
+/* group */
+
+this.fishes=this.physics.add.group({
+allowGravity:false,
+maxSize:50
+})
+
+this.physics.add.overlap(
+this.spoon,
+this.fishes,
+this.tryCatchFish,
+null,
+this
+)
+
+/* timers */
+
+this.spawnTimer=this.time.addEvent({
+delay:this.spawnDelay,
+loop:true,
+callback:this.spawnFish,
+callbackScope:this
+})
+
+this.timer=this.time.addEvent({
+delay:1000,
+loop:true,
+callback:this.tick,
+callbackScope:this
+})
+
+}
+
+/* ================= SPAWN ================= */
+
+spawnFish(){
+
+if(this.fishes.countActive(true)>=MAX_FISH)return
+
+const rand=Phaser.Math.Between(1,100)
+
+let randomKey
+let type="normal"
+
+if(rand<=5){
+
+randomKey="fish5"
+type="gold"
+
+}
+else if(rand<=35){
+
+randomKey="fish1"
+
+}
+else if(rand<=60){
+
+randomKey="fish2"
+
+}
+else if(rand<=80){
+
+randomKey="fish3"
+
+}
+else{
+
+randomKey="fish4"
+
+}
+
+const angle=Phaser.Math.FloatBetween(0,Math.PI*2)
+const radius=Phaser.Math.FloatBetween(0,this.poolRadius-35)
+
+const x=this.poolCenterX+Math.cos(angle)*radius
+const y=this.poolCenterY+Math.sin(angle)*radius
+
+const fish=this.fishes.get(x,y,randomKey)
+
+if(!fish)return
+
+fish.enableBody(true,x,y,true,true)
+
+fish.setTexture(randomKey)
+fish.setScale(type==="gold"?0.14:0.12)
+
+fish.type=type
+fish.value=FISH_SCORE[type]
+
+fish.following=false
+fish.pending=false
+fish.scored=false
+
+let speed=this.baseFishSpeed+Phaser.Math.Between(-20,20)
+
+fish.spawnTime=this.time.now
+
+fish.setVelocity(
+Phaser.Math.Between(-speed,speed),
+Phaser.Math.Between(-40,40)
+)
+
+}
+
+/* ================= UPDATE ================= */
+
+update(){
+
+if(this.ended)return
+
+this.spoon?.update?.()
+
+this.fishes.children.iterate((fish)=>{
+
+if(!fish?.active)return
+
+if(fish.following){
+
+fish.setPosition(
+this.spoon.x+this.spoon.netOffsetX,
+this.spoon.y+this.spoon.netOffsetY
+)
+
+this.checkDropIntoBucket(fish)
+
+}
+
+})
+
+}
+
+/* ================= CATCH ================= */
+
+tryCatchFish(spoon,fish){
+
+if(!fish || fish.following || fish.pending || this.isDragging)return
+
+fish.pending=true
+this.pendingFish=fish
+
+this.pendingTimer?.remove()
+
+this.pendingTimer=this.time.delayedCall(
+CONFIRM_TIME,
+()=>{
+
+if(this.pendingFish===fish && !fish.following){
+
+this.pendingFish=null
+fish.pending=false
+
+this.failHit++
+
+}
+
+})
+
+}
+
+/* ================= SCORE ================= */
+
+checkDropIntoBucket(fish){
+
+const bucketBounds=this.bucket.getBounds()
+
+if(bucketBounds.contains(fish.x,fish.y)){
+
+this.scoreFish(fish)
+
+}
+
+}
+
+scoreFish(fish){
+
+if(!fish || fish.scored)return
+
+fish.scored=true
+
+this.score+=fish.value
+
+this.scoreText.setText(`คะแนน: ${this.score}`)
+
+fish.disableBody(true,true)
+
+}
+
+/* ================= TIMER ================= */
+
+tick(){
+
+if(this.ended)return
+
+this.timeLeft--
+
+this.timeText.setText(`เวลา: ${this.timeLeft}`)
+
+if(this.timeLeft===10){
+
+this.sound.play("countdownSound")
+
+}
+
+if(this.timeLeft<=0)this.endGame()
+
+}
+
+/* ================= END GAME ================= */
+
+endGame(){
+
+if(this.ended)return
+
+this.ended=true
+
+this.spawnTimer?.remove()
+this.timer?.remove()
+
+this.input.enabled=false
+
+this.showSummary()
+
+}
+
+/* ================= SUMMARY ================= */
+
+showSummary(){
+
+const {width,height}=this.scale
+
+this.add.image(
+width/2,
+height/2,
+"scoreSign"
+).setDepth(200).setScale(0.8)
+
+this.add.text(
+width/2,
+height/2-10,
+`คะแนน: ${this.score}`,
+{fontSize:"32px",color:"#000"}
+).setOrigin(0.5)
+
+let countdown=10
+
+const text=this.add.text(
+width/2,
+height/2+60,
+`กลับซุ้มใน ${countdown}`,
+{fontSize:"22px",color:"#000"}
+).setOrigin(0.5)
+
+this.time.addEvent({
+
+delay:1000,
+repeat:9,
+
+callback:()=>{
+
+countdown--
+
+text.setText(`กลับซุ้มใน ${countdown}`)
+
+if(countdown<=0){
+
+if(this.onGameEnd){
+
+this.onGameEnd({
+score:this.score,
+player:this.player
+})
+
+}else{
+
+this.scene.start("FestivalMapScene")
+
+}
+
+}
+
+}
+
+})
+
+}
+
 }
