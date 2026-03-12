@@ -1,8 +1,9 @@
 import Phaser from "phaser"
-import Horse from "./Horse"
-import Obstacle from "./Obstacle"
-import Items from "./Items"
-import ScoreManager from "./ScoreManager"
+
+import Horse from "./components/Horse"
+import Obstacle from "./components/Obstacle"
+import Items from "./components/Items"
+import ScoreManager from "./components/ScoreManager"
 
 const GAME_TIME = 60
 
@@ -12,9 +13,9 @@ constructor(){
 super("HorseDeliveryScene")
 }
 
-init(data={})
+/* ================= INIT ================= */
 
-{
+init(data={}){
 
 this.playerData = data.player ?? null
 this.onGameEnd = data.onGameEnd ?? null
@@ -28,18 +29,16 @@ this.ended = false
 
 preload(){
 
-this.load.image("bg","/src/games/HorseDelivery/assetsHorse/BGhorse.png")
+this.load.image("bg","/assetsHorse/BGhorse.png")
+this.load.image("horse","/assetsHorse/horse.png")
+this.load.image("obstacle","/assetsHorse/obstacle.png")
 
-this.load.image("horse","/src/games/HorseDelivery/assetsHorse/horse.png")
+this.load.image("item_candy","/assetsHorse/item_candy.png")
+this.load.image("item_coin","/assetsHorse/item_coin.png")
+this.load.image("item_gift","/assetsHorse/item_gift.png")
+this.load.image("item_hay","/assetsHorse/item_hay.png")
 
-this.load.image("obstacle","/src/games/HorseDelivery/assetsHorse/obstacle.png")
-
-this.load.image("item_candy","/src/games/HorseDelivery/assetsHorse/item_candy.png")
-this.load.image("item_coin","/src/games/HorseDelivery/assetsHorse/item_coin.png")
-this.load.image("item_gift","/src/games/HorseDelivery/assetsHorse/item_gift.png")
-this.load.image("item_hay","/src/games/HorseDelivery/assetsHorse/item_hay.png")
-
-this.load.image("sign","/src/games/HorseDelivery/assetsHorse/sign.png")
+this.load.image("sign","/assetsHorse/sign.png")
 
 }
 
@@ -49,8 +48,6 @@ create(){
 
 const width = this.scale.width
 const height = this.scale.height
-
-/* world */
 
 this.physics.world.gravity.y = 900
 
@@ -72,18 +69,15 @@ showStartSign(){
 const width = this.scale.width
 const height = this.scale.height
 
-const sign = this.add.image(
-width/2,
-height/2,
-"sign"
-).setDepth(500).setScale(0.8)
+const sign = this.add.image(width/2,height/2,"sign")
+.setScale(0.8)
+.setDepth(100)
 
 sign.setInteractive()
 
 sign.once("pointerdown",()=>{
 
 sign.destroy()
-
 this.startGame()
 
 })
@@ -110,7 +104,8 @@ width-20,
 {
 fontSize:"24px",
 color:"#ffffff"
-}).setOrigin(1,0)
+}
+).setOrigin(1,0)
 
 /* player */
 
@@ -118,46 +113,37 @@ this.player = new Horse(this,200,height-200)
 
 /* groups */
 
-this.obstacles = this.physics.add.group()
-this.items = this.physics.add.group()
+this.obstacles = this.physics.add.group({
+maxSize:20
+})
 
-/* spawn obstacle */
+this.items = this.physics.add.group({
+maxSize:20
+})
+
+/* smoother spawn timers */
 
 this.obstacleTimer = this.time.addEvent({
 
-delay:1800,
+delay:1500,
 loop:true,
 
 callback:()=>{
 
-const obstacle = new Obstacle(
-this,
-width+100,
-height-180
-)
-
-this.obstacles.add(obstacle)
+this.spawnObstacle()
 
 }
 
 })
 
-/* spawn items */
-
 this.itemTimer = this.time.addEvent({
 
-delay:2200,
+delay:2000,
 loop:true,
 
 callback:()=>{
 
-const item = new Items(
-this,
-width+100,
-height-250
-)
-
-this.items.add(item)
+this.spawnItem()
 
 }
 
@@ -187,7 +173,7 @@ this.input.on("pointerdown",()=>{
 this.player.jump()
 })
 
-/* game timer */
+/* timer */
 
 this.timer = this.time.addEvent({
 
@@ -214,18 +200,64 @@ this.endGame()
 
 }
 
+/* ================= SPAWN ================= */
+
+spawnObstacle(){
+
+const width = this.scale.width
+const height = this.scale.height
+
+const obstacle = new Obstacle(
+this,
+width+100,
+height-180
+)
+
+this.obstacles.add(obstacle)
+
+}
+
+spawnItem(){
+
+const width = this.scale.width
+const height = this.scale.height
+
+const item = new Items(
+this,
+width+100,
+height-250
+)
+
+this.items.add(item)
+
+}
+
 /* ================= UPDATE ================= */
 
 update(){
 
 if(this.ended)return
 
-this.obstacles.children.iterate((obs)=>{
-if(obs && obs.x < -100) obs.destroy()
+/* recycle objects instead of destroy */
+
+this.obstacles.children.each((obs)=>{
+
+if(obs.active && obs.x < -100){
+
+obs.destroy()
+
+}
+
 })
 
-this.items.children.iterate((item)=>{
-if(item && item.x < -100) item.destroy()
+this.items.children.each((item)=>{
+
+if(item.active && item.x < -100){
+
+item.destroy()
+
+}
+
 })
 
 }
@@ -292,8 +324,8 @@ const height = this.scale.height
 this.add.rectangle(
 width/2,
 height/2,
-400,
-250,
+420,
+260,
 0x000000,
 0.8
 )
@@ -318,7 +350,7 @@ color:"#ffff66"
 }
 ).setOrigin(0.5)
 
-let countdown = 10
+let countdown = 5
 
 const text = this.add.text(
 width/2,
@@ -333,7 +365,7 @@ color:"#ffffff"
 this.time.addEvent({
 
 delay:1000,
-repeat:9,
+repeat:4,
 
 callback:()=>{
 

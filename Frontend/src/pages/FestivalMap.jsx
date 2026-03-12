@@ -11,14 +11,9 @@ export default function FestivalMap({
   mode = "solo",
   onLeave,
 }) {
-  /* =========================
-     ROLE
-  ========================= */
+
   const isHost = player?.isHost === true;
 
-  /* =========================
-     STATE (PLAYER ONLY)
-  ========================= */
   const [team, setTeam] = useState([]);
   const [scores, setScores] = useState({});
 
@@ -26,71 +21,85 @@ export default function FestivalMap({
   const mountedRef = useRef(false);
 
   /* =========================
-     SAFE SET
+     SAFE SET STATE
   ========================= */
+
   const safeSet = useCallback((fn) => {
     if (mountedRef.current) fn();
   }, []);
 
   /* =========================
-     LOAD TEAM (TEAM MODE)
+     LOAD TEAM FROM SERVER
   ========================= */
+
   const loadTeamFromServer = useCallback(async () => {
+
     if (mode !== "team") return;
+    if (!roomCode || !player?.id) return;
 
     try {
-      const res = await fetch(
-        `${API_BASE}/rooms/${roomCode}`
-      );
+
+      const res = await fetch(`${API_BASE}/rooms/${roomCode}`);
+
       if (!res.ok) return;
 
       const data = await res.json();
+
       if (!Array.isArray(data?.players)) return;
 
       const me = data.players.find(
-        (p) => p.id === player.id
+        (p) => p?.id === player.id
       );
+
       if (!me?.team) return;
 
       const myTeam = data.players.filter(
-        (p) => p.team === me.team
+        (p) => p?.team === me.team
       );
 
       safeSet(() => {
+
         setTeam(
           myTeam.map((p) => ({
-            id: p.id,
-            name: p.name,
+            id: p?.id,
+            name: p?.name ?? "player",
           }))
         );
 
         const scoreMap = {};
+
         myTeam.forEach((p) => {
-          scoreMap[p.id] =
-            p.total_score ?? p.score ?? 0;
+          scoreMap[p?.id] =
+            p?.total_score ?? p?.score ?? 0;
         });
+
         setScores(scoreMap);
+
       });
+
     } catch (err) {
+
       console.error("❌ loadTeamFromServer:", err);
+
     }
-  }, [mode, roomCode, player.id, safeSet]);
+
+  }, [mode, roomCode, player?.id, safeSet]);
 
   /* =========================
-     WEBSOCKET (PLAYER ONLY)
+     WEBSOCKET CONNECT
   ========================= */
+
   useEffect(() => {
+
     mountedRef.current = true;
 
-    if (
-      isHost ||
-      !roomCode ||
-      !player?.id
-    ) {
+    if (!roomCode || !player?.id) {
       return () => {
         mountedRef.current = false;
       };
     }
+
+    if (wsRef.current) return;
 
     const socket = createRoomSocket(
       roomCode,
@@ -103,10 +112,8 @@ export default function FestivalMap({
           loadTeamFromServer();
         },
 
-        onScoreUpdate: ({
-          player_id,
-          score,
-        }) => {
+        onScoreUpdate: ({ player_id, score }) => {
+
           safeSet(() =>
             setScores((prev) => ({
               ...prev,
@@ -114,37 +121,48 @@ export default function FestivalMap({
                 (prev[player_id] || 0) + score,
             }))
           );
+
         },
+
       }
     );
 
     wsRef.current = socket;
+
     loadTeamFromServer();
 
     return () => {
+
       mountedRef.current = false;
-      socket?.close();
-      wsRef.current = null;
+
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+
     };
+
   }, [
     roomCode,
     player?.id,
     mode,
-    isHost,
     loadTeamFromServer,
     safeSet,
   ]);
 
   /* =========================
-     HOST VIEW (CONTROLLER)
+     HOST VIEW
   ========================= */
+
   if (isHost) {
+
     return (
+
       <div
         style={{
           minHeight: "100vh",
           background:
-            "linear-gradient(180deg, #fbe7c6 0%, #ffd89c 100%)",
+            "linear-gradient(180deg,#fbe7c6 0%,#ffd89c 100%)",
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
@@ -154,6 +172,7 @@ export default function FestivalMap({
           fontFamily: "Kanit",
         }}
       >
+
         <div
           style={{
             fontSize: 30,
@@ -191,19 +210,24 @@ export default function FestivalMap({
         >
           ออกจากห้อง
         </button>
+
       </div>
+
     );
+
   }
 
   /* =========================
      PLAYER VIEW
   ========================= */
+
   return (
+
     <div
       style={{
         minHeight: "100vh",
         background:
-          "linear-gradient(180deg, #fbe7c6 0%, #ffd89c 100%)",
+          "linear-gradient(180deg,#fbe7c6 0%,#ffd89c 100%)",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -211,13 +235,16 @@ export default function FestivalMap({
         fontFamily: "Kanit",
       }}
     >
-      {/* ===== HEADER ===== */}
+
+      {/* HEADER */}
+
       <header
         style={{
           marginBottom: 12,
           textAlign: "center",
         }}
       >
+
         <div
           style={{
             fontSize: 28,
@@ -227,20 +254,22 @@ export default function FestivalMap({
         >
           🎪 Festival Map
         </div>
+
         <div
           style={{
             fontSize: 16,
             color: "#7a4a1f",
           }}
         >
-          {mode === "team"
-            ? "โหมดทีม"
-            : "โหมดเดี่ยว"}
+          {mode === "team" ? "โหมดทีม" : "โหมดเดี่ยว"}
         </div>
+
       </header>
 
-      {/* ===== TEAM PANEL ===== */}
-      {mode === "team" && team.length > 0 && (
+      {/* TEAM PANEL */}
+
+      {mode === "team" && team?.length > 0 && (
+
         <div
           style={{
             width: "100%",
@@ -249,10 +278,10 @@ export default function FestivalMap({
             borderRadius: 16,
             padding: 14,
             marginBottom: 14,
-            boxShadow:
-              "0 8px 20px rgba(0,0,0,0.15)",
+            boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
           }}
         >
+
           <div
             style={{
               fontWeight: 600,
@@ -263,41 +292,48 @@ export default function FestivalMap({
           </div>
 
           {team.map((p) => (
+
             <div
-              key={p.id}
+              key={p?.id}
               style={{
                 display: "flex",
-                justifyContent:
-                  "space-between",
+                justifyContent: "space-between",
                 padding: "4px 0",
               }}
             >
+
               <span>
-                {p.name}
-                {p.id === player.id &&
-                  " (คุณ)"}
+                {p?.name}
+                {p?.id === player?.id && " (คุณ)"}
               </span>
+
               <span>
-                {scores[p.id] || 0}
+                {scores[p?.id] || 0}
               </span>
+
             </div>
+
           ))}
+
         </div>
+
       )}
 
-      {/* =====================
-          🗺️ PHASER GAME
-      ===================== */}
+      {/* PHASER GAME */}
+
       <GameContainer
         roomCode={roomCode}
         player={player}
         wsRef={wsRef}
-        onGameEnd={() => {
-          // คะแนน sync ผ่าน WS
+        onGameEnd={(result) => {
+
+          console.log("🎮 Mini game finished:", result);
+
         }}
       />
 
-      {/* ===== EXIT ===== */}
+      {/* EXIT */}
+
       <button
         onClick={onLeave}
         style={{
@@ -313,6 +349,9 @@ export default function FestivalMap({
       >
         ออกจากห้อง
       </button>
+
     </div>
+
   );
+
 }

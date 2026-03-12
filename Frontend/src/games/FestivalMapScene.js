@@ -2,124 +2,179 @@ import Phaser from "phaser";
 
 export default class FestivalMapScene extends Phaser.Scene {
 
-  constructor() {
-    super({ key: "FestivalMapScene" });
+constructor(){
+  super({ key:"FestivalMapScene" });
 
-    this.player = null;
-    this.onEnterGame = null;
-  }
+  this.onEnterGame = null
+  this.entering = false
+}
 
-  init(data = {}) {
-    this.onEnterGame = data.onEnterGame ?? null;
-  }
+init(data = {}){
 
-  preload() {
+  this.onEnterGame = data?.onEnterGame ?? null
+  this.entering = false
 
-    this.load.image("map", "/assets/MapLong.png");
+}
 
-    this.load.image("fish", "/assets/fish_booth.png");
-    this.load.image("horse", "/assets/carousel_booth.png");
-    this.load.image("shoot", "/assets/shoot_booth.png");
-    this.load.image("worship", "/assets/worship_booth.png");
-    this.load.image("cotton", "/assets/cotton_booth.png");
+preload(){
 
-    this.load.image("player", "/assets/player.png");
+if(this.textures.exists("map")) return
 
-  }
+/* MAP */
 
-  create() {
+this.load.image("map","/assets/Map.png")
 
-    const { width, height } = this.scale;
+/* BOOTHS */
 
-    /* ======================
-       WORLD SIZE
-    ====================== */
+this.load.image("fish","/assets/fish_booth.png")
+this.load.image("horse","/assets/carousel_booth.png")
+this.load.image("worship","/assets/worship_booth.png")
 
-    this.physics.world.setBounds(0, 0, 4000, height);
+this.load.image("boxing","/assets/boxing_booth.png")
+this.load.image("cooking","/assets/cooking_booth.png")
+this.load.image("balloon","/assets/balloon_booth.png")
 
-    /* ======================
-       MAP
-    ====================== */
+this.load.image("doll","/assets/doll_booth.png")
+this.load.image("flower","/assets/flower_booth.png")
+this.load.image("haunted","/assets/haunted_booth.png")
+this.load.image("tug","/assets/tug_booth.png")
 
-    const bg = this.add.image(2000, height / 2, "map");
+}
 
-    /* ======================
-       PLAYER
-    ====================== */
+create(){
 
-    this.player = this.physics.add.sprite(200, height - 120, "player");
+const {height} = this.scale
 
-    this.player.setCollideWorldBounds(true);
+/* WORLD SIZE */
 
-    /* ======================
-       CAMERA
-    ====================== */
+this.physics.world.setBounds(0,0,7000,height)
 
-    this.cameras.main.startFollow(this.player);
-    this.cameras.main.setBounds(0, 0, 4000, height);
+/* MAP */
 
-    /* ======================
-       BOOTHS
-    ====================== */
+const bg = this.add.image(3500,height/2,"map")
+bg.setDisplaySize(7000,height)
 
-    this.createBooth(600, "fish", "FishScoopingScene");
-    this.createBooth(1200, "horse", "HorseDeliveryScene");
-    this.createBooth(1800, "shoot", "DollShootScene");
-    this.createBooth(2400, "worship", "WorshipScene");
-    this.createBooth(3000, "cotton", "CottonCandyScene");
+/* CAMERA */
 
-    /* ======================
-       INPUT
-    ====================== */
+const cam = this.cameras.main
 
-    this.cursors = this.input.keyboard.createCursorKeys();
+cam.setBounds(0,0,7000,height)
+cam.scrollX = 0
 
-  }
+/* ======================
+   BOOTHS
+====================== */
 
-  /* ======================
-     CREATE BOOTH
-  ====================== */
+this.createBooth(600,"fish","FishScoopingScene")
+this.createBooth(1200,"horse","HorseDeliveryScene")
+this.createBooth(1800,"worship","WorshipScene")
 
-  createBooth(x, texture, gameKey) {
+this.createBooth(2400,"boxing","BoxingGameScene")
+this.createBooth(3000,"cooking","CookingGameScene")
+this.createBooth(3600,"balloon","BalloonShootScene")
 
-    const { height } = this.scale;
+this.createBooth(4200,"doll","DollGameScene")
+this.createBooth(4800,"flower","FlowerGameScene")
+this.createBooth(5400,"haunted","HauntedHouseScene")
+this.createBooth(6000,"tug","TugOfWarScene")
 
-    const booth = this.physics.add.staticImage(
-      x,
-      height - 140,
-      texture
-    );
+/* DRAG CAMERA */
 
-    booth.setScale(0.35);
+this.input.on("pointermove",(pointer)=>{
 
-    this.physics.add.overlap(
-      this.player,
-      booth,
-      () => {
+  if(pointer.isDown){
 
-        this.onEnterGame?.({ gameKey });
-
-      },
-      null,
-      this
-    );
+    cam.scrollX -= pointer.velocity.x / 10
+    this.limitCamera()
 
   }
 
-  /* ======================
-     UPDATE
-  ====================== */
+})
 
-  update() {
+/* SCROLL WHEEL */
 
-    if (this.cursors.right.isDown) {
-      this.player.setVelocityX(250);
-    } else if (this.cursors.left.isDown) {
-      this.player.setVelocityX(-250);
-    } else {
-      this.player.setVelocityX(0);
-    }
+this.input.on("wheel",(pointer,gameObjects,deltaX)=>{
+
+  cam.scrollX += deltaX
+  this.limitCamera()
+
+})
+
+/* CLEANUP */
+
+this.events.once("shutdown",()=>{
+
+  this.input.removeAllListeners()
+
+})
+
+}
+
+limitCamera(){
+
+const cam = this.cameras.main
+
+cam.scrollX = Phaser.Math.Clamp(cam.scrollX,0,6400)
+
+}
+
+createBooth(x,texture,gameKey){
+
+const {height} = this.scale
+
+const tug = this.add.text(200,520,"Tug Of War",{
+fontSize:"32px",
+color:"#ffffff"
+})
+
+tug.setInteractive()
+
+tug.on("pointerdown",()=>{
+
+this.scene.start("TugOfWarScene")
+
+})
+
+const booth = this.physics.add.staticImage(
+  x,
+  height-140,
+  texture
+)
+
+booth.setScale(0.35)
+
+booth.setInteractive({ useHandCursor:true })
+
+booth.on("pointerover",()=>{
+
+  booth.setScale(0.4)
+
+})
+
+booth.on("pointerout",()=>{
+
+  booth.setScale(0.35)
+
+})
+
+booth.on("pointerdown",()=>{
+
+  if(this.entering) return
+
+  this.entering = true
+
+  console.log("🎮 entering game:",gameKey)
+
+  if(this.onEnterGame){
+
+    this.onEnterGame({
+      gameKey:gameKey
+    })
 
   }
+
+})
+
+}
 
 }

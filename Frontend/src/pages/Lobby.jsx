@@ -47,31 +47,41 @@ export default function Lobby({
   ========================= */
 
   const loadRoom = useCallback(async () => {
+
+    if (!roomCode) return;
+
     try {
+
       const res = await fetch(
         `${API_BASE}/rooms/${roomCode}`
       );
 
-      if (!res.ok) throw new Error();
+      if (!res.ok) throw new Error("room load failed");
 
       const data = await res.json();
 
+      const list = Array.isArray(data?.players)
+        ? data.players
+        : [];
+
       safeSet(() =>
         setPlayers(
-          Array.isArray(data.players)
-            ? data.players.map((p) => ({
-                id: p.id,
-                name: p.name,
-                isHost: p.is_host === true,
-                connected: p.connected !== false,
-                total_score: p.score ?? 0,
-              }))
-            : []
+          list.map((p) => ({
+            id: p?.id,
+            name: p?.name ?? "player",
+            isHost: p?.is_host === true,
+            connected: p?.connected !== false,
+            total_score: p?.score ?? 0,
+          }))
         )
       );
+
     } catch (err) {
+
       console.error("❌ loadRoom failed", err);
+
     }
+
   }, [roomCode, safeSet]);
 
   /* =========================
@@ -81,7 +91,8 @@ export default function Lobby({
   const handleMessage = useCallback(
     (msg) => {
 
-      if (!mountedRef.current || !msg?.type) return;
+      if (!mountedRef.current) return;
+      if (!msg?.type) return;
 
       switch (msg.type) {
 
@@ -91,27 +102,30 @@ export default function Lobby({
             setPlayers((prev) => {
 
               const exists = prev.find(
-                (p) => p.id === msg.player.id
+                (p) => p?.id === msg?.player?.id
               );
 
               if (exists) {
+
                 return prev.map((p) =>
-                  p.id === msg.player.id
+                  p?.id === msg?.player?.id
                     ? { ...p, connected: true }
                     : p
                 );
+
               }
 
               return [
                 ...prev,
                 {
-                  id: msg.player.id,
-                  name: msg.player.name,
-                  isHost: msg.player.is_host,
+                  id: msg?.player?.id,
+                  name: msg?.player?.name ?? "player",
+                  isHost: msg?.player?.is_host === true,
                   connected: true,
                   total_score: 0,
                 },
               ];
+
             })
           );
 
@@ -122,7 +136,7 @@ export default function Lobby({
           safeSet(() =>
             setPlayers((prev) =>
               prev.map((p) =>
-                p.id === msg.player_id
+                p?.id === msg?.player_id
                   ? { ...p, connected: false }
                   : p
               )
@@ -136,19 +150,26 @@ export default function Lobby({
           console.log("🎮 GAME START EVENT");
 
           if (startedRef.current) return;
+
           startedRef.current = true;
 
           if (isMeHostRef.current) {
+
             safeSet(() => setGameStarted(true));
+
           } else {
+
             onStartGame?.();
+
           }
 
           break;
 
         default:
           break;
+
       }
+
     },
     [onStartGame, safeSet]
   );
@@ -167,8 +188,12 @@ export default function Lobby({
     loadRoom();
 
     return () => {
+
       mountedRef.current = false;
+
       wsRef.current?.close();
+      wsRef.current = null;
+
     };
 
   }, [loadRoom]);
@@ -180,6 +205,7 @@ export default function Lobby({
   useEffect(() => {
 
     if (!player?.id) return;
+    if (!roomCode) return;
     if (wsRef.current) return;
 
     wsRef.current = createRoomSocket(
@@ -189,8 +215,10 @@ export default function Lobby({
     );
 
     return () => {
+
       wsRef.current?.close();
       wsRef.current = null;
+
     };
 
   }, [roomCode, player?.id, handleMessage]);
@@ -199,9 +227,11 @@ export default function Lobby({
      HOST CHECK
   ========================= */
 
-  const isMeHost = players.some(
-    (p) => p.id === player.id && p.isHost
-  );
+  const isMeHost = player
+    ? players.some(
+        (p) => p?.id === player.id && p?.isHost
+      )
+    : false;
 
   useEffect(() => {
     isMeHostRef.current = isMeHost;
@@ -213,7 +243,9 @@ export default function Lobby({
 
   const startGame = async () => {
 
-    if (!isMeHost || starting) return;
+    if (!player?.id) return;
+    if (!isMeHost) return;
+    if (starting) return;
 
     setStarting(true);
 
@@ -221,22 +253,23 @@ export default function Lobby({
 
       const res = await fetch(
         `${API_BASE}/rooms/${roomCode}/start?player_id=${player.id}`,
-        {
-          method: "POST",
-        }
+        { method: "POST" }
       );
 
       if (!res.ok) {
+
         const text = await res.text();
         console.error(text);
-        throw new Error();
+
+        throw new Error("start failed");
+
       }
 
     } catch (err) {
 
-      console.error("startGame error", err);
+      console.error("❌ startGame error", err);
 
-      alert("❌ เริ่มเกมไม่สำเร็จ");
+      alert("เริ่มเกมไม่สำเร็จ");
 
     } finally {
 
@@ -251,6 +284,7 @@ export default function Lobby({
   ========================= */
 
   return (
+
     <div className="home-root">
 
       <div className="ui-panel lobby-panel">
@@ -262,7 +296,8 @@ export default function Lobby({
         {/* PLAYER INFO */}
 
         <div className="lobby-me">
-          คุณ: <b>{player.name}</b>
+
+          คุณ: <b>{player?.name ?? "player"}</b>
 
           {isMeHost && (
             <span className="host-badge">
@@ -280,23 +315,28 @@ export default function Lobby({
 
           <ul className="player-list">
 
-            {players.map((p) => (
+            {players?.map((p) => (
 
               <li
-                key={p.id}
+                key={p?.id ?? Math.random()}
                 className={`player-item ${
-                  p.isHost ? "host" : ""
+                  p?.isHost ? "host" : ""
                 }`}
               >
 
                 <span>
-                  {p.connected ? "🟢" : "🔴"}{" "}
-                  {p.name}
-                  {p.isHost && " ⭐"}
+
+                  {p?.connected ? "🟢" : "🔴"}{" "}
+                  {p?.name}
+
+                  {p?.isHost && " ⭐"}
+
                 </span>
 
                 <span className="score">
-                  {p.total_score}
+
+                  {p?.total_score ?? 0}
+
                 </span>
 
               </li>
@@ -358,5 +398,7 @@ export default function Lobby({
       </div>
 
     </div>
+
   );
+
 }

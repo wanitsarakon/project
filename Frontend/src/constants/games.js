@@ -61,6 +61,12 @@ export const GAMES = [
     scene: "PrayScene",
     enabled: false,
   },
+
+  {
+    id:"tugofwar",
+    name:"ชักกะเย่อ",
+    scene:"TugOfWarScene"
+  }
 ];
 
 /* =========================
