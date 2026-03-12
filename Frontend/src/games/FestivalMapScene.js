@@ -1,252 +1,180 @@
 import Phaser from "phaser";
 
 export default class FestivalMapScene extends Phaser.Scene {
-  constructor() {
-    super({ key: "FestivalMapScene" });
 
-    this.currentRound = 1;
-    this.booths = [];
-    this.onEnterGame = null;
+constructor(){
+  super({ key:"FestivalMapScene" });
+
+  this.onEnterGame = null
+  this.entering = false
+}
+
+init(data = {}){
+
+  this.onEnterGame = data?.onEnterGame ?? null
+  this.entering = false
+
+}
+
+preload(){
+
+if(this.textures.exists("map")) return
+
+/* MAP */
+
+this.load.image("map","/assets/Map.png")
+
+/* BOOTHS */
+
+this.load.image("fish","/assets/fish_booth.png")
+this.load.image("horse","/assets/carousel_booth.png")
+this.load.image("worship","/assets/worship_booth.png")
+
+this.load.image("boxing","/assets/boxing_booth.png")
+this.load.image("cooking","/assets/cooking_booth.png")
+this.load.image("balloon","/assets/balloon_booth.png")
+
+this.load.image("doll","/assets/doll_booth.png")
+this.load.image("flower","/assets/flower_booth.png")
+this.load.image("haunted","/assets/haunted_booth.png")
+this.load.image("tug","/assets/tug_booth.png")
+
+}
+
+create(){
+
+const {height} = this.scale
+
+/* WORLD SIZE */
+
+this.physics.world.setBounds(0,0,7000,height)
+
+/* MAP */
+
+const bg = this.add.image(3500,height/2,"map")
+bg.setDisplaySize(7000,height)
+
+/* CAMERA */
+
+const cam = this.cameras.main
+
+cam.setBounds(0,0,7000,height)
+cam.scrollX = 0
+
+/* ======================
+   BOOTHS
+====================== */
+
+this.createBooth(600,"fish","FishScoopingScene")
+this.createBooth(1200,"horse","HorseDeliveryScene")
+this.createBooth(1800,"worship","WorshipScene")
+
+this.createBooth(2400,"boxing","BoxingGameScene")
+this.createBooth(3000,"cooking","CookingGameScene")
+this.createBooth(3600,"balloon","BalloonShootScene")
+
+this.createBooth(4200,"doll","DollGameScene")
+this.createBooth(4800,"flower","FlowerGameScene")
+this.createBooth(5400,"haunted","HauntedHouseScene")
+this.createBooth(6000,"tug","TugOfWarScene")
+
+/* DRAG CAMERA */
+
+this.input.on("pointermove",(pointer)=>{
+
+  if(pointer.isDown){
+
+    cam.scrollX -= pointer.velocity.x / 10
+    this.limitCamera()
+
   }
 
-  /* =====================
-     INIT
-  ===================== */
-  init(data = {}) {
-    this.currentRound = data.currentRound ?? 1;
-    this.onEnterGame = data.onEnterGame ?? null;
+})
+
+/* SCROLL WHEEL */
+
+this.input.on("wheel",(pointer,gameObjects,deltaX)=>{
+
+  cam.scrollX += deltaX
+  this.limitCamera()
+
+})
+
+/* CLEANUP */
+
+this.events.once("shutdown",()=>{
+
+  this.input.removeAllListeners()
+
+})
+
+}
+
+limitCamera(){
+
+const cam = this.cameras.main
+
+cam.scrollX = Phaser.Math.Clamp(cam.scrollX,0,6400)
+
+}
+
+createBooth(x,texture,gameKey){
+
+const {height} = this.scale
+
+const tug = this.add.text(200,520,"Tug Of War",{
+fontSize:"32px",
+color:"#ffffff"
+})
+
+tug.setInteractive()
+
+tug.on("pointerdown",()=>{
+
+this.scene.start("TugOfWarScene")
+
+})
+
+const booth = this.physics.add.staticImage(
+  x,
+  height-140,
+  texture
+)
+
+booth.setScale(0.35)
+
+booth.setInteractive({ useHandCursor:true })
+
+booth.on("pointerover",()=>{
+
+  booth.setScale(0.4)
+
+})
+
+booth.on("pointerout",()=>{
+
+  booth.setScale(0.35)
+
+})
+
+booth.on("pointerdown",()=>{
+
+  if(this.entering) return
+
+  this.entering = true
+
+  console.log("🎮 entering game:",gameKey)
+
+  if(this.onEnterGame){
+
+    this.onEnterGame({
+      gameKey:gameKey
+    })
+
   }
 
-  /* =====================
-     PRELOAD
-  ===================== */
-  preload() {
-    this.load.image("map", "/assets/Map.png");
+})
 
-    this.load.image("booth-fish", "/assets/fish_booth.png");
-    this.load.image("booth-carousel", "/assets/carousel_booth.png");
-    this.load.image("booth-shoot", "/assets/shoot_booth.png");
-    this.load.image("booth-cotton", "/assets/cotton_booth.png");
-    this.load.image("booth-worship", "/assets/worship_booth.png");
+}
 
-    this.load.image("lock", "/assets/lock.png");
-    this.load.image("unlock", "/assets/unlock.png");
-  }
-
-  /* =====================
-     CREATE
-  ===================== */
-  create() {
-    const { width, height } = this.scale;
-
-    /* ===== CLEAR SAFETY ===== */
-    this.children.removeAll(true);
-    this.cameras.main.setBackgroundColor("#000");
-
-    /* ===== MAP ===== */
-    this.add.image(width / 2, height / 2, "map");
-
-    /* ===== BOOTH DATA ===== */
-    const BOOTH_POINTS = [
-      {
-        x: 220,
-        y: 210,
-        key: "booth-fish",
-        label: "เกมตักปลา",
-        gameKey: "FishScoopingScene",
-        order: 1,
-      },
-      {
-        x: 400,
-        y: 200,
-        key: "booth-carousel",
-        label: "เกมขี่ม้า",
-        gameKey: "CAROUSEL",
-        order: 2,
-      },
-      {
-        x: 580,
-        y: 220,
-        key: "booth-shoot",
-        label: "เกมยิงตุ๊กตา",
-        gameKey: "SHOOT",
-        order: 3,
-      },
-      {
-        x: 320,
-        y: 420,
-        key: "booth-worship",
-        label: "จุดไหว้ขอพร",
-        gameKey: "WORSHIP",
-        order: 4,
-      },
-      {
-        x: 520,
-        y: 420,
-        key: "booth-cotton",
-        label: "เกมทำสายไหม",
-        gameKey: "COTTON",
-        order: 5,
-      },
-    ];
-
-    /* ===== PATH ===== */
-    this.drawPath(BOOTH_POINTS);
-
-    /* ===== BOOTHS ===== */
-    this.booths = [];
-    BOOTH_POINTS.forEach((p) => this.createBooth(p));
-
-    this.events.once("shutdown", this.onShutdown, this);
-    this.events.once("destroy", this.onShutdown, this);
-  }
-
-  /* =====================
-     DRAW PATH
-  ===================== */
-  drawPath(points) {
-    const g = this.add.graphics();
-
-    g.lineStyle(4, 0xd2a679, 0.9);
-    g.beginPath();
-
-    points.forEach((p, i) => {
-      i === 0 ? g.moveTo(p.x, p.y) : g.lineTo(p.x, p.y);
-    });
-
-    g.strokePath();
-
-    points.forEach((p) => {
-      g.fillStyle(0xfff3d6, 1);
-      g.fillCircle(p.x, p.y, 6);
-    });
-  }
-
-  /* =====================
-     CREATE BOOTH
-  ===================== */
-  createBooth({ x, y, key, label, gameKey, order }) {
-    const booth = this.add.container(x, y);
-
-    const img = this.add
-      .image(0, -22, key)
-      .setScale(0.25)
-      .setOrigin(0.5);
-
-    const lockIcon = this.add
-      .image(0, -60, "lock")
-      .setScale(0.05);
-
-    const text = this.add
-      .text(0, 42, label, {
-        fontFamily: "Kanit",
-        fontSize: "16px",
-        backgroundColor: "#e0e0e0",
-        color: "#999",
-        padding: { x: 12, y: 6 },
-      })
-      .setOrigin(0.5);
-
-    booth.add([img, lockIcon, text]);
-
-    const boothData = {
-      order,
-      gameKey,
-      booth,
-      img,
-      lockIcon,
-      text,
-      unlocked: false,
-      floatTween: null,
-    };
-
-    this.booths.push(boothData);
-    this.updateBoothState(boothData);
-  }
-
-  /* =====================
-     UPDATE BOOTH STATE
-  ===================== */
-  updateBoothState(b) {
-    const shouldUnlock = b.order === this.currentRound;
-
-    /* ===== UNLOCK ===== */
-    if (shouldUnlock && !b.unlocked) {
-      b.unlocked = true;
-
-      if (b.lockIcon?.active) {
-        this.playUnlock(b.lockIcon);
-        b.lockIcon = null;
-      }
-
-      b.img.clearTint().setAlpha(1);
-      b.img.setInteractive({ useHandCursor: true });
-      b.img.removeAllListeners();
-
-      b.img.once("pointerdown", () => {
-        this.onEnterGame?.({ gameKey: b.gameKey });
-      });
-
-      b.text.setStyle({
-        backgroundColor: "#ffd28a",
-        color: "#5b2c00",
-      });
-
-      b.floatTween = this.tweens.add({
-        targets: b.img,
-        y: -28,
-        duration: 1400,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut",
-      });
-    }
-
-    /* ===== LOCK ===== */
-    if (!shouldUnlock) {
-      b.img.setTint(0x777777).setAlpha(0.55);
-      b.img.disableInteractive();
-      b.img.removeAllListeners();
-
-      b.floatTween?.stop();
-      b.floatTween = null;
-      b.img.y = -22;
-    }
-  }
-
-  /* =====================
-     UNLOCK ANIMATION
-  ===================== */
-  playUnlock(lockIcon) {
-    this.tweens.add({
-      targets: lockIcon,
-      scale: 0.08,
-      duration: 600,
-      ease: "Back.easeOut",
-      onComplete: () => {
-        lockIcon.setTexture("unlock");
-
-        this.tweens.add({
-          targets: lockIcon,
-          alpha: 0,
-          y: "-=20",
-          duration: 700,
-          ease: "Sine.easeIn",
-          onComplete: () => lockIcon.destroy(),
-        });
-      },
-    });
-  }
-
-  /* =====================
-     CLEANUP
-  ===================== */
-  onShutdown() {
-    this.booths.forEach((b) => {
-      b.floatTween?.stop();
-      b.img.removeAllListeners();
-    });
-
-    this.booths = [];
-  }
 }

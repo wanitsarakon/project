@@ -1,0 +1,943 @@
+/* --- โค้ดเดิมของคุณทั้งหมดห้ามแก้ --- */
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #000;
+}
+
+#game-container {
+    width: 100vw;
+    height: 100vh;
+    background-image: url('images/bg1.png'); 
+    background-size: 100% 100%; 
+    background-position: center;
+    background-repeat: no-repeat;
+    position: relative;
+}
+.top-header {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    position: absolute;
+    top: 0;
+    z-index: 100;
+}
+
+.main-banner-img {
+    width: 700px; 
+    margin-top: -90px; 
+    height: auto;
+    filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
+}
+
+.team-side { 
+    width: 300px; 
+    text-align: center; 
+    margin-top: 60px; 
+}
+.center-stage { 
+    text-align: center; 
+    flex: 1; 
+    /* ปรับ margin-top เพิ่มขึ้นจากเดิม 150px เป็น 250px (หรือมากกว่าตามต้องการ) */
+    margin-top: 250px; 
+}
+#turn-display {
+    color: white;
+    font-size: 1.8rem;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    /* เพิ่มบรรทัดนี้เพื่อขยับคำลงมา */
+    margin-top: 20px; 
+    /* หรือใช้ margin-bottom ของตัวบนช่วยดันก็ได้ */
+    margin-bottom: 150px; 
+}
+#rps-result {
+    margin-top: 15px;
+    font-size: 1.2rem;
+    color: #ffde7d;
+    font-weight: bold;
+}
+.rps-choices {
+    /* เพิ่มระยะห่างจากข้อความ "เป่ายิงฉุบเพื่อเริ่ม!" ลงมาอีกนิด */
+    margin-top: -50px;
+    position: relative;
+    z-index: 120;
+}
+.selection-area {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    height: 70vh; 
+    padding: 0 50px;
+    z-index: 100; /* ดันขึ้นมาหน้าสุด */
+}
+
+.team-banner {
+    width: 400px; 
+    height: auto;
+    filter: drop-shadow(0 5px 8px rgba(0,0,0,0.4));
+    
+    /* ปรับตรงนี้ */
+    margin-bottom: 50px; /* เพิ่มตัวเลขเพื่อให้วงกลมถูกดันลงไปห่างจากป้ายมากขึ้น */
+    margin-top: -60px;    /* ถ้าอยากให้ป้ายขยับขึ้นไปข้างบนอีก ให้ใส่ค่าติดลบ */
+    /* เพิ่มบรรทัดนี้เพื่อขยับไปทางซ้าย */
+    margin-left: -50px; /* ปรับตัวเลขตามความต้องการ (ยิ่งลบมากยิ่งไปซ้ายมาก) */
+    position: relative;
+    z-index: 10;
+}
+/* เพิ่มต่อท้ายไฟล์ style.css */
+
+/* ทำให้ช่องเลือกไอเท็มมีลักษณะเหมือนช่องเลือกตัวละคร */
+/* ค้นหาส่วนนี้ใน style.css และแก้ไขตามนี้ */
+
+#item-selection-area .char-item {
+    /* นำพื้นหลังและเส้นขอบเดิมออก */
+    background: none; 
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    
+    /* ปรับระยะห่างให้เกยกันเหมือนตัวละคร */
+    margin: 0 -90px; /* ปรับตัวเลขนี้ (เช่น -30px หรือ -40px) เพื่อให้ภาพชิดกันมากขึ้น */
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+}
+
+#item-selection-area .char-item:hover {
+    /* นำเอฟเฟกต์สีพื้นหลังตอน hover ออก และเน้นที่การขยายขนาดแทน */
+    border-color: transparent;
+    background: none;
+    transform: scale(1.1);
+    z-index: 10; /* ให้รูปที่ชี้อยู่ลอยขึ้นมาข้างบนตัวอื่น */
+}
+
+/* ปรับขนาดรูปไอเท็มให้พอดี (ถ้าต้องการ) */
+#item-selection-area .char-item img {
+    width: 300px; /* ปรับขนาดตามความเหมาะสม */
+    transform: translateY(20px);
+    height: auto;
+    filter: drop-shadow(0 5px 10px rgba(0,0,0,0.3));
+}
+/* เพิ่มหรือแก้ไขใน style.css */
+
+/* เพิ่มใน style.css */
+
+.item-selected {
+    opacity: 0.4;         /* ทำให้จางลง */
+    filter: grayscale(1);  /* ทำให้เป็นสีขาวดำ */
+    pointer-events: none;  /* ห้ามคลิกซ้ำ */
+    cursor: default;
+}
+
+/* ปรับระยะขอบล่างของกลุ่มเลือกไอเท็มให้ลงไปอีกตามที่ต้องการ */
+#item-selection-area .char-footer {
+    bottom: -60px;        /* ขยับลงมา (ปรับตัวเลขตามชอบ) */
+    transition: bottom 0.3s ease;
+}
+
+.item-disabled {
+    filter: grayscale(1) opacity(0.5) !important;
+    pointer-events: none;
+}
+
+.slots {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+    
+    /* ปรับตรงนี้ */
+    margin-top: -120px; /* ใส่ค่าติดลบเพื่อดึงเฉพาะกลุ่มวงกลมขยับขึ้นไปหาป้าย */
+    
+    justify-items: center;
+}
+
+.slot {
+    width: 160px;
+    height:160px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: visible; 
+    box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
+}
+
+.slot.has-char {
+    background: none !important;
+    border: none !important;
+}
+
+.slot img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 5px 10px rgba(0,0,0,0.5));
+}
+.rps-choices {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    /* ไม่ต้องใส่ gap หรือใส่เป็น 0 */
+    gap: 0; 
+    margin-top: 10px;
+}
+
+.rps-item {
+    cursor: pointer;
+    transition: transform 0.2s ease;
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    outline: none;
+    /* ดันให้รูปขยับเข้ามาเกยกัน */
+    /* ลองปรับจาก -20px เป็น -40px หรือมากกว่านั้นถ้ายังไม่ชิด */
+    margin: 0 -25px; 
+    display: flex;
+    justify-content: center;
+}
+
+.rps-item img {
+    width: 250px; /* เพิ่มขนาดรูปให้ใหญ่ขึ้นเพราะเราบีบพื้นที่เข้ามา */
+    height: auto;
+    display: block;
+    /* ป้องกันไม่ให้รูปถูกบีบสัดส่วน */
+    object-fit: contain; 
+}
+
+/* เอฟเฟกต์ตอนชี้ */
+.rps-item:hover {
+    transform: scale(1.2);
+    /* สำคัญมาก: เมื่อชี้แล้วให้รูปนั้นลอยมาอยู่ข้างหน้าสุด ไม่โดนรูปข้างๆ ทับ */
+    z-index: 99; 
+    filter: brightness(1.1);
+}
+
+.char-footer {
+    position: absolute;
+    z-index: 100;
+    bottom: -15px; 
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    gap: -5px; 
+    width: 95%;
+    padding-bottom: 20px;
+    background: none; 
+}
+
+.char-item img {
+    width: 240px; 
+    height: auto;
+    filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
+    object-fit: contain;
+}
+
+.char-item {
+    width: 600px;  /* ปรับความกว้าง (เดิมอาจจะ 100-120) */
+    height: 240px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.char-item:hover {
+    transform: translateY(-20px) scale(1.1);
+}
+
+.char-item:hover img {
+    filter: drop-shadow(0 0 20px #ffde7d);
+}
+
+.char-item.selected {
+    filter: grayscale(1) opacity(0.3);
+    cursor: not-allowed;
+    transform: none !important;
+}
+
+.hands-battle-area {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    justify-content: center; /* รักษาความสมดุลซ้าย-ขวาไว้ที่กึ่งกลางจอ */
+    align-items: center;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.hand-wrapper {
+    position: relative;
+    width: 700px; /* ขนาดพื้นที่ต้องคงที่เพื่อให้เสาอยู่ที่เดิม */
+    height: 100%;
+    display: flex;
+    align-items: center;
+    overflow: visible;
+}
+
+.hand-pillar {
+    width: 700px; 
+    height: 190vh;
+    background-image: url('images/your_pillar_image.png'); 
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    position: absolute;
+    top: 100;
+    z-index: 20; /* อยู่หน้ามือ */
+}
+
+/* ตำแหน่งเสาที่คุณตั้งไว้ */
+.hand-wrapper.left .hand-pillar { right: -60px; }
+.hand-wrapper.right .hand-pillar { left: -50px; }
+
+/* --- มือ (ซ่อนอยู่หลังเสา) --- */
+.hand-img {
+    width: 400px;
+    height: auto;
+    position: absolute;
+    opacity: 0; 
+    z-index: 5; /* อยู่หลังเสาแน่นอน */
+    transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
+}
+
+/* ตั้งค่าตำแหน่งเริ่มต้นให้อยู่ "หลังเสา" พอดี 
+   ฝั่งซ้าย: ขยับไปทางขวาเพื่อให้อยู่ตรงเสาที่ถูกดันมา 150px
+   ฝั่งขวา: ขยับไปทางซ้ายเพื่อให้อยู่ตรงเสาที่ถูกดันมา 150px
+*/
+.hand-wrapper.left .hand-img { 
+    left: 202px; /* จุดเริ่มต้นหลังเสาซ้าย */
+}
+.hand-wrapper.right .hand-img { 
+    right: 198px; /* จุดเริ่มต้นหลังเสาขวา */
+    transform: scaleX(-1); 
+}
+
+/* เมื่อเป่า (show): มือจะพุ่งออกจากหลังเสามาชนกันตรงกลาง 
+   ใช้ระยะพุ่งที่สั้นลงเพราะจุดเริ่มอยู่ใกล้กลางมากขึ้นแล้ว
+*/
+.hand-wrapper.left .hand-img.show { 
+    transform: translateX(80px); /* พุ่งออกมาจากหลังเสามาทางขวา */
+    opacity: 1; 
+}
+.hand-wrapper.left .hand-img[src*="paper"].show {
+    /* translateX(ระยะที่พุ่ง) + rotate(องศาที่ต้องการ) */
+    transform: translateX(84px) rotate(35deg); 
+    opacity: 1;
+}
+.hand-wrapper.right .hand-img[src*="paper"].show {
+    /* translateX(ระยะที่พุ่ง) + scaleX(-1)(กลับด้านมือ) + rotate(องศาที่ต้องการ) */
+    transform: translateX(-84px) scaleX(-1) rotate(35deg); 
+    opacity: 1;
+}
+.hand-wrapper.right .hand-img.show { 
+    transform: translateX(-80px) scaleX(-1); /* พุ่งออกมาจากหลังเสามาทางซ้าย */
+    opacity: 1; 
+}
+
+.vs-text {
+    /* ใช้ visibility: hidden แทนการลบทิ้ง เพื่อให้พื้นที่ว่างยังคงอยู่เท่าเดิม เสาจะไม่ขยับ */
+    visibility: hidden; 
+    
+    /* หรือถ้าต้องการลบออกไปเลย แต่รักษาช่องว่าง ให้กำหนดความกว้างตายตัว */
+    width: 80px; /* ปรับตัวเลขนี้ให้เท่ากับระยะห่างที่คุณต้องการคงไว้ระหว่างเสา */
+    display: inline-block;
+    margin: 0 10px;
+}
+#big-start-btn {
+    position: absolute;
+    top: 90%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 20px 50px;
+    font-size: 30px;
+    font-family: 'Kanit', sans-serif;
+    background: #ffde7d;
+    border: 5px solid #000;
+    cursor: pointer;
+    z-index: 1000;
+    border-radius: 15px;
+    box-shadow: 0 10px 0 #b39b56;
+    transition: 0.1s;
+}
+
+#big-start-btn:active {
+    margin-top: 5px;
+    box-shadow: 0 5px 0 #b39b56;
+}
+
+#gameCanvas {
+    width: 100%;
+    height: 100vh;
+    display: block;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    /* ปรับค่าแรกเป็น -50% เพื่อให้อยู่กลางจอแนวขวาง */
+    /* ปรับค่าหลังเป็น -45% เพื่อให้ตัวละครลดระดับลงมาเหยียบพื้นพอดี */
+    transform: translate(-50%, -45%); 
+    pointer-events: none;
+    z-index: 10;
+}
+/* คอนเทนเนอร์หลักของแถบพลัง */
+#power-bar-container {
+    position: absolute;
+    top: 40px; /* ขยับลงมาจากขอบบนเล็กน้อย */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 850px; /* ขยายให้กว้างขึ้นเล็กน้อยเพื่อความสวยงาม */
+    z-index: 100;
+}
+
+/* คอนเทนเนอร์หลัก */
+/* คอนเทนเนอร์รางแถบพลัง */
+#power-bar-bg {
+    position: relative;
+    width: 800px; 
+    height: 50px; 
+    background: #333; /* พื้นหลังกันพลาด */
+    border: 6px solid #ffd700; 
+    border-radius: 25px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    overflow: hidden; /* สำคัญ: เพื่อให้สีที่ยืดไม่ล้นขอบโค้ง */
+    display: flex; /* จัดวางสีแดงกับน้ำเงินต่อกัน */
+}
+
+/* สีฝั่งซ้าย (ทีมคุณ - สีแดง) */
+#power-fill {
+    display: block; /* เปิดใช้งานกลับมา */
+    height: 100%;
+    width: 50%; /* เริ่มต้นคนละ 50% */
+    background: linear-gradient(to bottom, #ff5252, #b71c1c); /* ไล่เฉดแดงให้ดูนูน */
+    transition: none; /* ปิด transition เพื่อให้ขยับตามนิ้วทันที */
+}
+
+/* สีฝั่งขวา (คู่แข่ง - สีน้ำเงิน) */
+/* เราจะใช้พื้นหลังของรางเป็นสีน้ำเงินไปเลย หรือจะสร้าง div ใหม่ก็ได้ */
+/* ในที่นี้แนะนำให้ตั้งพื้นหลังรางเป็นสีน้ำเงิน เพื่อความง่าย */
+#power-bar-bg {
+    background: linear-gradient(to bottom, #2196f3, #0d47a1); 
+}
+
+/* ตัวชี้ตรงกลาง */
+#power-indicator {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 10px;
+    height: 100%;
+    background: #fff;
+    box-shadow: 0 0 15px #fff;
+    z-index: 10;
+    transform: translateX(-50%);
+}
+/* ตกแต่งชื่อทีมให้เด่นขึ้น */
+.team-label {
+    position: absolute;
+    top: -40px;
+    font-family: 'Kanit', sans-serif;
+    font-weight: 800;
+    font-size: 1.8rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.team-label.p1 { 
+    left: 0; 
+    color: #4caf50; 
+    text-shadow: 0 0 10px rgba(76, 175, 80, 0.8), 2px 2px 0px #000;
+} 
+
+.team-label.p2 { 
+    right: 0; 
+    color: #ff5252; 
+    text-shadow: 0 0 10px rgba(255, 82, 82, 0.8), 2px 2px 0px #000;
+}
+
+/* เอฟเฟกต์สะท้อนแสงกระจกด้านบนแถบพลัง */
+#power-bar-bg::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 40%;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.3), transparent);
+    pointer-events: none;
+    z-index: 6;
+}
+#result-screen {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8); /* พื้นหลังดำจางๆ */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+/* การจัดวางหน้า Start Screen */
+#start-screen {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.3); /* ม่านดำจางๆ ให้เห็นข้างหลัง */
+    transition: opacity 0.5s ease;
+}
+
+/* เอฟเฟกต์เบลอฉากหลัง */
+.initial-blur {
+    filter: blur(8px);
+    transition: filter 0.8s ease;
+}
+
+/* จัดการป้ายให้เหมือนหน้าสรุปคะแนน */
+.result-container {
+    position: relative;
+    width: 700px; /* ปรับขนาดป้ายตามความเหมาะสม */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#result-banner {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* จัดข้อความและปุ่มให้กลางป้าย */
+.result-text-overlay {
+    position: absolute;
+    /* ปรับค่า top/left เพื่อให้เข้ากึ่งกลางพื้นที่ว่างของป้าย */
+    top: 52%; 
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80%;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+/* --- แยก Style สำหรับหน้าสรุปคะแนนโดยเฉพาะ --- */
+
+.final-score-container {
+    position: relative;
+    width: 750px; /* ขยายป้ายสรุปให้ใหญ่กว่าเดิมนิดหน่อย */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    animation: scaleUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.final-score-overlay {
+    position: absolute;
+    top: 55%; /* ปรับตำแหน่งให้ลงมากลางพื้นที่ป้าย */
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    text-align: center;
+}
+
+.score-label {
+    font-family: 'Kanit', sans-serif;
+    font-size: 1.0rem;
+    color: #ffd700;
+    margin: 5px 0;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+}
+
+#total-score {
+    font-size: 90px;
+    font-family: 'Kanit', sans-serif;
+    font-weight: 900;
+    margin: 0;
+
+    background: linear-gradient(180deg, #FFFFFF 30%, #FFD700 60%, #FF8C00 100%);
+
+    background-clip: text;          /* standard */
+    -webkit-background-clip: text;  /* chrome / safari */
+
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+
+    filter: drop-shadow(4px 4px 0px #632b00) 
+            drop-shadow(0px 0px 15px rgba(255, 140, 0, 0.5));
+
+    transform: translateY(50px);
+
+    animation: scorePop 0.5s ease-out;
+}
+
+/* เอฟเฟกต์ตอนคะแนนปรากฏ */
+@keyframes scorePop {
+    0% { transform: scale(0.5); opacity: 0; }
+    80% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* คืนค่าหน้าเริ่มเกมให้เป็นปกติ (ถ้าถูกทับ) */
+.start-title {
+    font-size: 3.2rem !important;
+    text-shadow: 3px 3px 0px #ff5252, 5px 5px 15px rgba(0,0,0,0.5) !important;
+}
+
+.start-title {
+    font-family: 'Kanit', sans-serif;
+    font-size: 3.2rem;
+    color: #ffffff;
+    margin: 0;
+    text-shadow: 3px 3px 0px #ff5252, 5px 5px 15px rgba(0,0,0,0.5);
+}
+
+#enter-game-btn {
+    padding: 15px 40px;
+    font-size: 28px;
+    font-family: 'Kanit', sans-serif;
+    font-weight: bold;
+    color: white;
+    /* ไล่เฉดสีจากส้มไปแดง ให้ดูมีมิติ */
+    background: linear-gradient(180deg, #ffcc00 0%, #ff8800 50%, #ff4400 100%);
+    border: 4px solid #fff;
+    border-radius: 50px; /* ทรงแคปซูล */
+    cursor: pointer;
+    outline: none;
+    margin-top: 100px;
+    /* เงาใต้ปุ่มและแสงฟุ้งรอบๆ */
+    box-shadow: 0 8px 0 #992200, 0 15px 20px rgba(0,0,0,0.5);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    
+    transition: all 0.2s ease; /* หน่วงเวลาตอนกดให้ดูนุ่มนวล */
+    position: relative;
+    overflow: hidden;
+}
+
+/* เอฟเฟกต์เมื่อเอาเมาส์ไปชี้ (Hover) */
+#enter-game-btn:hover {
+    transform: translateY(-3px) scale(1.05); /* ขยายใหญ่ขึ้นนิดนึง */
+    background: linear-gradient(180deg, #ffe066 0%, #ffa500 50%, #ff5500 100%);
+    box-shadow: 0 10px 0 #992200, 0 20px 25px rgba(0,0,0,0.6);
+}
+
+/* เอฟเฟกต์เมื่อคลิก (Active) */
+#enter-game-btn:active {
+    transform: translateY(4px); /* ปุ่มยุบลงเหมือนกดจริง */
+    box-shadow: 0 2px 0 #992200, 0 5px 10px rgba(0,0,0,0.5);
+}
+
+/* เพิ่มเส้นแสงวิ่งผ่านปุ่ม (ตัวเลือกเสริมเพื่อให้ดูพรีเมียม) */
+#enter-game-btn::after {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -60%;
+    width: 20%;
+    height: 200%;
+    background: rgba(255, 255, 255, 0.4);
+    transform: rotate(30deg);
+    transition: all 0.5s;
+    animation: shine 3s infinite;
+}
+
+@keyframes shine {
+    0% { left: -60%; }
+    20% { left: 120%; }
+    100% { left: 120%; }
+}
+
+/* จัดตำแหน่งกลุ่มปุ่มกด */
+#keyboard-controls {
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 20px;
+    z-index: 1000;
+}
+
+/* ตั้งค่าให้ปุ่มเป็นจุดอ้างอิงสำหรับข้อความ */
+.key-btn {
+    position: relative;
+    display: inline-block;
+}
+
+/* สไตล์ของข้อความอธิบาย (Tooltip) */
+.key-btn .tooltip {
+    visibility: hidden;
+    width: 200px;
+    background-color: rgba(0, 0, 0, 0.85);
+    color: #fff;
+    text-align: center;
+    border-radius: 8px;
+    padding: 10px;
+    position: absolute;
+    z-index: 1001;
+    bottom: 125%; /* ให้ข้อความอยู่เหนือปุ่ม */
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-family: 'Kanit', sans-serif;
+    font-size: 16px;
+    border: 2px solid #ffd700; /* ขอบสีทองให้ดูเป็นพลังพิเศษ */
+    pointer-events: none;
+}
+
+/* ทำให้ข้อความปรากฏเมื่อเอาเมาส์ชี้ */
+.key-btn:hover .tooltip {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* เพิ่มลูกศรชี้ลงด้านล่างของ Tooltip */
+.key-btn .tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: rgba(0, 0, 0, 0.85) transparent transparent transparent;
+}
+/* ปรับขนาดปุ่มปกติ S และ D */
+.key-btn img {
+    width: 150px; /* ลดขนาดลงเล็กน้อยเพื่อให้มีที่ว่างสำหรับ Spacebar */
+    height: auto;
+    transition: transform 0.1s;
+}
+
+/* ปรับขนาดปุ่ม Spacebar ให้กว้างขึ้น */
+#key-space img {
+    width: 380px; /* ปรับความกว้างตามความเหมาะสมของรูปภาพ */
+}
+
+/* คลาสสำหรับการสั่น */
+.key-active {
+    animation: shake 0.1s infinite;
+    filter: brightness(1.2); /* เพิ่มความสว่างตอนกด */
+}
+
+@keyframes shake {
+    0% { transform: translate(1px, 1px) rotate(0deg); }
+    10% { transform: translate(-1px, -2px) rotate(-1deg); }
+    20% { transform: translate(-3px, 0px) rotate(1deg); }
+    30% { transform: translate(3px, 2px) rotate(0deg); }
+    40% { transform: translate(1px, -1px) rotate(1deg); }
+    50% { transform: translate(-1px, 2px) rotate(-1deg); }
+    60% { transform: translate(-3px, 1px) rotate(0deg); }
+    70% { transform: translate(3px, 1px) rotate(-1deg); }
+    80% { transform: translate(-1px, -1px) rotate(1deg); }
+    90% { transform: translate(1px, 2px) rotate(0deg); }
+    100% { transform: translate(1px, -2px) rotate(-1deg); }
+}
+/* คอนเทนเนอร์ของตัวละครในหน้าเลือก */
+.char-item {
+    position: relative; /* สำคัญ: เพื่อให้ป้ายเทียบตำแหน่งกับตัวละคร */
+    overflow: hidden;   /* ตัดส่วนป้ายที่เกินออกถ้าต้องการ */
+    cursor: pointer;
+    border-radius: 10px;
+}
+
+/* ป้ายบอกความสามารถ (ให้บังหน้าตัวละคร) */
+.ability-tooltip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.27); /* พื้นหลังดำโปร่งแสง */
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    opacity: 0; /* ซ่อนไว้ก่อน */
+    transition: opacity 0.3s ease;
+    z-index: 10;
+    padding: 5px;
+    box-sizing: border-box;
+    font-family: 'Kanit', sans-serif;
+    pointer-events: none; /* เพื่อให้ยังคลิกเลือกตัวละครได้ */
+}
+
+/* เมื่อเอาเมาส์ชี้ ให้ป้ายปรากฏขึ้นมาบัง */
+.char-item:hover .ability-tooltip {
+    opacity: 1;
+}
+
+/* ตกแต่งข้อความข้างในป้าย */
+.tooltip-title {
+    font-size: 1.1rem;
+    font-weight: bold;
+    color: #ffd700; /* สีทอง */
+    margin-bottom: 5px;
+}
+.tooltip-stat {
+    font-size: 0.9rem;
+    margin: 2px 0;
+}
+.tooltip-note {
+    font-size: 0.8rem;
+    color: #4caf50; /* สีเขียว */
+    margin-top: 5px;
+    font-style: italic;
+    line-height: 1.2;
+}
+/* --- เพิ่มเติมต่อท้ายไฟล์เดิม --- */
+.stamina-container {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+    transition: transform 0.3s;
+}
+
+#player-stamina-bar, #ai-stamina-bar {
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+}
+
+/* เอฟเฟกต์เมื่อเหนื่อยจัด */
+@keyframes staminaShake {
+    0% { transform: translate(1px, 1px); }
+    50% { transform: translate(-1px, -1px); }
+    100% { transform: translate(1px, 1px); }
+}
+
+.stamina-exhausted {
+    animation: shake 0.2s infinite;
+    border-color: #ff0000 !important;
+}
+/* ตกแต่ง Container ของปุ่มให้รองรับการวาง Tooltip */
+.key-btn {
+    position: relative; /* เพื่อให้ Tooltip อ้างอิงตำแหน่งจากปุ่ม */
+    display: inline-block;
+    cursor: pointer;
+}
+
+/* สไตล์ของ Tooltip */
+.key-tooltip {
+    position: absolute;
+    bottom: 120%; /* ให้ลอยอยู่เหนือปุ่ม */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.85); /* สีดำโปร่งแสง */
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    white-space: nowrap; /* ไม่ให้ข้อความตัดบรรทัด */
+    opacity: 0; /* ซ่อนไว้ */
+    visibility: hidden;
+    transition: all 0.3s ease;
+    border: 2px solid #ffd700; /* ขอบสีทองให้เข้ากับธีมงานวัด */
+    pointer-events: none; /* ป้องกันไม่ให้เมาส์ไปโดน Tooltip แทนปุ่ม */
+    z-index: 2000;
+    font-family: 'Kanit', sans-serif;
+}
+
+/* ทำลูกศรชี้ลงด้านล่างของ Tooltip */
+.key-tooltip::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #ffd700 transparent transparent transparent;
+}
+
+/* เมื่อเอาเมาส์ชี้ที่ปุ่ม ให้แสดง Tooltip */
+.key-btn:hover .key-tooltip {
+    opacity: 1;
+    visibility: visible;
+    bottom: 110%; /* ขยับขึ้นมานิดหน่อยตอนแสดงผล */
+}
+/* ขณะที่ AI กำลังสุ่มรูปมือ */
+#ai-hand.show:not(.hand-impact) {
+    animation: shuffle-shake 0.1s infinite;
+}/* --- ปรับปรุงช่องโชว์ไอเท็มให้สวยงามและชัดเจน --- */
+/* ปรับแต่งช่องไอเท็ม */
+.ingame-item-slot {
+    width: 110px;          /* ขยายช่องให้กว้างขึ้น */
+    height: 110px;         /* ขยายช่องให้สูงขึ้น */
+    background: radial-gradient(circle, #333 0%, #000 100%);
+    border: 3px solid #ffd700;
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    box-shadow: 0 0 15px rgba(0,0,0,0.5);
+    /* เอา animation: itemFloat ออกแล้วเพื่อให้กล่องไม่ลอย */
+}
+
+/* ปรับรูปไอเท็มให้ใหญ่เต็มช่อง */
+.ingame-item-slot img {
+    width: 100%;            /* ขยายรูปไอเท็มให้ใหญ่เกือบเต็มกล่อง */
+    height: 90%;
+    object-fit: contain;
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.3)); /* เพิ่มแสงฟุ้งรอบไอเท็ม */
+}
+
+/* ปรับป้ายข้อความในกล่อง (แทนที่ Q และ AI) */
+.ingame-item-slot .key-hint {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;           /* ขยายความกว้างป้าย */
+    background: linear-gradient(180deg, #ffd700, #ff8c00);
+    color: #000;
+    padding: 3px 0;
+    border-radius: 5px;
+    font-size: 14px;        /* ปรับขนาดฟอนต์ */
+    font-weight: bold;
+    text-align: center;
+    border: 2px solid #fff;
+    white-space: nowrap;    /* กันข้อความตัดบรรทัด */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+}
+
+/* ปรับสีป้ายของฝั่งคู่แข่งเป็นสีแดง */
+#ai-item-slot-arena {
+    border-color: #ff5252; /* เปลี่ยนสีกรอบกล่อง AI */
+}
+
+#ai-item-slot-arena .key-hint {
+    background: linear-gradient(180deg, #ff5252, #b71c1c);
+    color: #fff;
+}
+/* แก้ไขใน style.css */
+#controls-guide {
+    position: absolute;
+    /* เดิมอาจจะเป็น 160px ให้ลองปรับเหลือ 100px หรือ 80px */
+    bottom: 0px; 
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    background: rgba(0, 0, 0, 0.7);
+    padding: 8px 25px;
+    border-radius: 50px;
+    border: 1px solid rgba(255, 215, 0, 0.4);
+    z-index: 1005;
+}
