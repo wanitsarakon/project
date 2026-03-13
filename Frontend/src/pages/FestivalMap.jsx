@@ -473,6 +473,9 @@ export default function FestivalMap({
             meta: {
               game: result?.game || result?.gameKey || null,
               won: result?.won ?? null,
+              ...(result?.meta && typeof result.meta === "object"
+                ? result.meta
+                : {}),
             },
           });
 

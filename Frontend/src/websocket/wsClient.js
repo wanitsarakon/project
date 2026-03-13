@@ -1,13 +1,32 @@
 export function createRoomSocket(roomCode, onMessage, options = {}) {
 
+  const apiBase =
+    import.meta.env.VITE_API_URL || null;
+
+  const derivedUrlBase = (() => {
+    if (!apiBase) {
+      return window.location.protocol === "https:"
+        ? `wss://${window.location.host}`
+        : "ws://localhost:8080";
+    }
+
+    try {
+      const parsed = new URL(apiBase, window.location.origin);
+      const protocol =
+        parsed.protocol === "https:" ? "wss:" : "ws:";
+      return `${protocol}//${parsed.host}`;
+    } catch {
+      return window.location.protocol === "https:"
+        ? `wss://${window.location.host}`
+        : "ws://localhost:8080";
+    }
+  })();
+
   const {
     playerId = null,
     mode = "solo",
 
-    urlBase =
-      window.location.protocol === "https:"
-        ? `wss://${window.location.host}`
-        : "ws://localhost:8080",
+    urlBase = derivedUrlBase,
 
     reconnectDelay = 2000,
     heartbeatInterval = 30000,

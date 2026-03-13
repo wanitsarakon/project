@@ -1,10 +1,37 @@
 import Phaser from "phaser";
 
+const ASSET_BASE = "/assets/flowergame";
+
 const FLOWERS = [
-  { id: "jasmine", label: "มะลิ", icon: "🤍", color: "#fffaf0" },
-  { id: "rose", label: "กุหลาบ", icon: "🌹", color: "#ffd7e2" },
-  { id: "marigold", label: "ดาวเรือง", icon: "🌼", color: "#ffe08a" },
-  { id: "orchid", label: "กล้วยไม้", icon: "💜", color: "#eadbff" },
+  { id: "white", label: "มะลิ", image: `${ASSET_BASE}/image/flower-white.png`, glow: "#fff6d7" },
+  { id: "red", label: "กุหลาบ", image: `${ASSET_BASE}/image/flower-red.png`, glow: "#ffb0b6" },
+  { id: "yellow", label: "จำปา", image: `${ASSET_BASE}/image/flower-yellow.png`, glow: "#ffe07d" },
+  { id: "green", label: "ใบแก้ว", image: `${ASSET_BASE}/image/flower-green.png`, glow: "#c4ff8f" },
+  { id: "purple", label: "รักม่วง", image: `${ASSET_BASE}/image/flower-purple.png`, glow: "#e0c2ff" },
+];
+
+const ORDER_DIALOGS = [
+  "สวัสดีจ้ะ รับร้อยพวงมาลัยแบบนี้หน่อย",
+  "ช่วยร้อยพวงมาลัยให้ทีนะจ๊ะ",
+  "ขอแบบสวย ๆ ไปไหว้พระหน่อยจ้ะ",
+  "รบกวนร้อยตามแบบนี้ให้หน่อยสิ",
+  "แม่ค้าจ๋า เอาแบบตามนี้เลยนะ",
+];
+
+const ANGRY_DIALOGS = [
+  "ทำไมทำแบบนี้! ไม่เอาแล้ว!",
+  "ร้อยผิดแบบนี้ ฉันไปร้านอื่นดีกว่า!",
+  "นี่มันไม่ใช่ที่สั่งไว้นี่นา!",
+  "เสียเวลาจริง ๆ ฉันรีบนะ!",
+  "ของสวย ๆ เสียหมดเลย!",
+];
+
+const CUSTOMER_PROFILES = [
+  { image: "npc-customer-1", type: "normal", patience: 45, scoreMult: 1, timeBonus: 0, lengthMod: 0, decay: 0.1 },
+  { image: "npc-customer-21", type: "rusher", patience: 25, scoreMult: 3, timeBonus: 0, lengthMod: -2, decay: 0.2 },
+  { image: "npc-customer-3", type: "tourist", patience: 80, scoreMult: 1.5, timeBonus: 0, lengthMod: 5, decay: 0.05 },
+  { image: "npc-customer-4", type: "vip", patience: 40, scoreMult: 1.2, timeBonus: 10, lengthMod: 1, decay: 0.1 },
+  { image: "npc-customer-5", type: "normal", patience: 55, scoreMult: 1.1, timeBonus: 0, lengthMod: 0, decay: 0.08 },
 ];
 
 export default class FlowerGameScene extends Phaser.Scene {
@@ -13,7 +40,9 @@ export default class FlowerGameScene extends Phaser.Scene {
     this.onGameEnd = null;
     this.root = null;
     this.state = null;
-    this.timer = null;
+    this.gameTimer = null;
+    this.customerTimers = new Map();
+    this.audio = {};
   }
 
   init(data = {}) {
@@ -21,202 +50,498 @@ export default class FlowerGameScene extends Phaser.Scene {
   }
 
   create() {
-    this.state = {
-      score: 0,
-      timeLeft: 30,
-      started: false,
-      sequence: [],
-      input: [],
-    };
-
-    this.buildDom();
-    this.generateSequence();
-
+    this.state = this.getInitialState();
+    this.mount();
     this.events.once("shutdown", () => this.cleanup());
     this.events.once("destroy", () => this.cleanup());
   }
 
-  buildDom() {
+  getInitialState() {
+    return {
+      started: false,
+      ended: false,
+      score: 0,
+      timeLeft: 120,
+      round: 1,
+      combo: 0,
+      feverMode: false,
+      perfectStreak: 0,
+      itemWaterCount: 3,
+      itemPowderCount: 1,
+      isTimeFrozen: false,
+      customers: [],
+      selectedCustomerId: null,
+      currentInput: [],
+      countdown: 3,
+    };
+  }
+
+  mount() {
     const container = this.game.canvas?.parentElement;
     if (!container) return;
 
     this.root = document.createElement("div");
     this.root.innerHTML = `
       <style>
-        .fg-root { position:absolute; inset:0; font-family:Kanit,sans-serif; background:linear-gradient(180deg,#fff9ec 0%,#ffd48b 100%); color:#5b2c00; }
-        .fg-wrap { height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:22px; text-align:center; }
-        .fg-card { width:min(90%,720px); background:rgba(255,255,255,0.9); border-radius:28px; padding:24px; box-shadow:0 16px 40px rgba(0,0,0,0.18); }
-        .fg-title { font-size:34px; font-weight:700; margin-bottom:8px; }
-        .fg-sub { color:#8a5a2f; margin-bottom:18px; }
-        .fg-hud { display:flex; justify-content:center; gap:18px; margin-bottom:18px; flex-wrap:wrap; }
-        .fg-box { background:#fff4dd; border-radius:18px; padding:10px 18px; font-weight:700; min-width:120px; }
-        .fg-seq, .fg-input { display:flex; justify-content:center; gap:10px; flex-wrap:wrap; margin-bottom:14px; min-height:58px; }
-        .fg-chip { width:64px; height:64px; border-radius:18px; display:flex; align-items:center; justify-content:center; font-size:30px; background:#fff; box-shadow:inset 0 0 0 2px rgba(139,90,43,0.12); }
-        .fg-buttons { display:grid; grid-template-columns:repeat(2,minmax(140px,1fr)); gap:12px; margin-top:14px; }
-        .fg-btn { border:none; border-radius:18px; padding:14px 12px; font:inherit; font-weight:700; cursor:pointer; box-shadow:0 8px 20px rgba(0,0,0,0.08); }
-        .fg-msg { min-height:28px; font-weight:700; color:#a04d00; }
-        .fg-start, .fg-result { position:absolute; inset:0; background:rgba(0,0,0,0.42); display:flex; align-items:center; justify-content:center; padding:18px; }
-        .fg-panel { width:min(88%,520px); background:#fff9ef; border-radius:28px; padding:28px; text-align:center; box-shadow:0 16px 40px rgba(0,0,0,0.2); }
-        .fg-panel h2 { margin:0 0 10px; font-size:34px; color:#8a4d0f; }
-        .fg-panel button { margin-top:16px; border:none; border-radius:999px; padding:12px 24px; background:#d35400; color:#fff; font:inherit; font-weight:700; cursor:pointer; }
-        .fg-hidden { display:none; }
+        .fl-root{position:absolute;inset:0;overflow:hidden;font-family:Kanit,sans-serif;color:#fff;background:#13070a}
+        .fl-screen{position:absolute;inset:0}
+        .fl-bg{position:absolute;inset:0;background:url('${ASSET_BASE}/image/bg-temple.png') center/cover no-repeat;filter:saturate(1.08)}
+        .fl-dim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,6,8,.35),rgba(20,6,8,.62))}
+        .fl-ui{position:absolute;inset:0;display:flex;flex-direction:column}
+        .fl-header{display:flex;justify-content:space-between;align-items:flex-start;padding:16px 18px;gap:12px;z-index:3}
+        .fl-sign{min-width:140px;padding:10px 18px;border-radius:22px;background:rgba(52,17,8,.84);border:1px solid rgba(255,213,139,.25);text-align:center;box-shadow:0 10px 22px rgba(0,0,0,.24)}
+        .fl-sign .label{font-size:14px;color:#ffdfad}
+        .fl-sign .value{font-size:32px;font-weight:800;color:#fff9e8;line-height:1.05}
+        .fl-items{display:flex;gap:10px}
+        .fl-item{min-width:120px;padding:10px 14px;border-radius:18px;background:rgba(255,248,229,.92);color:#6d3300;box-shadow:0 10px 20px rgba(0,0,0,.16)}
+        .fl-item strong{display:block;font-size:15px}
+        .fl-item span{font-size:26px;font-weight:800}
+        .fl-area{position:relative;flex:1}
+        .fl-customers{position:absolute;inset:82px 0 180px;pointer-events:none}
+        .fl-customer{position:absolute;bottom:0;width:min(22vw,190px);pointer-events:auto;transition:left .6s ease,right .6s ease,opacity .5s ease,transform .2s ease,filter .2s ease}
+        .fl-customer.selected{transform:translateY(-8px) scale(1.03)}
+        .fl-customer.worried{filter:drop-shadow(0 0 18px rgba(255,221,89,.28))}
+        .fl-customer.angry{filter:drop-shadow(0 0 22px rgba(255,59,48,.34))}
+        .fl-customer.timeout{filter:grayscale(1) brightness(.62)}
+        .fl-patience{position:absolute;left:-14px;bottom:18px;width:10px;height:150px;border-radius:999px;background:rgba(255,255,255,.16);overflow:hidden;box-shadow:0 0 10px rgba(0,0,0,.22)}
+        .fl-patience-fill{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(180deg,#39d353,#0a8f41);border-radius:999px}
+        .fl-bubble{position:absolute;bottom:78%;left:50%;transform:translateX(-50%);min-width:170px;max-width:230px;padding:12px 14px;border-radius:18px;background:rgba(255,247,233,.96);color:#6b3500;font-size:14px;line-height:1.45;box-shadow:0 12px 22px rgba(0,0,0,.18);display:none}
+        .fl-bubble.show{display:block}
+        .fl-bubble::after{content:"";position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);border-width:8px 8px 0 8px;border-style:solid;border-color:rgba(255,247,233,.96) transparent transparent transparent}
+        .fl-order{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
+        .fl-order img{width:28px;height:28px;object-fit:contain}
+        .fl-tag{position:absolute;right:6px;bottom:6px;padding:6px 10px;border-radius:999px;background:rgba(82,22,4,.9);color:#ffe4b3;font-size:11px;font-weight:800;letter-spacing:.03em}
+        .fl-sprite{width:100%;height:min(46vw,330px);background:center bottom/contain no-repeat}
+        .fl-garland{position:absolute;left:50%;bottom:145px;transform:translateX(-50%);width:min(42vw,360px);height:110px;display:flex;align-items:flex-start;justify-content:center}
+        .fl-rope{position:absolute;top:10px;left:8%;right:8%;height:16px;background:url('${ASSET_BASE}/image/rope.png') center/contain repeat-x}
+        .fl-stack{position:relative;display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap;justify-content:center;padding-top:18px;max-width:82%}
+        .fl-stack img{width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 4px 6px rgba(0,0,0,.22))}
+        .fl-table{position:absolute;left:0;right:0;bottom:0;height:235px;background:url('${ASSET_BASE}/image/table-front.png') center bottom/cover no-repeat;pointer-events:none}
+        .fl-controls{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);width:min(94vw,860px);display:grid;grid-template-columns:repeat(5,minmax(70px,1fr));gap:12px;z-index:4}
+        .fl-btn{min-height:84px;border:none;border-radius:22px;background:rgba(255,250,241,.94);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 24px rgba(0,0,0,.2);transition:transform .16s ease,box-shadow .16s ease}
+        .fl-btn:hover{transform:translateY(-2px);box-shadow:0 16px 28px rgba(0,0,0,.22)}
+        .fl-btn img{width:54px;height:54px;object-fit:contain}
+        .fl-actions{position:absolute;right:16px;bottom:138px;display:flex;flex-direction:column;gap:10px;z-index:4}
+        .fl-action{border:none;border-radius:18px;padding:12px 16px;background:rgba(87,27,5,.9);color:#fff5df;font:inherit;font-weight:700;cursor:pointer;box-shadow:0 10px 22px rgba(0,0,0,.24)}
+        .fl-action:disabled{opacity:.45;cursor:default}
+        .fl-topnote{position:absolute;left:50%;top:86px;transform:translateX(-50%);padding:10px 16px;border-radius:999px;background:rgba(255,247,230,.9);color:#703700;font-weight:700;z-index:4}
+        .fl-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(7,2,2,.58);z-index:10}
+        .fl-panel{width:min(92vw,760px);padding:28px;border-radius:28px;background:url('${ASSET_BASE}/image/frame.png') center/100% 100% no-repeat;min-height:340px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+        .fl-panel h2{margin:0;color:#7b2800;font-size:42px}
+        .fl-panel p{max-width:560px;color:#fff7ed;font-size:19px;line-height:1.6;text-shadow:0 2px 5px rgba(0,0,0,.35)}
+        .fl-mainbtn{border:none;border-radius:999px;padding:14px 28px;background:linear-gradient(180deg,#b33e08,#7c2200);color:#fff7e8;font:inherit;font-weight:800;cursor:pointer;box-shadow:0 14px 24px rgba(0,0,0,.24)}
+        .fl-subbtn{margin-top:10px;border:none;border-radius:999px;padding:10px 22px;background:rgba(82,29,5,.82);color:#fff4dc;font:inherit;font-weight:700;cursor:pointer}
+        .fl-count{font-size:120px;font-weight:900;color:#fff8df;text-shadow:0 0 28px rgba(255,201,88,.4)}
+        .fl-result{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(7,2,2,.76);z-index:12}
+        .fl-resultcard{position:relative;width:min(96vw,980px);aspect-ratio:16/9;background:url('${ASSET_BASE}/image/result_summary_banner.png') center/contain no-repeat;display:flex;align-items:center;justify-content:center;flex-direction:column}
+        .fl-resultscore{margin-top:26px;font-size:clamp(54px,8vw,96px);font-weight:900;color:#b71d00}
+        .fl-resultmeta{margin-top:8px;font-size:clamp(16px,2vw,22px);color:#5f2b00;font-weight:700}
+        .fl-tutorial{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(7,2,2,.74);z-index:11}
+        .fl-tutorialcard{width:min(94vw,860px);padding:30px;border-radius:30px;background:url('${ASSET_BASE}/image/frame-gold.png') center/100% 100% no-repeat;text-align:center}
+        .fl-tutorialcard h3{margin:0;color:#6e2800;font-size:36px}
+        .fl-tutorialgrid{margin-top:18px;display:grid;grid-template-columns:repeat(2,minmax(220px,1fr));gap:14px}
+        .fl-tip{padding:18px;border-radius:20px;background:rgba(255,248,232,.9);color:#6b3500;min-height:110px;box-shadow:0 10px 18px rgba(0,0,0,.12)}
+        .fl-tip strong{display:block;font-size:18px;margin-bottom:8px}
+        .fl-chip{padding:8px 14px;border-radius:999px;background:rgba(255,255,255,.14);font-weight:700}
+        .fl-fever{box-shadow:inset 0 0 0 1000px rgba(255,74,74,.08)}
+        .fl-frozen{box-shadow:inset 0 0 0 1000px rgba(120,224,255,.08)}
+        .fl-shake{animation:flShake .35s linear}
+        @keyframes flShake{0%,100%{transform:translate(0,0)}25%{transform:translate(-6px,0)}50%{transform:translate(6px,0)}75%{transform:translate(-4px,0)}}
+        @media (max-width:900px){.fl-controls{grid-template-columns:repeat(5,minmax(56px,1fr));gap:8px}.fl-btn{min-height:72px}.fl-btn img{width:42px;height:42px}.fl-actions{right:10px;bottom:128px}.fl-action{padding:10px 12px;font-size:14px}.fl-topnote{top:92px;max-width:85vw;text-align:center}.fl-customers{inset:92px 0 190px}.fl-customer{width:min(28vw,160px)}.fl-tutorialgrid{grid-template-columns:1fr}}
       </style>
-      <div class="fg-root">
-        <div class="fg-wrap">
-          <div class="fg-card">
-            <div class="fg-title">ร้อยมาลัย</div>
-            <div class="fg-sub">กดดอกไม้ให้ตรงตามลำดับที่ลูกค้าสั่งภายในเวลา 30 วินาที</div>
-            <div class="fg-hud">
-              <div class="fg-box">คะแนน <span id="fg-score">0</span></div>
-              <div class="fg-box">เวลา <span id="fg-time">30</span></div>
+      <div class="fl-root">
+        <div class="fl-bg"></div>
+        <div class="fl-dim"></div>
+        <div id="gameShell" class="fl-ui">
+          <div class="fl-header">
+            <div class="fl-sign"><div class="label">เวลา</div><div id="time" class="value">120</div></div>
+            <div class="fl-items">
+              <div class="fl-item"><strong>น้ำอบ</strong><span id="water">3</span></div>
+              <div class="fl-item"><strong>ธูป</strong><span id="powder">1</span></div>
             </div>
-            <div style="font-weight:700; margin-bottom:8px;">ออเดอร์</div>
-            <div id="fg-sequence" class="fg-seq"></div>
-            <div style="font-weight:700; margin-bottom:8px;">ที่คุณร้อยแล้ว</div>
-            <div id="fg-input" class="fg-input"></div>
-            <div id="fg-msg" class="fg-msg"></div>
-            <div id="fg-buttons" class="fg-buttons"></div>
+            <div class="fl-sign"><div class="label">คะแนน</div><div id="score" class="value">0</div></div>
           </div>
-        </div>
-        <div id="fg-start" class="fg-start">
-          <div class="fg-panel">
-            <h2>ซุ้มร้อยมาลัย</h2>
-            <div>จำลำดับดอกไม้ แล้วกดให้ครบชุด รับคะแนนเพิ่มเมื่อร้อยได้ถูกทั้งชุด</div>
-            <button id="fg-start-btn">เริ่มเกม</button>
+          <div id="note" class="fl-topnote">เลือกลูกค้าก่อน แล้วค่อยร้อยพวงมาลัยตามแบบ</div>
+          <div class="fl-area">
+            <div id="customers" class="fl-customers"></div>
+            <div class="fl-garland"><div class="fl-rope"></div><div id="garland" class="fl-stack"></div></div>
+            <div class="fl-actions">
+              <button id="waterBtn" class="fl-action">ใช้น้ำอบ</button>
+              <button id="powderBtn" class="fl-action">ใช้ธูป</button>
+            </div>
+            <div class="fl-table"></div>
           </div>
+          <div id="controls" class="fl-controls"></div>
         </div>
-        <div id="fg-result" class="fg-result fg-hidden">
-          <div class="fg-panel">
-            <h2>จบเกม</h2>
-            <div>มาลัยที่ได้คะแนนรวม</div>
-            <div id="fg-final" style="font-size:64px; font-weight:700; color:#d35400; margin-top:8px;">0</div>
-            <button id="fg-finish-btn">กลับแผนที่</button>
-          </div>
-        </div>
+        <div id="startOverlay" class="fl-overlay"><div class="fl-panel"><h2>ร้านร้อยพวงมาลัย</h2><p>รับลูกค้าหลายคิวพร้อมกัน เลือกคนที่ต้องการบริการ แล้วร้อยพวงมาลัยตามแบบให้ถูกต้องก่อนความอดทนของลูกค้าหมดลง</p><button id="startBtn" class="fl-mainbtn">เริ่มเกม</button><button id="tutorialBtn" class="fl-subbtn">ดูวิธีเล่น</button></div></div>
+        <div id="tutorialOverlay" class="fl-tutorial" style="display:none"><div class="fl-tutorialcard"><h3>วิธีเล่น</h3><div class="fl-tutorialgrid"><div class="fl-tip"><strong>1. เลือกลูกค้า</strong>กดที่ลูกค้าเพื่อดูแบบพวงมาลัยในฟองคำพูด จากนั้นค่อยเริ่มร้อย</div><div class="fl-tip"><strong>2. ร้อยตามลำดับ</strong>กดดอกไม้ให้ตรงกับแบบ ถ้ากดผิดลูกค้าจะโกรธและเดินออกทันที</div><div class="fl-tip"><strong>3. จัดการเวลา</strong>น้ำอบช่วยหยุดความอดทน 5 วินาที ส่วนธูปช่วยร้อยให้เสร็จทันที</div><div class="fl-tip"><strong>4. ทำคอมโบ</strong>ร้อยสำเร็จต่อเนื่องจะได้คอมโบและเข้า fever mode ทำคะแนนได้แรงขึ้น</div></div><button id="closeTutorialBtn" class="fl-mainbtn" style="margin-top:18px">เข้าใจแล้ว</button></div></div>
+        <div id="countdownOverlay" class="fl-overlay" style="display:none"><div id="countdown" class="fl-count">3</div></div>
+        <div id="resultOverlay" class="fl-result" style="display:none"><div class="fl-resultcard"><div id="finalScore" class="fl-resultscore">0</div><div id="finalMeta" class="fl-resultmeta"></div><button id="finishBtn" class="fl-mainbtn" style="margin-top:22px">กลับไปแผนที่</button></div></div>
       </div>
     `;
 
     container.appendChild(this.root);
-
-    this.scoreEl = this.root.querySelector("#fg-score");
-    this.timeEl = this.root.querySelector("#fg-time");
-    this.sequenceEl = this.root.querySelector("#fg-sequence");
-    this.inputEl = this.root.querySelector("#fg-input");
-    this.messageEl = this.root.querySelector("#fg-msg");
-    this.buttonsEl = this.root.querySelector("#fg-buttons");
-    this.startEl = this.root.querySelector("#fg-start");
-    this.resultEl = this.root.querySelector("#fg-result");
-    this.finalEl = this.root.querySelector("#fg-final");
+    this.shellEl = this.root.querySelector("#gameShell");
+    this.timeEl = this.root.querySelector("#time");
+    this.scoreEl = this.root.querySelector("#score");
+    this.waterEl = this.root.querySelector("#water");
+    this.powderEl = this.root.querySelector("#powder");
+    this.noteEl = this.root.querySelector("#note");
+    this.customersEl = this.root.querySelector("#customers");
+    this.garlandEl = this.root.querySelector("#garland");
+    this.controlsEl = this.root.querySelector("#controls");
+    this.startOverlayEl = this.root.querySelector("#startOverlay");
+    this.countdownOverlayEl = this.root.querySelector("#countdownOverlay");
+    this.countdownEl = this.root.querySelector("#countdown");
+    this.resultOverlayEl = this.root.querySelector("#resultOverlay");
+    this.finalScoreEl = this.root.querySelector("#finalScore");
+    this.finalMetaEl = this.root.querySelector("#finalMeta");
+    this.tutorialOverlayEl = this.root.querySelector("#tutorialOverlay");
 
     FLOWERS.forEach((flower) => {
-      const btn = document.createElement("button");
-      btn.className = "fg-btn";
-      btn.style.background = flower.color;
-      btn.innerHTML = `${flower.icon} ${flower.label}`;
-      btn.addEventListener("click", () => this.pickFlower(flower.id));
-      this.buttonsEl.appendChild(btn);
+      const button = document.createElement("button");
+      button.className = "fl-btn";
+      button.title = flower.label;
+      button.innerHTML = `<img src="${flower.image}" alt="${flower.label}" />`;
+      button.addEventListener("click", () => this.playAdd(flower.id));
+      this.controlsEl.appendChild(button);
     });
 
-    this.root
-      .querySelector("#fg-start-btn")
-      ?.addEventListener("click", () => this.startGame());
-
-    this.root
-      .querySelector("#fg-finish-btn")
-      ?.addEventListener("click", () => {
-        this.onGameEnd?.({
-          score: this.state?.score ?? 0,
-          game: "FlowerGame",
-        });
+    this.root.querySelector("#startBtn")?.addEventListener("click", () => this.startCountdown());
+    this.root.querySelector("#tutorialBtn")?.addEventListener("click", () => {
+      this.tutorialOverlayEl.style.display = "flex";
+    });
+    this.root.querySelector("#closeTutorialBtn")?.addEventListener("click", () => {
+      this.tutorialOverlayEl.style.display = "none";
+      this.startCountdown();
+    });
+    this.root.querySelector("#waterBtn")?.addEventListener("click", () => this.useWater());
+    this.root.querySelector("#powderBtn")?.addEventListener("click", () => this.usePowder());
+    this.root.querySelector("#finishBtn")?.addEventListener("click", () => {
+      this.onGameEnd?.({
+        score: this.state?.score ?? 0,
+        game: "FlowerGame",
+        meta: {
+          combo: this.state?.combo ?? 0,
+          round: this.state?.round ?? 1,
+          perfectStreak: this.state?.perfectStreak ?? 0,
+        },
       });
+    });
 
-    this.renderState();
+    this.audio.bgm = new Audio(`${ASSET_BASE}/audio/background.mp3`);
+    this.audio.bgm.loop = true;
+    this.audio.bgm.volume = 0.25;
+    this.audio.countdown = new Audio(`${ASSET_BASE}/audio/countdown.mp3`);
+    this.audio.start = new Audio(`${ASSET_BASE}/audio/start.mp3`);
+    this.renderHud();
   }
 
-  startGame() {
+  startCountdown() {
     if (this.state.started) return;
-    this.state.started = true;
-    this.startEl?.classList.add("fg-hidden");
-    this.timer = window.setInterval(() => {
-      this.state.timeLeft -= 1;
-      this.renderState();
-      if (this.state.timeLeft <= 0) {
-        this.endGame();
+    this.startOverlayEl.style.display = "none";
+    this.countdownOverlayEl.style.display = "flex";
+    let count = 3;
+    this.countdownEl.textContent = `${count}`;
+    this.audio.countdown.currentTime = 0;
+    this.audio.countdown.play().catch(() => {});
+    const timer = window.setInterval(() => {
+      count -= 1;
+      if (count > 0) {
+        this.countdownEl.textContent = `${count}`;
+        this.audio.countdown.currentTime = 0;
+        this.audio.countdown.play().catch(() => {});
+      } else if (count === 0) {
+        this.countdownEl.textContent = "เริ่ม!";
+        this.audio.start.currentTime = 0;
+        this.audio.start.play().catch(() => {});
+      } else {
+        window.clearInterval(timer);
+        this.countdownOverlayEl.style.display = "none";
+        this.startGame();
       }
     }, 1000);
   }
 
-  generateSequence() {
-    this.state.sequence = Array.from({ length: 4 }, () => {
-      return FLOWERS[
-        Math.floor(Math.random() * FLOWERS.length)
-      ].id;
+  startGame() {
+    this.state.started = true;
+    this.audio.bgm.play().catch(() => {});
+    this.gameTimer = window.setInterval(() => this.tickGame(), 1000);
+    this.startRound();
+  }
+
+  tickGame() {
+    if (!this.state.started || this.state.ended) return;
+    this.state.timeLeft -= 1;
+    this.renderHud();
+    if (this.state.timeLeft <= 0) this.endGame();
+  }
+
+  startRound() {
+    this.customersEl.innerHTML = "";
+    this.state.customers = [];
+    this.state.selectedCustomerId = null;
+    this.state.currentInput = [];
+    this.garlandEl.innerHTML = "";
+
+    const numCustomers = ((this.state.round - 1) % 5) + 1;
+    const queue = [...CUSTOMER_PROFILES].sort(() => Math.random() - 0.5).slice(0, numCustomers);
+    queue.forEach((profile, index) => {
+      window.setTimeout(() => {
+        if (!this.state.ended) this.createCustomer(index, profile);
+      }, index * 1100);
     });
-    this.state.input = [];
-    this.renderState();
+    this.noteEl.textContent = `รอบ ${this.state.round} มีลูกค้า ${numCustomers} คน`;
   }
 
-  pickFlower(flowerId) {
-    if (!this.state.started || this.state.timeLeft <= 0) return;
+  createCustomer(id, profile) {
+    const isLeft = id % 2 === 0;
+    const offset = Math.floor(id / 2) * 14;
+    const patternLength = Math.min(15, Math.max(11, this.state.round + 10 + profile.lengthMod));
+    const colorVariety = Math.min(5, 3 + Math.floor(this.state.round / 4));
+    const colors = FLOWERS.slice(0, colorVariety).map((flower) => flower.id);
+    const pattern = Array.from({ length: patternLength }, () => colors[Math.floor(Math.random() * colors.length)]);
+    const customer = {
+      id,
+      profile,
+      pattern,
+      patience: profile.patience,
+      maxPatience: profile.patience,
+      done: false,
+      isLeft,
+      state: "normal",
+      orderText: ORDER_DIALOGS[Math.floor(Math.random() * ORDER_DIALOGS.length)],
+      left: isLeft ? 2 + offset : null,
+      right: !isLeft ? 2 + offset : null,
+    };
+    this.state.customers.push(customer);
+    this.renderCustomers();
+    const timer = window.setInterval(() => this.tickCustomer(customer.id), 100);
+    this.customerTimers.set(customer.id, timer);
+  }
 
-    this.state.input.push(flowerId);
-    const stepIndex = this.state.input.length - 1;
-    const expected = this.state.sequence[stepIndex];
+  tickCustomer(customerId) {
+    const customer = this.state.customers.find((entry) => entry.id === customerId);
+    if (!customer || customer.done || this.state.ended || this.state.isTimeFrozen) return;
+    const speedMult = 1 + this.state.round * 0.05;
+    customer.patience -= (customer.profile.decay + this.state.round * 0.02) * speedMult;
+    if (customer.patience <= 0) {
+      this.clearCustomerTimer(customer.id);
+      customer.done = true;
+      customer.state = "timeout";
+      this.state.combo = 0;
+      this.state.perfectStreak = 0;
+      this.state.score = Math.max(0, this.state.score - 50);
+      if (this.state.selectedCustomerId === customer.id) this.state.selectedCustomerId = null;
+      this.noteEl.textContent = "ลูกค้าหมดความอดทนไปแล้ว -50 คะแนน";
+      this.renderHud();
+      this.renderCustomers();
+      window.setTimeout(() => this.removeCustomer(customer.id), 900);
+      return;
+    }
+    if (customer.patience <= customer.maxPatience * 0.3) customer.state = "angry";
+    else if (customer.patience <= customer.maxPatience * 0.5) customer.state = "worried";
+    this.renderCustomers();
+  }
 
-    if (expected !== flowerId) {
-      this.state.score = Math.max(0, this.state.score - 5);
-      this.messageEl.textContent = "ลำดับผิด ลองเริ่มใหม่";
-      this.state.input = [];
-      this.renderState();
+  renderCustomers() {
+    this.customersEl.innerHTML = this.state.customers.map((customer) => {
+      const selected = this.state.selectedCustomerId === customer.id ? "selected" : "";
+      const moodClass = customer.state === "timeout"
+        ? "timeout"
+        : customer.state === "angry"
+        ? "angry"
+        : customer.state === "worried"
+        ? "worried"
+        : "";
+      const sprite = this.getCustomerImage(customer);
+      const patiencePercent = Math.max(0, (customer.patience / customer.maxPatience) * 100);
+      const bubbleContent = this.state.selectedCustomerId === customer.id
+        ? `<div class="fl-order">${customer.pattern.map((id) => `<img src="${FLOWERS.find((flower) => flower.id === id)?.image}" alt="${id}" />`).join("")}</div>`
+        : `<div>${customer.orderText}</div>`;
+      const tag = customer.profile.type === "vip"
+        ? "VIP"
+        : customer.profile.type === "rusher"
+        ? "รีบมาก"
+        : customer.profile.type === "tourist"
+        ? "นักท่องเที่ยว"
+        : "ทั่วไป";
+      const sideStyle = customer.isLeft ? `left:${customer.left}vw` : `right:${customer.right}vw`;
+      return `
+        <div class="fl-customer ${selected} ${moodClass}" data-id="${customer.id}" style="${sideStyle}; opacity:${customer.done ? 0 : 1}">
+          <div class="fl-patience"><div class="fl-patience-fill" style="height:${patiencePercent}%; background:${patiencePercent < 30 ? "#ff3b30" : "linear-gradient(180deg,#39d353,#0a8f41)"}"></div></div>
+          <div class="fl-bubble ${selected || customer.state === "angry" || customer.state === "timeout" ? "show" : ""}">${bubbleContent}</div>
+          <div class="fl-sprite" style="background-image:url('${sprite}')"></div>
+          <div class="fl-tag">${tag}</div>
+        </div>
+      `;
+    }).join("");
+
+    this.customersEl.querySelectorAll(".fl-customer[data-id]").forEach((node) => {
+      node.addEventListener("click", () => this.selectCustomer(Number(node.getAttribute("data-id"))));
+    });
+  }
+
+  getCustomerImage(customer) {
+    const suffix = customer.state === "angry" ? "-angry" : customer.state === "worried" ? "-worried" : "";
+    return `${ASSET_BASE}/image/${customer.profile.image}${suffix}.png`;
+  }
+
+  selectCustomer(customerId) {
+    if (this.state.ended) return;
+    const customer = this.state.customers.find((entry) => entry.id === customerId && !entry.done);
+    if (!customer) return;
+    this.state.selectedCustomerId = customerId;
+    this.state.currentInput = [];
+    this.garlandEl.innerHTML = "";
+    this.noteEl.textContent = `เลือกลูกค้าแล้ว: ${customer.profile.type.toUpperCase()} · ร้อยตามแบบให้ครบ`;
+    this.renderCustomers();
+  }
+
+  playAdd(color) {
+    if (this.state.ended || !this.state.selectedCustomerId) return;
+    const customer = this.state.customers.find((entry) => entry.id === this.state.selectedCustomerId);
+    if (!customer || customer.done) return;
+    const expected = customer.pattern[this.state.currentInput.length];
+    if (color !== expected) {
+      this.state.perfectStreak = 0;
+      this.state.combo = 0;
+      this.shellEl.classList.add("fl-shake");
+      window.setTimeout(() => this.shellEl.classList.remove("fl-shake"), 350);
+      customer.done = true;
+      customer.state = "angry";
+      customer.orderText = ANGRY_DIALOGS[Math.floor(Math.random() * ANGRY_DIALOGS.length)];
+      this.noteEl.textContent = customer.orderText;
+      this.clearCustomerTimer(customer.id);
+      this.state.selectedCustomerId = null;
+      this.state.currentInput = [];
+      this.garlandEl.innerHTML = "";
+      this.renderCustomers();
+      window.setTimeout(() => this.removeCustomer(customer.id), 700);
       return;
     }
 
-    this.messageEl.textContent = "ถูกต้อง";
+    this.state.currentInput.push(color);
+    this.state.perfectStreak += 1;
+    const img = document.createElement("img");
+    img.src = FLOWERS.find((flower) => flower.id === color)?.image ?? "";
+    img.alt = color;
+    img.style.boxShadow = `0 0 12px ${FLOWERS.find((flower) => flower.id === color)?.glow ?? "#fff"}`;
+    this.garlandEl.appendChild(img);
 
-    if (this.state.input.length === this.state.sequence.length) {
-      this.state.score += 25;
-      this.messageEl.textContent = "ร้อยมาลัยสำเร็จ +25";
-      this.generateSequence();
-      return;
-    }
-
-    this.renderState();
+    if (this.state.currentInput.length === customer.pattern.length) this.finishCustomer(customer.id);
   }
 
-  renderState() {
-    if (this.scoreEl) this.scoreEl.textContent = this.state.score;
-    if (this.timeEl) this.timeEl.textContent = this.state.timeLeft;
-    if (this.sequenceEl) {
-      this.sequenceEl.innerHTML = this.state.sequence
-        .map((id) => {
-          const flower = FLOWERS.find((item) => item.id === id);
-          return `<div class="fg-chip">${flower?.icon || "?"}</div>`;
-        })
-        .join("");
+  finishCustomer(customerId) {
+    const customer = this.state.customers.find((entry) => entry.id === customerId);
+    if (!customer) return;
+    this.state.combo += 1;
+    if (this.state.combo >= 10 && !this.state.feverMode) {
+      this.state.feverMode = true;
+      this.shellEl.classList.add("fl-fever");
+      window.setTimeout(() => {
+        this.state.feverMode = false;
+        this.shellEl.classList.remove("fl-fever");
+      }, 5000);
     }
-    if (this.inputEl) {
-      this.inputEl.innerHTML = this.state.input
-        .map((id) => {
-          const flower = FLOWERS.find((item) => item.id === id);
-          return `<div class="fg-chip">${flower?.icon || "?"}</div>`;
-        })
-        .join("");
+    const streakBonus = Math.floor(this.state.perfectStreak * 5);
+    const multiplier = (this.state.feverMode ? 2 : 1) * customer.profile.scoreMult;
+    this.state.score += Math.floor((150 + this.state.combo * 20 + streakBonus) * multiplier);
+    if (customer.profile.timeBonus > 0) this.state.timeLeft += customer.profile.timeBonus;
+    customer.done = true;
+    customer.state = "normal";
+    this.clearCustomerTimer(customer.id);
+    this.noteEl.textContent = `ร้อยสำเร็จ! คอมโบ x${this.state.combo}`;
+    this.renderHud();
+    this.renderCustomers();
+    this.state.selectedCustomerId = null;
+    this.state.currentInput = [];
+    window.setTimeout(() => {
+      this.garlandEl.innerHTML = "";
+      this.removeCustomer(customer.id);
+    }, 1000);
+  }
+
+  removeCustomer(customerId) {
+    this.state.customers = this.state.customers.filter((entry) => entry.id !== customerId);
+    this.renderCustomers();
+    this.checkRoundEnd();
+  }
+
+  useWater() {
+    if (this.state.itemWaterCount <= 0 || this.state.isTimeFrozen || this.state.ended) return;
+    this.state.itemWaterCount -= 1;
+    this.state.isTimeFrozen = true;
+    this.shellEl.classList.add("fl-frozen");
+    this.noteEl.textContent = "ใช้น้ำอบแล้ว เวลาความอดทนหยุด 5 วินาที";
+    this.renderHud();
+    window.setTimeout(() => {
+      this.state.isTimeFrozen = false;
+      this.shellEl.classList.remove("fl-frozen");
+    }, 5000);
+  }
+
+  usePowder() {
+    if (this.state.itemPowderCount <= 0 || this.state.ended || !this.state.selectedCustomerId) return;
+    this.state.itemPowderCount -= 1;
+    this.renderHud();
+    const customer = this.state.customers.find((entry) => entry.id === this.state.selectedCustomerId);
+    if (!customer) return;
+    this.state.currentInput = [...customer.pattern];
+    this.garlandEl.innerHTML = customer.pattern.map((id) => `<img src="${FLOWERS.find((flower) => flower.id === id)?.image}" alt="${id}" />`).join("");
+    this.noteEl.textContent = "ใช้ธูปช่วยร้อยเสร็จทันที!";
+    this.finishCustomer(customer.id);
+  }
+
+  checkRoundEnd() {
+    if (this.state.ended) return;
+    if (this.state.customers.length === 0) {
+      this.state.round += 1;
+      this.renderHud();
+      this.startRound();
     }
+  }
+
+  renderHud() {
+    this.timeEl.textContent = `${this.state.timeLeft}`;
+    this.scoreEl.textContent = `${this.state.score}`;
+    this.waterEl.textContent = `${this.state.itemWaterCount}`;
+    this.powderEl.textContent = `${this.state.itemPowderCount}`;
+    this.root.querySelector("#waterBtn").disabled = this.state.itemWaterCount <= 0 || this.state.ended;
+    this.root.querySelector("#powderBtn").disabled = this.state.itemPowderCount <= 0 || this.state.ended || !this.state.selectedCustomerId;
   }
 
   endGame() {
-    window.clearInterval(this.timer);
-    this.timer = null;
-    if (this.finalEl) this.finalEl.textContent = this.state.score;
-    this.resultEl?.classList.remove("fg-hidden");
+    if (this.state.ended) return;
+    this.state.ended = true;
+    window.clearInterval(this.gameTimer);
+    this.customerTimers.forEach((timer) => window.clearInterval(timer));
+    this.customerTimers.clear();
+    this.audio.bgm.pause();
+    this.finalScoreEl.textContent = `${this.state.score}`;
+    this.finalMetaEl.textContent = `รอบ ${this.state.round} · คอมโบสูงสุดล่าสุด ${this.state.combo} · Perfect streak ${this.state.perfectStreak}`;
+    this.resultOverlayEl.style.display = "flex";
+  }
+
+  clearCustomerTimer(customerId) {
+    const timer = this.customerTimers.get(customerId);
+    if (timer) {
+      window.clearInterval(timer);
+      this.customerTimers.delete(customerId);
+    }
   }
 
   cleanup() {
-    window.clearInterval(this.timer);
-    this.timer = null;
-    if (this.root?.parentNode) {
-      this.root.parentNode.removeChild(this.root);
-    }
+    window.clearInterval(this.gameTimer);
+    this.customerTimers.forEach((timer) => window.clearInterval(timer));
+    this.customerTimers.clear();
+    Object.values(this.audio).forEach((audio) => {
+      if (audio?.pause) {
+        audio.pause();
+        audio.currentTime = 0;
+      }
+    });
+    if (this.root?.parentNode) this.root.parentNode.removeChild(this.root);
     this.root = null;
   }
 }
