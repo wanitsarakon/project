@@ -63,7 +63,9 @@ export default class TugOfWarScene extends Phaser.Scene {
   ═══════════════════════════════════ */
   _mountOverlay() {
     // ลบ overlay เก่าถ้ายังค้างอยู่
+    this._cleanupDone = false;
     this._removeOverlay();
+    this._cleanupDone = false;
 
     const overlay = document.createElement("div");
     overlay.id = "tug-overlay";
@@ -79,6 +81,7 @@ export default class TugOfWarScene extends Phaser.Scene {
     overlay.innerHTML = this._buildHTML();
     document.body.appendChild(overlay);
     this._overlay = overlay;
+    this._cleanupDone = false;
 
     // inject CSS
     this._injectStyle();

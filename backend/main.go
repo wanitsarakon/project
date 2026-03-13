@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -84,9 +85,16 @@ func main() {
 	   CORS
 	========================= */
 	r.Use(cors.New(cors.Config{
-		AllowOrigins: []string{
-			"http://localhost:5173",
-			"http://127.0.0.1:5173",
+		AllowOriginFunc: func(origin string) bool {
+			if origin == "" {
+				return true
+			}
+			parsed, err := url.Parse(origin)
+			if err != nil {
+				return false
+			}
+			host := parsed.Hostname()
+			return host == "localhost" || host == "127.0.0.1"
 		},
 		AllowMethods: []string{
 			"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS",

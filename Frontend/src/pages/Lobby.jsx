@@ -16,55 +16,41 @@ export default function Lobby({
   onLeave,
   onStartGame,
 }) {
-
-  /* =========================
-     STATE
-  ========================= */
-
   const [players, setPlayers] = useState([]);
   const [starting, setStarting] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
-
-  /* =========================
-     REFS
-  ========================= */
+  const [savingPrizes, setSavingPrizes] = useState(false);
+  const [roomMeta, setRoomMeta] = useState({
+    name: "",
+    mode: "solo",
+    prizes: [],
+  });
+  const [prizeDraft, setPrizeDraft] = useState([]);
 
   const wsRef = useRef(null);
   const mountedRef = useRef(false);
   const startedRef = useRef(false);
-  const isMeHostRef = useRef(false);
-
-  /* =========================
-     SAFE STATE UPDATE
-  ========================= */
 
   const safeSet = useCallback((fn) => {
     if (mountedRef.current) fn();
   }, []);
 
-  /* =========================
-     LOAD ROOM DATA
-  ========================= */
-
   const loadRoom = useCallback(async () => {
-
     if (!roomCode) return;
 
     try {
-
-      const res = await fetch(
-        `${API_BASE}/rooms/${roomCode}`
-      );
-
+      const res = await fetch(`${API_BASE}/rooms/${roomCode}`);
       if (!res.ok) throw new Error("room load failed");
 
       const data = await res.json();
-
       const list = Array.isArray(data?.players)
         ? data.players
         : [];
+      const nextPrizes = Array.isArray(data?.prizes)
+        ? data.prizes
+        : [];
 
-      safeSet(() =>
+      safeSet(() => {
         setPlayers(
           list.map((p) => ({
             id: p?.id,
@@ -73,133 +59,57 @@ export default function Lobby({
             connected: p?.connected !== false,
             total_score: p?.score ?? 0,
           }))
-        )
-      );
-
+        );
+        setRoomMeta({
+          name: data?.name ?? "Thai Festival Room",
+          mode: data?.mode ?? "solo",
+          prizes: nextPrizes,
+        });
+        setPrizeDraft(nextPrizes.length ? nextPrizes : [""]);
+      });
     } catch (err) {
-
-      console.error("❌ loadRoom failed", err);
-
+      console.error("loadRoom failed", err);
     }
-
   }, [roomCode, safeSet]);
-
-  /* =========================
-     WS MESSAGE HANDLER
-  ========================= */
 
   const handleMessage = useCallback(
     (msg) => {
-
-      if (!mountedRef.current) return;
-      if (!msg?.type) return;
+      if (!mountedRef.current || !msg?.type) return;
 
       switch (msg.type) {
-
         case "player_join":
-
-          safeSet(() =>
-            setPlayers((prev) => {
-
-              const exists = prev.find(
-                (p) => p?.id === msg?.player?.id
-              );
-
-              if (exists) {
-
-                return prev.map((p) =>
-                  p?.id === msg?.player?.id
-                    ? { ...p, connected: true }
-                    : p
-                );
-
-              }
-
-              return [
-                ...prev,
-                {
-                  id: msg?.player?.id,
-                  name: msg?.player?.name ?? "player",
-                  isHost: msg?.player?.is_host === true,
-                  connected: true,
-                  total_score: 0,
-                },
-              ];
-
-            })
-          );
-
-          break;
-
         case "player_disconnect":
-
-          safeSet(() =>
-            setPlayers((prev) =>
-              prev.map((p) =>
-                p?.id === msg?.player_id
-                  ? { ...p, connected: false }
-                  : p
-              )
-            )
-          );
-
+        case "room_update":
+          loadRoom();
           break;
-
         case "game_start":
-
-          console.log("🎮 GAME START EVENT");
-
           if (startedRef.current) return;
-
           startedRef.current = true;
-
           safeSet(() => setGameStarted(true));
           onStartGame?.();
-
           break;
-
         default:
           break;
-
       }
-
     },
-    [onStartGame, safeSet]
+    [loadRoom, onStartGame, safeSet]
   );
 
-  /* =========================
-     MOUNT
-  ========================= */
-
   useEffect(() => {
-
     mountedRef.current = true;
     startedRef.current = false;
-
     setGameStarted(false);
-
     loadRoom();
 
     return () => {
-
       mountedRef.current = false;
-
       wsRef.current?.close();
       wsRef.current = null;
-
     };
-
   }, [loadRoom]);
 
-  /* =========================
-     CONNECT WEBSOCKET
-  ========================= */
-
   useEffect(() => {
-
-    if (!player?.id) return;
-    if (!roomCode) return;
-    if (wsRef.current) return;
+    if (!player?.id || !roomCode || wsRef.current) return;
 
     wsRef.current = createRoomSocket(
       roomCode,
@@ -208,17 +118,10 @@ export default function Lobby({
     );
 
     return () => {
-
       wsRef.current?.close();
       wsRef.current = null;
-
     };
-
   }, [roomCode, player?.id, handleMessage]);
-
-  /* =========================
-     HOST CHECK
-  ========================= */
 
   const isMeHost = player
     ? players.some(
@@ -226,172 +129,227 @@ export default function Lobby({
       )
     : false;
 
-  useEffect(() => {
-    isMeHostRef.current = isMeHost;
-  }, [isMeHost]);
-
-  /* =========================
-     START GAME
-  ========================= */
-
   const startGame = async () => {
-
-    if (!player?.id) return;
-    if (!isMeHost) return;
-    if (starting) return;
+    if (!player?.id || !isMeHost || starting) return;
 
     setStarting(true);
 
     try {
-
       const res = await fetch(
         `${API_BASE}/rooms/${roomCode}/start?player_id=${player.id}`,
         { method: "POST" }
       );
 
       if (!res.ok) {
-
         const text = await res.text();
-        console.error(text);
-
-        throw new Error("start failed");
-
+        throw new Error(text || "start failed");
       }
-
     } catch (err) {
-
-      console.error("❌ startGame error", err);
-
+      console.error("startGame error", err);
       alert("เริ่มเกมไม่สำเร็จ");
-
     } finally {
-
       safeSet(() => setStarting(false));
-
     }
-
   };
 
-  /* =========================
-     UI
-  ========================= */
+  const savePrizes = async () => {
+    if (!isMeHost || !player?.id || savingPrizes) return;
+
+    setSavingPrizes(true);
+
+    try {
+      const res = await fetch(
+        `${API_BASE}/rooms/${roomCode}/prizes?player_id=${player.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            prizes: prizeDraft
+              .map((item) => String(item || "").trim())
+              .filter(Boolean),
+          }),
+        }
+      );
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "save prizes failed");
+      }
+
+      safeSet(() =>
+        setRoomMeta((prev) => ({
+          ...prev,
+          prizes: Array.isArray(data?.prizes) ? data.prizes : [],
+        }))
+      );
+      loadRoom();
+    } catch (err) {
+      console.error("savePrizes error", err);
+      alert(err?.message || "บันทึกรางวัลไม่สำเร็จ");
+    } finally {
+      safeSet(() => setSavingPrizes(false));
+    }
+  };
 
   return (
-
     <div className="home-root">
-
       <div className="ui-panel lobby-panel">
-
         <h2 className="lobby-title">
-          🎪 Lobby ห้อง {roomCode}
+          Lobby ห้อง {roomCode}
         </h2>
 
-        {/* PLAYER INFO */}
-
         <div className="lobby-me">
-
           คุณ: <b>{player?.name ?? "player"}</b>
-
           {isMeHost && (
             <span className="host-badge">
               HOST
             </span>
           )}
-
         </div>
 
-        {/* PLAYER LIST */}
+        <div className="lobby-card">
+          <div className="lobby-card-title">
+            ข้อมูลห้อง
+          </div>
+          <div>ชื่อห้อง: {roomMeta.name || "Thai Festival Room"}</div>
+          <div>
+            โหมด: {roomMeta.mode === "team" ? "ทีม" : "เดี่ยว"}
+          </div>
+        </div>
+
+        <div className="lobby-card">
+          <div className="lobby-card-title">
+            ของรางวัล
+          </div>
+
+          {isMeHost && !gameStarted ? (
+            <>
+              {prizeDraft.map((prize, index) => (
+                <div
+                  key={`prize-${index}`}
+                  className="lobby-prize-row"
+                >
+                  <span className="lobby-prize-rank">
+                    {index + 1}
+                  </span>
+                  <input
+                    className="room-input"
+                    style={{ width: "100%", margin: 0 }}
+                    value={prize}
+                    placeholder={`รางวัลอันดับ ${index + 1}`}
+                    onChange={(e) =>
+                      setPrizeDraft((prev) =>
+                        prev.map((item, i) =>
+                          i === index ? e.target.value : item
+                        )
+                      )
+                    }
+                    disabled={savingPrizes}
+                  />
+                  {prizeDraft.length > 1 && (
+                    <button
+                      className="role-btn"
+                      style={{ padding: "10px 14px" }}
+                      onClick={() =>
+                        setPrizeDraft((prev) =>
+                          prev.filter((_, i) => i !== index)
+                        )
+                      }
+                      disabled={savingPrizes}
+                    >
+                      ลบ
+                    </button>
+                  )}
+                </div>
+              ))}
+
+              <div className="lobby-prize-actions">
+                <button
+                  className="role-btn"
+                  onClick={() =>
+                    setPrizeDraft((prev) => [...prev, ""])
+                  }
+                  disabled={savingPrizes || prizeDraft.length >= 10}
+                >
+                  เพิ่มรางวัล
+                </button>
+                <button
+                  className="confirm-btn"
+                  style={{ marginTop: 0 }}
+                  onClick={savePrizes}
+                  disabled={savingPrizes}
+                >
+                  {savingPrizes ? "กำลังบันทึก..." : "บันทึกรางวัล"}
+                </button>
+              </div>
+            </>
+          ) : roomMeta.prizes?.length > 0 ? (
+            <ul className="lobby-prize-list">
+              {roomMeta.prizes.map((prize, index) => (
+                <li key={`${prize}-${index}`}>
+                  อันดับ {index + 1}: {prize}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div>ยังไม่ได้ตั้งของรางวัล</div>
+          )}
+        </div>
 
         <div className="player-section">
-
-          <h3>👥 ผู้เล่น</h3>
+          <h3>ผู้เล่น</h3>
 
           <ul className="player-list">
-
             {players?.map((p) => (
-
               <li
                 key={p?.id ?? Math.random()}
                 className={`player-item ${
                   p?.isHost ? "host" : ""
                 }`}
               >
-
                 <span>
-
-                  {p?.connected ? "🟢" : "🔴"}{" "}
-                  {p?.name}
-
+                  {p?.connected ? "🟢" : "🔴"} {p?.name}
                   {p?.isHost && " ⭐"}
-
                 </span>
-
                 <span className="score">
-
                   {p?.total_score ?? 0}
-
                 </span>
-
               </li>
-
             ))}
-
           </ul>
-
         </div>
 
-        {/* HOST BUTTON */}
-
         {isMeHost && !gameStarted && (
-
           <button
             className="start-btn big"
             onClick={startGame}
             disabled={starting}
           >
-
-            {starting
-              ? "⏳ กำลังเริ่มเกม..."
-              : "▶ เริ่มเกม"}
-
+            {starting ? "กำลังเริ่มเกม..." : "เริ่มเกม"}
           </button>
-
         )}
-
-        {/* HOST WAIT */}
 
         {isMeHost && gameStarted && (
-
           <div className="host-wait">
-            ⏳ เกมเริ่มแล้ว <br />
-            ผู้เล่นกำลังเล่นมินิเกม
+            เกมเริ่มแล้ว
+            <br />
+            ระบบกำลังพาผู้เล่นเข้าสู่รอบแข่งขัน
           </div>
-
         )}
-
-        {/* PLAYER WAIT */}
 
         {!isMeHost && !gameStarted && (
-
           <div className="player-wait">
-            ⏳ รอ Host เริ่มเกม
+            รอ Host เริ่มเกม
           </div>
-
         )}
-
-        {/* LEAVE */}
 
         <button
           className="back-btn"
           onClick={onLeave}
         >
-          ← ออกจากห้อง
+          ออกจากห้อง
         </button>
-
       </div>
-
     </div>
-
   );
-
 }

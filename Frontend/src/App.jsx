@@ -5,11 +5,13 @@ import Host from "./pages/Host";
 import RoomList from "./pages/RoomList";
 import Lobby from "./pages/Lobby";
 import FestivalMap from "./pages/FestivalMap";
+import SummaryPage from "./pages/SummaryPage";
 
 export default function App() {
 
   const [view, setView] = useState("home");
   const [session, setSession] = useState(null);
+  const [summary, setSummary] = useState(null);
 
   /* =========================
      NAV HELPERS
@@ -17,6 +19,7 @@ export default function App() {
 
   const goHome = () => {
     setSession(null);
+    setSummary(null);
     setView("home");
   };
 
@@ -28,6 +31,7 @@ export default function App() {
     }
 
     setSession({ roomCode, player });
+    setSummary(null);
     setView("lobby");
 
   };
@@ -150,6 +154,28 @@ export default function App() {
         roomCode={session.roomCode}
         player={session.player}
         onLeave={leaveRoom}
+        onShowSummary={(data) => {
+          setSummary(data);
+          setView("summary");
+        }}
+      />
+    );
+
+  }
+
+  if (view === "summary") {
+
+    if (!session?.player?.id || !session?.roomCode) {
+      goHome();
+      return null;
+    }
+
+    return (
+      <SummaryPage
+        roomCode={session.roomCode}
+        player={session.player}
+        summary={summary}
+        onExit={goHome}
       />
     );
 

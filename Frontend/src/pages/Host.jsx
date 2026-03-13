@@ -28,6 +28,11 @@ export default function Host({
   const [maxPlayers, setMaxPlayers] = useState(8);
   const [isPrivate, setIsPrivate] = useState(false);
   const [password, setPassword] = useState("");
+  const [prizes, setPrizes] = useState([
+    "ตุ๊กตาตัวใหญ่",
+    "ชุดขนมไทย",
+    "พวงกุญแจงานวัด",
+  ]);
 
   /* =========================
      REFS
@@ -107,6 +112,9 @@ export default function Host({
           mode,
           host_name: hostName,
           max_players: maxPlayers,
+          prizes: prizes
+            .map((item) => normalize(item))
+            .filter(Boolean),
           room_password: isPrivate ? cleanPassword : null,
         }),
       });
@@ -260,6 +268,75 @@ export default function Host({
                 disabled={loading}
               />
             )}
+
+            <div style={{ marginTop: 18, textAlign: "left" }}>
+              <div style={{ color: "#fff", marginBottom: 8 }}>
+                🏆 ของรางวัลตามอันดับ
+              </div>
+
+              {prizes.map((prize, index) => (
+                <div
+                  key={`prize-${index}`}
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    alignItems: "center",
+                    marginBottom: 8,
+                  }}
+                >
+                  <span
+                    style={{
+                      minWidth: 28,
+                      color: "#ffd966",
+                      fontWeight: 700,
+                    }}
+                  >
+                    {index + 1}
+                  </span>
+                  <input
+                    className="room-input"
+                    style={{ width: "100%", margin: 0 }}
+                    placeholder={`รางวัลอันดับ ${index + 1}`}
+                    value={prize}
+                    onChange={(e) =>
+                      setPrizes((prev) =>
+                        prev.map((item, i) =>
+                          i === index ? e.target.value : item
+                        )
+                      )
+                    }
+                    disabled={loading}
+                  />
+                  {prizes.length > 1 && (
+                    <button
+                      type="button"
+                      className="role-btn"
+                      style={{ padding: "10px 14px" }}
+                      onClick={() =>
+                        setPrizes((prev) =>
+                          prev.filter((_, i) => i !== index)
+                        )
+                      }
+                      disabled={loading}
+                    >
+                      ลบ
+                    </button>
+                  )}
+                </div>
+              ))}
+
+              <button
+                type="button"
+                className="role-btn"
+                style={{ marginTop: 6 }}
+                onClick={() =>
+                  setPrizes((prev) => [...prev, ""])
+                }
+                disabled={loading || prizes.length >= 10}
+              >
+                เพิ่มรางวัล
+              </button>
+            </div>
 
             <button
               className="confirm-btn"

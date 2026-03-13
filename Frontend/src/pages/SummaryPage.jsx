@@ -6,36 +6,16 @@ import React, {
   useCallback,
 } from "react";
 
-/**
- * SummaryPage
- *
- * props:
- * - roomCode
- * - player        { id, name, team? }
- * - results       [{ player_id, name, total_score, team? }]
- * - mode          "solo" | "team"
- * - isHost
- * - onExit        () => void
- */
-
 export default function SummaryPage({
   roomCode,
   player,
-  results = [],
-  mode = "solo",
-  isHost = false,
+  summary,
   onExit,
 }) {
-  /* =========================
-     STATE / REFS
-  ========================= */
-  const [countdown, setCountdown] = useState(15);
+  const [countdown, setCountdown] = useState(20);
   const exitingRef = useRef(false);
   const timerRef = useRef(null);
 
-  /* =========================
-     EXIT (SAFE)
-  ========================= */
   const triggerExit = useCallback(() => {
     if (exitingRef.current) return;
     exitingRef.current = true;
@@ -48,9 +28,6 @@ export default function SummaryPage({
     onExit?.();
   }, [onExit]);
 
-  /* =========================
-     COUNTDOWN
-  ========================= */
   useEffect(() => {
     timerRef.current = setInterval(() => {
       setCountdown((prev) => {
@@ -67,197 +44,205 @@ export default function SummaryPage({
     };
   }, [triggerExit]);
 
-  /* =========================
-     SOLO RESULT
-  ========================= */
-  const soloResults = useMemo(() => {
-    if (!Array.isArray(results)) return [];
+  const mode = summary?.mode ?? "solo";
+  const prizes = Array.isArray(summary?.prizes)
+    ? summary.prizes
+    : [];
+  const results = Array.isArray(summary?.results)
+    ? summary.results
+    : [];
+  const podium = Array.isArray(summary?.podium)
+    ? summary.podium
+    : [];
+  const teams = Array.isArray(summary?.teams)
+    ? summary.teams
+    : [];
 
-    return [...results]
-      .map((r) => ({
-        player_id: r.player_id,
-        name: r.name || "ผู้เล่น",
-        score: r.total_score ?? 0,
-      }))
-      .sort((a, b) => b.score - a.score)
-      .map((r, i) => ({
-        ...r,
-        rank: i + 1,
-      }));
-  }, [results]);
+  const sortedResults = useMemo(
+    () =>
+      [...results].sort((a, b) => {
+        if ((b?.total_score ?? 0) === (a?.total_score ?? 0)) {
+          return (a?.player_id ?? 0) - (b?.player_id ?? 0);
+        }
+        return (b?.total_score ?? 0) - (a?.total_score ?? 0);
+      }),
+    [results]
+  );
 
-  /* =========================
-     TEAM RESULT
-  ========================= */
-  const teamResults = useMemo(() => {
-    if (!Array.isArray(results)) return [];
-
-    const map = {}; // team => { team, total, members[] }
-
-    results.forEach((p) => {
-      if (!p.team) return;
-
-      if (!map[p.team]) {
-        map[p.team] = {
-          team: p.team,
-          total: 0,
-          members: [],
-        };
-      }
-
-      map[p.team].total += p.total_score ?? 0;
-      map[p.team].members.push({
-        id: p.player_id,
-        name: p.name,
-        score: p.total_score ?? 0,
-      });
-    });
-
-    return Object.values(map)
-      .sort((a, b) => b.total - a.total)
-      .map((t, i) => ({
-        ...t,
-        rank: i + 1,
-      }));
-  }, [results]);
-
-  /* =========================
-     HELPERS
-  ========================= */
-  const rankEmoji = (rank) => {
+  const rankIcon = (rank) => {
     if (rank === 1) return "🥇";
     if (rank === 2) return "🥈";
     if (rank === 3) return "🥉";
-    return "🎮";
+    return "🎯";
   };
 
-  /* =========================
-     UI
-  ========================= */
   return (
-    <div className="summary-root">
-      <div className="panel">
-        <h2>🏆 สรุปผลการแข่งขัน</h2>
-        <div style={{ fontSize: 13, color: "#666" }}>
-          ห้อง {roomCode}
+    <div className="home-root">
+      <div className="summary-shell">
+        <div className="summary-hero">
+          <div className="summary-kicker">
+            ห้อง {roomCode}
+          </div>
+          <h1 className="summary-title">
+            สรุปผลผู้ชนะ
+          </h1>
+          <div className="summary-subtitle">
+            {summary?.room_name || "Thai Festival Room"}
+          </div>
         </div>
 
-        <hr />
+        <div className="summary-grid">
+          <section className="summary-panel">
+            <div className="summary-panel-title">
+              Podium
+            </div>
 
-        {/* =========================
-            SOLO MODE
-        ========================= */}
-        {mode === "solo" && (
-          <ul style={{ listStyle: "none", padding: 0 }}>
-            {soloResults.map((r) => {
-              const me = r.player_id === player?.id;
+            {podium.length > 0 ? (
+              <div className="summary-podium">
+                {podium.map((entry, index) => {
+                  const rank = index + 1;
+                  const mine =
+                    mode === "team"
+                      ? entry?.members?.some(
+                          (member) =>
+                            member?.player_id === player?.id
+                        )
+                      : entry?.player_id === player?.id;
 
-              return (
-                <li
-                  key={r.player_id}
-                  style={{
-                    marginBottom: 10,
-                    padding: "10px 12px",
-                    borderRadius: 10,
-                    background: me ? "#fff3cd" : "#fff",
-                    border: me
-                      ? "2px solid #f1c40f"
-                      : "none",
-                  }}
-                >
-                  <b>
-                    {rankEmoji(r.rank)} อันดับ {r.rank} —{" "}
-                    {r.name}
-                    {me && " (คุณ)"}
-                  </b>
-                  <div>คะแนน: {r.score}</div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-
-        {/* =========================
-            TEAM MODE
-        ========================= */}
-        {mode === "team" && (
-          <ul style={{ listStyle: "none", padding: 0 }}>
-            {teamResults.map((t) => {
-              const isMyTeam = t.team === player?.team;
-
-              return (
-                <li
-                  key={t.team}
-                  style={{
-                    marginBottom: 14,
-                    padding: "12px",
-                    borderRadius: 12,
-                    background: isMyTeam
-                      ? "#e8f8f5"
-                      : "#fff",
-                    border: isMyTeam
-                      ? "2px solid #1abc9c"
-                      : "none",
-                  }}
-                >
-                  <div style={{ fontSize: 17, fontWeight: "bold" }}>
-                    {rankEmoji(t.rank)} ทีม {t.team} — อันดับ{" "}
-                    {t.rank}
-                  </div>
-
-                  <div style={{ marginBottom: 6 }}>
-                    คะแนนรวมทีม:{" "}
-                    <b>{t.total}</b>
-                  </div>
-
-                  <div style={{ fontSize: 14 }}>
-                    {t.members.map((m) => (
-                      <div key={m.id}>
-                        • {m.name} ({m.score})
-                        {m.id === player?.id && " ← คุณ"}
+                  return (
+                    <div
+                      key={`podium-${rank}-${entry?.team || entry?.player_id || index}`}
+                      className={`summary-podium-card rank-${rank}${
+                        mine ? " mine" : ""
+                      }`}
+                    >
+                      <div className="summary-rank">
+                        {rankIcon(rank)} อันดับ {rank}
                       </div>
-                    ))}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+                      <div className="summary-winner">
+                        {mode === "team"
+                          ? `ทีม ${entry?.team || "-"}`
+                          : entry?.name || "ผู้เล่น"}
+                      </div>
+                      <div className="summary-score">
+                        {entry?.total_score ?? 0} คะแนน
+                      </div>
+                      {entry?.prize && (
+                        <div className="summary-prize-badge">
+                          {entry.prize}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="summary-empty">
+                ยังไม่มีข้อมูลผู้ชนะ
+              </div>
+            )}
+          </section>
 
-        {/* =========================
-            FOOTER
-        ========================= */}
-        <div
-          style={{
-            marginTop: 16,
-            fontSize: 13,
-            color: "#777",
-            textAlign: "center",
-          }}
-        >
-          ⏳ ห้องจะปิดอัตโนมัติใน {countdown} วินาที
+          <section className="summary-panel">
+            <div className="summary-panel-title">
+              ของรางวัล
+            </div>
+
+            {prizes.length > 0 ? (
+              <div className="summary-prizes">
+                {prizes.map((prize, index) => (
+                  <div
+                    key={`${prize}-${index}`}
+                    className="summary-prize-row"
+                  >
+                    <span>อันดับ {index + 1}</span>
+                    <strong>{prize}</strong>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="summary-empty">
+                ห้องนี้ยังไม่ได้ตั้งของรางวัล
+              </div>
+            )}
+          </section>
+        </div>
+
+        <section className="summary-panel">
+          <div className="summary-panel-title">
+            ตารางคะแนนทั้งหมด
+          </div>
+
+          {mode === "team" ? (
+            <div className="summary-table">
+              {teams.map((teamEntry, index) => (
+                <div
+                  key={`team-${teamEntry?.team || index}`}
+                  className="summary-table-row"
+                >
+                  <div>
+                    <strong>
+                      {rankIcon(index + 1)} ทีม{" "}
+                      {teamEntry?.team || "-"}
+                    </strong>
+                    <div className="summary-row-sub">
+                      {(teamEntry?.members || [])
+                        .map((member) =>
+                          member?.player_id === player?.id
+                            ? `${member?.name} (คุณ)`
+                            : member?.name
+                        )
+                        .join(", ")}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div>{teamEntry?.total_score ?? 0}</div>
+                    {teamEntry?.prize && (
+                      <div className="summary-row-sub">
+                        {teamEntry.prize}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="summary-table">
+              {sortedResults.map((result, index) => (
+                <div
+                  key={result?.player_id || index}
+                  className={`summary-table-row${
+                    result?.player_id === player?.id ? " mine" : ""
+                  }`}
+                >
+                  <div>
+                    <strong>
+                      {rankIcon(index + 1)} {result?.name || "ผู้เล่น"}
+                      {result?.player_id === player?.id
+                        ? " (คุณ)"
+                        : ""}
+                    </strong>
+                    <div className="summary-row-sub">
+                      {result?.prize || "ไม่มีรางวัล"}
+                    </div>
+                  </div>
+                  <div>{result?.total_score ?? 0}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <div className="summary-footer">
+          ห้องจะปิดอัตโนมัติใน {countdown} วินาที
         </div>
 
         <button
           className="confirm-btn"
-          style={{ marginTop: 14 }}
           onClick={triggerExit}
         >
-          🚪 ออกจากห้อง
+          กลับหน้าแรก
         </button>
-
-        {isHost && (
-          <div
-            style={{
-              marginTop: 8,
-              fontSize: 12,
-              color: "#999",
-              textAlign: "center",
-            }}
-          >
-            (Host ไม่ต้องกดอะไร ห้องจะปิดอัตโนมัติ)
-          </div>
-        )}
       </div>
     </div>
   );

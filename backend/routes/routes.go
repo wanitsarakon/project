@@ -74,11 +74,13 @@ func RegisterRoutes(
 		room.POST("", roomCtrl.CreateRoom)      // create room
 		room.GET("", roomCtrl.ListRooms)        // list rooms
 		room.GET("/:code", roomCtrl.GetRoom)    // room detail
+		room.GET("/:code/summary", roomCtrl.GetSummary)
 		room.POST("/join", roomCtrl.JoinRoom)   // join room
 
 		/* ---------- HOST ACTION ---------- */
 
 		room.POST("/:code/start", roomCtrl.StartGame) // start session
+		room.PATCH("/:code/prizes", roomCtrl.UpdatePrizes)
 
 	}
 

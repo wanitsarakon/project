@@ -10,12 +10,17 @@ export default function FestivalMap({
   player,
   mode = "solo",
   onLeave,
+  onShowSummary,
 }) {
-
   const isHost = player?.isHost === true;
 
   const [team, setTeam] = useState([]);
   const [scores, setScores] = useState({});
+  const [roomMeta, setRoomMeta] = useState({
+    mode,
+    prizes: [],
+    name: "",
+  });
   const [roundInfo, setRoundInfo] = useState({
     currentRound: 0,
     totalRounds: 0,
@@ -26,17 +31,16 @@ export default function FestivalMap({
 
   const wsRef = useRef(null);
   const mountedRef = useRef(false);
+  const summaryShownRef = useRef(false);
 
   const safeSet = useCallback((fn) => {
     if (mountedRef.current) fn();
   }, []);
 
   const loadScoresFromServer = useCallback(async () => {
-
     if (!roomCode) return;
 
     try {
-
       const res = await fetch(`${API_BASE}/rooms/${roomCode}`);
       if (!res.ok) return;
 
@@ -49,9 +53,16 @@ export default function FestivalMap({
           p?.total_score ?? p?.score ?? 0;
       });
 
-      safeSet(() => setScores(scoreMap));
+      safeSet(() => {
+        setScores(scoreMap);
+        setRoomMeta({
+          mode: data?.mode ?? mode,
+          prizes: Array.isArray(data?.prizes) ? data.prizes : [],
+          name: data?.name ?? "Thai Festival Room",
+        });
+      });
 
-      if (mode === "team" && player?.id) {
+      if ((data?.mode ?? mode) === "team" && player?.id) {
         const me = data.players.find(
           (p) => p?.id === player.id
         );
@@ -71,57 +82,66 @@ export default function FestivalMap({
           );
         }
       }
-
     } catch (err) {
-
-      console.error("❌ loadScoresFromServer:", err);
-
+      console.error("loadScoresFromServer:", err);
     }
-
   }, [mode, player?.id, roomCode, safeSet]);
 
-  const submitScore = useCallback(async ({
-    roundId,
-    score,
-    meta = null,
-  }) => {
+  const loadSummary = useCallback(async () => {
+    if (!roomCode || summaryShownRef.current) return;
 
-    if (!roundId || !player?.id) return;
+    summaryShownRef.current = true;
 
     try {
-
       const res = await fetch(
-        `${API_BASE}/rounds/${roundId}/submit`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            player_id: player.id,
-            score: Math.max(0, Math.floor(score || 0)),
-            meta,
-          }),
-        }
+        `${API_BASE}/rooms/${roomCode}/summary`
       );
-
+      const data = await res.json();
       if (!res.ok) {
-        const data =
-          await res.json().catch(() => ({}));
-        console.error("❌ submitScore failed:", data);
+        throw new Error(data?.error || "summary load failed");
       }
-
+      onShowSummary?.(data);
     } catch (err) {
-
-      console.error("❌ submitScore error:", err);
-
+      console.error("loadSummary error:", err);
+      summaryShownRef.current = false;
     }
+  }, [onShowSummary, roomCode]);
 
-  }, [player?.id]);
+  const submitScore = useCallback(
+    async ({ roundId, score, meta = null }) => {
+      if (!roundId || !player?.id) return;
+
+      try {
+        const res = await fetch(
+          `${API_BASE}/rounds/${roundId}/submit`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              player_id: player.id,
+              score: Math.max(0, Math.floor(score || 0)),
+              meta,
+            }),
+          }
+        );
+
+        if (!res.ok) {
+          const data =
+            await res.json().catch(() => ({}));
+          console.error("submitScore failed:", data);
+        }
+      } catch (err) {
+        console.error("submitScore error:", err);
+      }
+    },
+    [player?.id]
+  );
 
   useEffect(() => {
-
     mountedRef.current = true;
+    summaryShownRef.current = false;
 
     if (!roomCode || !player?.id) {
       return () => {
@@ -154,16 +174,13 @@ export default function FestivalMap({
     loadScoresFromServer();
 
     return () => {
-
       mountedRef.current = false;
 
       if (wsRef.current) {
         wsRef.current.close();
         wsRef.current = null;
       }
-
     };
-
   }, [
     loadScoresFromServer,
     mode,
@@ -173,17 +190,14 @@ export default function FestivalMap({
   ]);
 
   useEffect(() => {
-
     if (!wsRef.current) return undefined;
 
     const socket = wsRef.current;
-
     if (typeof socket.subscribe !== "function") {
       return undefined;
     }
 
     return socket.subscribe((msg) => {
-
       if (!msg?.type) return;
 
       if (msg.type === "round_start") {
@@ -206,20 +220,28 @@ export default function FestivalMap({
           }));
           setStartingRound(false);
         });
+        loadScoresFromServer();
+        if (msg.game_finished) {
+          loadSummary();
+        }
       }
 
-    });
+      if (msg.type === "game_finished") {
+        loadSummary();
+      }
 
-  }, [safeSet]);
+      if (msg.type === "room_update") {
+        loadScoresFromServer();
+      }
+    });
+  }, [loadScoresFromServer, loadSummary, safeSet]);
 
   const startNextRound = useCallback(async () => {
-
     if (!isHost || !roomCode || startingRound) return;
 
     setStartingRound(true);
 
     try {
-
       const res = await fetch(
         `${API_BASE}/rooms/${roomCode}/round/start?player_id=${player.id}`,
         { method: "POST" }
@@ -232,21 +254,68 @@ export default function FestivalMap({
           data?.error || "start round failed"
         );
       }
-
     } catch (err) {
-
-      console.error("❌ startNextRound:", err);
+      console.error("startNextRound:", err);
       alert(err?.message || "เริ่มรอบไม่สำเร็จ");
       safeSet(() => setStartingRound(false));
-
     }
-
   }, [isHost, player?.id, roomCode, safeSet, startingRound]);
 
+  const rewardBar = (
+    <div
+      style={{
+        width: "100%",
+        maxWidth: 680,
+        background: "rgba(255,255,255,0.94)",
+        borderRadius: 18,
+        padding: 16,
+        marginBottom: 14,
+        boxShadow: "0 10px 24px rgba(0,0,0,0.14)",
+      }}
+    >
+      <div
+        style={{
+          fontWeight: 700,
+          fontSize: 18,
+          color: "#7a4a1f",
+          marginBottom: 8,
+        }}
+      >
+        ของรางวัลประจำห้อง
+      </div>
+      {roomMeta.prizes?.length ? (
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 10,
+          }}
+        >
+          {roomMeta.prizes.map((prize, index) => (
+            <div
+              key={`${prize}-${index}`}
+              style={{
+                padding: "8px 12px",
+                borderRadius: 999,
+                background: "#fff4df",
+                color: "#5b2c00",
+                fontWeight: 600,
+              }}
+            >
+              #{index + 1} {prize}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ color: "#7a4a1f" }}>
+          ยังไม่ได้ตั้งของรางวัล
+        </div>
+      )}
+    </div>
+  );
+
   if (isHost) {
-
     return (
-
       <div
         style={{
           minHeight: "100vh",
@@ -261,6 +330,7 @@ export default function FestivalMap({
           fontFamily: "Kanit",
         }}
       >
+        {rewardBar}
 
         <div
           style={{
@@ -272,7 +342,6 @@ export default function FestivalMap({
             boxShadow: "0 12px 32px rgba(0,0,0,0.18)",
           }}
         >
-
           <div
             style={{
               fontSize: 32,
@@ -337,7 +406,6 @@ export default function FestivalMap({
               ? "รอผู้เล่นจบรอบ"
               : "เริ่มรอบถัดไป"}
           </button>
-
         </div>
 
         <button
@@ -356,15 +424,11 @@ export default function FestivalMap({
         >
           ออกจากห้อง
         </button>
-
       </div>
-
     );
-
   }
 
   return (
-
     <div
       style={{
         minHeight: "100vh",
@@ -377,14 +441,12 @@ export default function FestivalMap({
         fontFamily: "Kanit",
       }}
     >
-
       <header
         style={{
           marginBottom: 12,
           textAlign: "center",
         }}
       >
-
         <div
           style={{
             fontSize: 28,
@@ -392,7 +454,7 @@ export default function FestivalMap({
             color: "#5b2c00",
           }}
         >
-          🎪 Festival Map
+          Festival Map
         </div>
 
         <div
@@ -402,71 +464,64 @@ export default function FestivalMap({
           }}
         >
           {roundInfo.running
-            ? `รอบ ${roundInfo.currentRound}${roundInfo.totalRounds ? ` / ${roundInfo.totalRounds}` : ""} : ${roundInfo.currentGame || "-"}`
+            ? `รอบ ${roundInfo.currentRound}${
+                roundInfo.totalRounds
+                  ? ` / ${roundInfo.totalRounds}`
+                  : ""
+              } : ${roundInfo.currentGame || "-"}`
             : "รอ Host เริ่มรอบถัดไป"}
         </div>
-
       </header>
 
-      {mode === "team" && team?.length > 0 && (
+      {rewardBar}
 
-        <div
-          style={{
-            width: "100%",
-            maxWidth: 480,
-            background: "#fff",
-            borderRadius: 16,
-            padding: 14,
-            marginBottom: 14,
-            boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
-          }}
-        >
-
+      {(roomMeta.mode === "team" || mode === "team") &&
+        team?.length > 0 && (
           <div
             style={{
-              fontWeight: 600,
-              marginBottom: 8,
+              width: "100%",
+              maxWidth: 480,
+              background: "#fff",
+              borderRadius: 16,
+              padding: 14,
+              marginBottom: 14,
+              boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
             }}
           >
-            ทีมของคุณ
-          </div>
-
-          {team.map((p) => (
-
             <div
-              key={p?.id}
               style={{
-                display: "flex",
-                justifyContent: "space-between",
-                padding: "4px 0",
+                fontWeight: 600,
+                marginBottom: 8,
               }}
             >
-
-              <span>
-                {p?.name}
-                {p?.id === player?.id && " (คุณ)"}
-              </span>
-
-              <span>
-                {scores[p?.id] || 0}
-              </span>
-
+              ทีมของคุณ
             </div>
 
-          ))}
+            {team.map((p) => (
+              <div
+                key={p?.id}
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  padding: "4px 0",
+                }}
+              >
+                <span>
+                  {p?.name}
+                  {p?.id === player?.id && " (คุณ)"}
+                </span>
 
-        </div>
-
-      )}
+                <span>{scores[p?.id] || 0}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
       <GameContainer
         roomCode={roomCode}
         player={player}
         wsRef={wsRef}
         onGameEnd={(result) => {
-
-          console.log("🎮 Mini game finished:", result);
-
           submitScore({
             roundId: result?.roundId,
             score: result?.score ?? 0,
@@ -478,7 +533,6 @@ export default function FestivalMap({
                 : {}),
             },
           });
-
         }}
       />
 
@@ -497,9 +551,6 @@ export default function FestivalMap({
       >
         ออกจากห้อง
       </button>
-
     </div>
-
   );
-
 }

@@ -269,6 +269,7 @@ func (rc *RoundController) SubmitScore(c *gin.Context) {
 	`, roundID).Scan(&submittedCount)
 
 	roundEnded := false
+	gameFinished := false
 	if activePlayers > 0 && submittedCount >= activePlayers {
 		if _, err := tx.Exec(`
 			UPDATE rounds
@@ -276,6 +277,14 @@ func (rc *RoundController) SubmitScore(c *gin.Context) {
 			WHERE id=$1
 		`, roundID); err == nil {
 			roundEnded = true
+			if roundIndex >= len(GameSequence) {
+				gameFinished = true
+				_, _ = tx.Exec(`
+					UPDATE rooms
+					SET status='finished'
+					WHERE id=$1
+				`, roomID)
+			}
 		}
 	}
 
@@ -298,10 +307,20 @@ func (rc *RoundController) SubmitScore(c *gin.Context) {
 		rc.Hub.Broadcast <- &ws.Message{
 			Room: roomCode,
 			Data: ws.MustJSON(gin.H{
-				"type":        "round_end",
-				"round_id":    roundID,
-				"round_index": roundIndex,
+				"type":          "round_end",
+				"round_id":      roundID,
+				"round_index":   roundIndex,
+				"game_finished": gameFinished,
 			}),
+		}
+
+		if gameFinished {
+			rc.Hub.Broadcast <- &ws.Message{
+				Room: roomCode,
+				Data: ws.MustJSON(gin.H{
+					"type": "game_finished",
+				}),
+			}
 		}
 	}
 
@@ -316,12 +335,13 @@ func (rc *RoundController) EndRound(c *gin.Context) {
 
 	var roomCode string
 	var roundIndex int
+	var roomID int
 	if err := rc.DB.QueryRow(`
-		SELECT rooms.code, rounds.round_index
+		SELECT rooms.code, rounds.round_index, rooms.id
 		FROM rounds
 		JOIN rooms ON rooms.id=rounds.room_id
 		WHERE rounds.id=$1 AND rounds.status='playing'
-	`, roundID).Scan(&roomCode, &roundIndex); err != nil {
+	`, roundID).Scan(&roomCode, &roundIndex, &roomID); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "round not active"})
 		return
 	}
@@ -332,13 +352,32 @@ func (rc *RoundController) EndRound(c *gin.Context) {
 		WHERE id=$1
 	`, roundID)
 
+	gameFinished := roundIndex >= len(GameSequence)
+	if gameFinished {
+		_, _ = rc.DB.Exec(`
+			UPDATE rooms
+			SET status='finished'
+			WHERE id=$1
+		`, roomID)
+	}
+
 	rc.Hub.Broadcast <- &ws.Message{
 		Room: roomCode,
 		Data: ws.MustJSON(gin.H{
-			"type":        "round_end",
-			"round_id":    roundID,
-			"round_index": roundIndex,
+			"type":          "round_end",
+			"round_id":      roundID,
+			"round_index":   roundIndex,
+			"game_finished": gameFinished,
 		}),
+	}
+
+	if gameFinished {
+		rc.Hub.Broadcast <- &ws.Message{
+			Room: roomCode,
+			Data: ws.MustJSON(gin.H{
+				"type": "game_finished",
+			}),
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"ok": true})

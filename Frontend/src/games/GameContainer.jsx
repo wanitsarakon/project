@@ -86,6 +86,25 @@ export default function GameContainer({
       roundId,
 
       onGameEnd: (result) => {
+        const activeScene =
+          gameRef.current?.scene?.keys?.[gameKey];
+
+        try {
+          if (
+            activeScene &&
+            typeof activeScene._removeOverlay === "function"
+          ) {
+            activeScene._removeOverlay();
+          }
+          if (
+            activeScene &&
+            typeof activeScene.shutdown === "function"
+          ) {
+            activeScene.shutdown();
+          }
+        } catch (err) {
+          console.warn("Scene end cleanup failed:", gameKey, err);
+        }
 
         console.log("🏁 Game finished:", result);
 
@@ -261,6 +280,18 @@ export default function GameContainer({
     return () => {
 
       if (gameRef.current) {
+        gameRef.current.scene.scenes.forEach((scene) => {
+          try {
+            if (typeof scene._removeOverlay === "function") {
+              scene._removeOverlay();
+            }
+            if (typeof scene.shutdown === "function") {
+              scene.shutdown();
+            }
+          } catch (err) {
+            console.warn("Scene cleanup failed:", scene?.scene?.key, err);
+          }
+        });
 
         gameRef.current.destroy(true);
 

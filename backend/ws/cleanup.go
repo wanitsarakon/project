@@ -149,12 +149,16 @@ func runCleanupOnce(
 	========================= */
 	res, err = db.ExecContext(ctx, `
 		DELETE FROM rooms
-		WHERE status IN ('waiting','finished')
-		  AND NOT EXISTS (
+		WHERE (
+			(status = 'waiting' AND created_at < NOW() - INTERVAL '30 minutes')
+			OR
+			(status = 'finished' AND created_at < NOW() - INTERVAL '2 hours')
+		)
+		AND NOT EXISTS (
 			SELECT 1 FROM players
 			WHERE room_id = rooms.id
 			  AND connected = true
-		  )
+		)
 	`)
 	if err == nil {
 		if n, _ := res.RowsAffected(); n > 0 {

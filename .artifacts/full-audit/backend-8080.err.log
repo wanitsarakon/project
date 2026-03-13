@@ -1,0 +1,7 @@
+2026/03/14 02:23:51 ✅ Connected to PostgreSQL
+2026/03/14 02:23:51 🧹 Stale state reset completed
+2026/03/14 02:23:51 ✅ WebSocket Hub running
+2026/03/14 02:23:51 🧹 AutoCleanup service running
+2026/03/14 02:23:51 🧹 AutoCleanup service started
+2026/03/14 02:23:51 🚀 Backend running on port 8080
+2026/03/14 02:23:51 ❌ Server error: listen tcp :8080: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.

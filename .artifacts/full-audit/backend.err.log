@@ -1,0 +1,66 @@
+2026/03/14 02:35:12 ✅ Connected to PostgreSQL
+2026/03/14 02:35:12 🧹 Stale state reset completed
+2026/03/14 02:35:12 ✅ WebSocket Hub running
+2026/03/14 02:35:12 🧹 AutoCleanup service running
+2026/03/14 02:35:12 🧹 AutoCleanup service started
+2026/03/14 02:35:12 🚀 Backend running on port 18082
+2026/03/14 02:35:47 ✅ WS register room=997020 player=504 clients=1
+2026/03/14 02:35:50 ✅ WS register room=global player=0 clients=2
+2026/03/14 02:35:51 ❌ WS unregister room=global player=0 clients=1
+2026/03/14 02:35:51 ✅ WS register room=997020 player=505 clients=2
+2026/03/14 02:35:52 ❌ WS unregister room=997020 player=505 clients=1
+2026/03/14 02:35:52 ❌ WS unregister room=997020 player=504 clients=0
+2026/03/14 02:35:52 ✅ WS register room=997020 player=504 clients=1
+2026/03/14 02:35:52 ✅ WS register room=997020 player=505 clients=2
+2026/03/14 02:36:49 ❌ WS unregister room=997020 player=504 clients=1
+2026/03/14 02:36:49 ❌ WS unregister room=997020 player=505 clients=0
+2026/03/14 02:38:30 ✅ WS register room=484160 player=506 clients=1
+2026/03/14 02:38:32 ✅ WS register room=global player=0 clients=2
+2026/03/14 02:38:33 ❌ WS unregister room=global player=0 clients=1
+2026/03/14 02:38:33 ✅ WS register room=484160 player=507 clients=2
+2026/03/14 02:38:34 ❌ WS unregister room=484160 player=506 clients=1
+2026/03/14 02:38:34 ❌ WS unregister room=484160 player=507 clients=0
+2026/03/14 02:38:34 ✅ WS register room=484160 player=506 clients=1
+2026/03/14 02:38:35 ✅ WS register room=484160 player=507 clients=2
+2026/03/14 02:39:12 ❌ WS unregister room=484160 player=506 clients=1
+2026/03/14 02:39:12 ❌ WS unregister room=484160 player=507 clients=0
+2026/03/14 02:39:40 ✅ WS register room=945456 player=508 clients=1
+2026/03/14 02:39:42 ✅ WS register room=global player=0 clients=2
+2026/03/14 02:39:43 ❌ WS unregister room=global player=0 clients=1
+2026/03/14 02:39:43 ✅ WS register room=945456 player=509 clients=2
+2026/03/14 02:39:44 ❌ WS unregister room=945456 player=508 clients=1
+2026/03/14 02:39:44 ❌ WS unregister room=945456 player=509 clients=0
+2026/03/14 02:39:44 ✅ WS register room=945456 player=508 clients=1
+2026/03/14 02:39:44 ✅ WS register room=945456 player=509 clients=2
+2026/03/14 02:40:17 ❌ WS unregister room=945456 player=508 clients=1
+2026/03/14 02:40:17 ❌ WS unregister room=945456 player=509 clients=0
+2026/03/14 02:42:18 ✅ WS register room=025715 player=510 clients=1
+2026/03/14 02:42:21 ✅ WS register room=global player=0 clients=2
+2026/03/14 02:42:22 ❌ WS unregister room=global player=0 clients=1
+2026/03/14 02:42:22 ✅ WS register room=025715 player=511 clients=2
+2026/03/14 02:42:23 ❌ WS unregister room=025715 player=511 clients=1
+2026/03/14 02:42:23 ❌ WS unregister room=025715 player=510 clients=0
+2026/03/14 02:42:23 ✅ WS register room=025715 player=510 clients=1
+2026/03/14 02:42:23 ✅ WS register room=025715 player=511 clients=2
+2026/03/14 02:42:55 ❌ WS unregister room=025715 player=511 clients=1
+2026/03/14 02:42:55 ❌ WS unregister room=025715 player=510 clients=0
+2026/03/14 02:43:21 ✅ WS register room=428834 player=512 clients=1
+2026/03/14 02:43:24 ✅ WS register room=global player=0 clients=2
+2026/03/14 02:43:25 ❌ WS unregister room=global player=0 clients=1
+2026/03/14 02:43:25 ✅ WS register room=428834 player=513 clients=2
+2026/03/14 02:43:26 ❌ WS unregister room=428834 player=512 clients=1
+2026/03/14 02:43:26 ✅ WS register room=428834 player=512 clients=2
+2026/03/14 02:43:26 ❌ WS unregister room=428834 player=513 clients=1
+2026/03/14 02:43:26 ✅ WS register room=428834 player=513 clients=2
+2026/03/14 02:43:58 ❌ WS unregister room=428834 player=512 clients=1
+2026/03/14 02:43:58 ❌ WS unregister room=428834 player=513 clients=0
+2026/03/14 02:45:24 ✅ WS register room=591381 player=514 clients=1
+2026/03/14 02:45:26 ✅ WS register room=global player=0 clients=2
+2026/03/14 02:45:27 ❌ WS unregister room=global player=0 clients=1
+2026/03/14 02:45:27 ✅ WS register room=591381 player=515 clients=2
+2026/03/14 02:45:28 ❌ WS unregister room=591381 player=514 clients=1
+2026/03/14 02:45:28 ❌ WS unregister room=591381 player=515 clients=0
+2026/03/14 02:45:28 ✅ WS register room=591381 player=514 clients=1
+2026/03/14 02:45:28 ✅ WS register room=591381 player=515 clients=2
+2026/03/14 02:46:01 ❌ WS unregister room=591381 player=514 clients=1
+2026/03/14 02:46:01 ❌ WS unregister room=591381 player=515 clients=0

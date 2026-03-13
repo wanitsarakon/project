@@ -2,9 +2,12 @@ package controllers
 
 import (
 	"database/sql"
+	"encoding/json"
 	"math/rand"
 	"net/http"
+	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"thai-festival-backend/ws"
@@ -33,6 +36,7 @@ func (rc *RoomController) CreateRoom(c *gin.Context) {
 		Mode       string `json:"mode"`
 		HostName   string `json:"host_name"`
 		MaxPlayers int    `json:"max_players"`
+		Prizes     []string `json:"prizes"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil || req.HostName == "" {
@@ -52,6 +56,12 @@ func (rc *RoomController) CreateRoom(c *gin.Context) {
 		req.MaxPlayers = 8
 	}
 
+	prizeJSON, err := encodePrizeList(req.Prizes)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid prizes"})
+		return
+	}
+
 	code := generateRoomCode()
 
 	tx, err := rc.DB.Begin()
@@ -66,10 +76,10 @@ func (rc *RoomController) CreateRoom(c *gin.Context) {
 
 	err = tx.QueryRow(`
 	INSERT INTO rooms
-	(code,name,mode,max_players,status)
-	VALUES ($1,$2,$3,$4,'waiting')
+	(code,name,mode,prize,max_players,status)
+	VALUES ($1,$2,$3,$4,$5,'waiting')
 	RETURNING id
-	`, code, req.Name, req.Mode, req.MaxPlayers).Scan(&roomID)
+	`, code, req.Name, req.Mode, prizeJSON, req.MaxPlayers).Scan(&roomID)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "create room failed"})
@@ -105,6 +115,8 @@ func (rc *RoomController) CreateRoom(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"room_code": code,
+		"mode":      req.Mode,
+		"prizes":    normalizePrizeList(req.Prizes),
 		"player": gin.H{
 			"id":      hostID,
 			"name":    req.HostName,
@@ -249,6 +261,17 @@ func (rc *RoomController) GetRoom(c *gin.Context) {
 
 	code := c.Param("code")
 
+	var roomName, mode, status string
+	var prizeText sql.NullString
+	if err := rc.DB.QueryRow(`
+	SELECT name,mode,status,prize
+	FROM rooms
+	WHERE code=$1
+	`, code).Scan(&roomName, &mode, &status, &prizeText); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "room not found"})
+		return
+	}
+
 	rows, err := rc.DB.Query(`
 	SELECT p.id,p.name,p.is_host,p.team,p.total_score,p.connected
 	FROM players p
@@ -285,7 +308,111 @@ func (rc *RoomController) GetRoom(c *gin.Context) {
 		})
 	}
 
-	c.JSON(http.StatusOK, gin.H{"players": players})
+	c.JSON(http.StatusOK, gin.H{
+		"name":   roomName,
+		"mode":   mode,
+		"status": status,
+		"prizes": decodePrizeList(prizeText.String),
+		"players": players,
+	})
+}
+
+/* =========================
+   UPDATE PRIZES (HOST ONLY)
+========================= */
+
+func (rc *RoomController) UpdatePrizes(c *gin.Context) {
+	code := c.Param("code")
+	playerID, _ := strconv.Atoi(c.Query("player_id"))
+
+	var req struct {
+		Prizes []string `json:"prizes"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	prizeJSON, err := encodePrizeList(req.Prizes)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid prizes"})
+		return
+	}
+
+	tx, err := rc.DB.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
+		return
+	}
+	defer tx.Rollback()
+
+	var roomID int
+	var status string
+	if err := tx.QueryRow(`
+	SELECT id,status
+	FROM rooms
+	WHERE code=$1
+	FOR UPDATE
+	`, code).Scan(&roomID, &status); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "room not found"})
+		return
+	}
+
+	if status != "waiting" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "cannot edit prizes after game start"})
+		return
+	}
+
+	var isHost bool
+	if err := tx.QueryRow(`
+	SELECT is_host
+	FROM players
+	WHERE id=$1 AND room_id=$2
+	`, playerID, roomID).Scan(&isHost); err != nil || !isHost {
+		c.JSON(http.StatusForbidden, gin.H{"error": "only host can update prizes"})
+		return
+	}
+
+	if _, err := tx.Exec(`
+	UPDATE rooms
+	SET prize=$1
+	WHERE id=$2
+	`, prizeJSON, roomID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "update prizes failed"})
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "commit failed"})
+		return
+	}
+
+	rc.broadcastRoom(code, gin.H{
+		"type":   "room_update",
+		"prizes": normalizePrizeList(req.Prizes),
+	})
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":     true,
+		"prizes": normalizePrizeList(req.Prizes),
+	})
+}
+
+/* =========================
+   ROOM SUMMARY
+========================= */
+
+func (rc *RoomController) GetSummary(c *gin.Context) {
+	code := c.Param("code")
+
+	summary, err := buildRoomSummary(rc.DB, code)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "room not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, summary)
 }
 
 /* =========================
@@ -426,4 +553,173 @@ func generateRoomCode() string {
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
+}
+
+type summaryPlayer struct {
+	PlayerID   int    `json:"player_id"`
+	Name       string `json:"name"`
+	Team       string `json:"team,omitempty"`
+	TotalScore int    `json:"total_score"`
+	Prize      string `json:"prize,omitempty"`
+}
+
+type summaryTeam struct {
+	Team       string          `json:"team"`
+	TotalScore int             `json:"total_score"`
+	Prize      string          `json:"prize,omitempty"`
+	Members    []summaryPlayer `json:"members"`
+}
+
+func buildRoomSummary(db *sql.DB, code string) (gin.H, error) {
+	var roomID int
+	var roomName, mode, status string
+	var prizeText sql.NullString
+	if err := db.QueryRow(`
+	SELECT id,name,mode,status,prize
+	FROM rooms
+	WHERE code=$1
+	`, code).Scan(&roomID, &roomName, &mode, &status, &prizeText); err != nil {
+		return nil, err
+	}
+
+	prizes := decodePrizeList(prizeText.String)
+	rows, err := db.Query(`
+	SELECT id,name,team,total_score
+	FROM players
+	WHERE room_id=$1 AND is_host=false
+	ORDER BY total_score DESC, id ASC
+	`, roomID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	players := make([]summaryPlayer, 0)
+	for rows.Next() {
+		var p summaryPlayer
+		var team sql.NullString
+		if err := rows.Scan(&p.PlayerID, &p.Name, &team, &p.TotalScore); err != nil {
+			continue
+		}
+		if team.Valid {
+			p.Team = team.String
+		}
+		players = append(players, p)
+	}
+
+	if mode == "team" {
+		teams := make(map[string]*summaryTeam)
+		for _, p := range players {
+			teamKey := p.Team
+			if teamKey == "" {
+				teamKey = "unassigned"
+			}
+			if teams[teamKey] == nil {
+				teams[teamKey] = &summaryTeam{
+					Team:    teamKey,
+					Members: make([]summaryPlayer, 0),
+				}
+			}
+			teams[teamKey].TotalScore += p.TotalScore
+			teams[teamKey].Members = append(teams[teamKey].Members, p)
+		}
+
+		rankedTeams := make([]summaryTeam, 0, len(teams))
+		for _, t := range teams {
+			sort.Slice(t.Members, func(i, j int) bool {
+				if t.Members[i].TotalScore == t.Members[j].TotalScore {
+					return t.Members[i].PlayerID < t.Members[j].PlayerID
+				}
+				return t.Members[i].TotalScore > t.Members[j].TotalScore
+			})
+			rankedTeams = append(rankedTeams, *t)
+		}
+
+		sort.Slice(rankedTeams, func(i, j int) bool {
+			if rankedTeams[i].TotalScore == rankedTeams[j].TotalScore {
+				return rankedTeams[i].Team < rankedTeams[j].Team
+			}
+			return rankedTeams[i].TotalScore > rankedTeams[j].TotalScore
+		})
+
+		for i := range rankedTeams {
+			if i < len(prizes) {
+				rankedTeams[i].Prize = prizes[i]
+			}
+		}
+
+		return gin.H{
+			"room_code": code,
+			"room_name": roomName,
+			"mode":      mode,
+			"status":    status,
+			"prizes":    prizes,
+			"results":   players,
+			"teams":     rankedTeams,
+			"podium":    rankedTeams[:min(len(rankedTeams), 3)],
+		}, nil
+	}
+
+	for i := range players {
+		if i < len(prizes) {
+			players[i].Prize = prizes[i]
+		}
+	}
+
+	return gin.H{
+		"room_code": code,
+		"room_name": roomName,
+		"mode":      mode,
+		"status":    status,
+		"prizes":    prizes,
+		"results":   players,
+		"podium":    players[:min(len(players), 3)],
+	}, nil
+}
+
+func encodePrizeList(prizes []string) (string, error) {
+	normalized := normalizePrizeList(prizes)
+	if len(normalized) == 0 {
+		return "[]", nil
+	}
+	b, err := json.Marshal(normalized)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
+
+func decodePrizeList(raw string) []string {
+	if strings.TrimSpace(raw) == "" {
+		return []string{}
+	}
+
+	var prizes []string
+	if err := json.Unmarshal([]byte(raw), &prizes); err == nil {
+		return normalizePrizeList(prizes)
+	}
+
+	return normalizePrizeList([]string{raw})
+}
+
+func normalizePrizeList(prizes []string) []string {
+	normalized := make([]string, 0, len(prizes))
+	for _, prize := range prizes {
+		clean := strings.TrimSpace(prize)
+		if clean == "" {
+			continue
+		}
+		normalized = append(normalized, clean)
+	}
+	if len(normalized) > 10 {
+		return normalized[:10]
+	}
+	return normalized
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
