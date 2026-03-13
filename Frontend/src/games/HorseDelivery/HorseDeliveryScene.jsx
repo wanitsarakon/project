@@ -237,6 +237,7 @@ this.items.add(item)
 update(){
 
 if(this.ended)return
+if(!this.obstacles || !this.items)return
 
 /* recycle objects instead of destroy */
 

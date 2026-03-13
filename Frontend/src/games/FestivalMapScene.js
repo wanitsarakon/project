@@ -54,7 +54,7 @@ export default class FestivalMapScene extends Phaser.Scene {
     ====================== */
     this.createBooth(600,  "fish",    "FishScoopingScene");
     this.createBooth(1200, "horse",   "HorseDeliveryScene");
-    this.createBooth(1800, "worship", "WorshipScene");
+    this.createBooth(1800, "worship", "WorshipBoothScene");
 
     this.createBooth(2400, "boxing",  "BoxingGameScene");
     this.createBooth(3000, "cooking", "CookingGameScene");

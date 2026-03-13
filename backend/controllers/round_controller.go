@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"encoding/json"
 	"database/sql"
 	"net/http"
 	"strconv"
@@ -29,10 +30,15 @@ func NewRoundController(db *sql.DB, hub *ws.Hub) *RoundController {
 ========================= */
 var GameSequence = []string{
 	"FishScoopingScene",
-	"CAROUSEL",
-	"SHOOT",
-	"COTTON",
-	"WORSHIP",
+	"HorseDeliveryScene",
+	"WorshipBoothScene",
+	"BoxingGameScene",
+	"CookingGameScene",
+	"BalloonShootScene",
+	"DollGameScene",
+	"FlowerGameScene",
+	"HauntedHouseScene",
+	"TugOfWarScene",
 }
 
 /* =========================
@@ -40,6 +46,7 @@ var GameSequence = []string{
 ========================= */
 func (rc *RoundController) StartRound(c *gin.Context) {
 	code := c.Param("code")
+	playerID, _ := strconv.Atoi(c.Query("player_id"))
 
 	tx, err := rc.DB.Begin()
 	if err != nil {
@@ -63,6 +70,16 @@ func (rc *RoundController) StartRound(c *gin.Context) {
 
 	if roomStatus != "playing" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "room not started"})
+		return
+	}
+
+	var isHost bool
+	if err := tx.QueryRow(`
+		SELECT is_host
+		FROM players
+		WHERE id=$1 AND room_id=$2
+	`, playerID, roomID).Scan(&isHost); err != nil || !isHost {
+		c.JSON(http.StatusForbidden, gin.H{"error": "only host can start round"})
 		return
 	}
 
@@ -183,14 +200,14 @@ func (rc *RoundController) SubmitScore(c *gin.Context) {
 	defer tx.Rollback()
 
 	var status, gameKey, roomCode string
-	var roomID int
+	var roomID, roundIndex int
 	if err := tx.QueryRow(`
-		SELECT r.status, r.game_key, rooms.code, rooms.id
+		SELECT r.status, r.game_key, rooms.code, rooms.id, r.round_index
 		FROM rounds r
 		JOIN rooms ON rooms.id=r.room_id
 		WHERE r.id=$1
 		FOR UPDATE
-	`, roundID).Scan(&status, &gameKey, &roomCode, &roomID); err != nil {
+	`, roundID).Scan(&status, &gameKey, &roomCode, &roomID, &roundIndex); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "round not found"})
 		return
 	}
@@ -214,11 +231,18 @@ func (rc *RoundController) SubmitScore(c *gin.Context) {
 	}
 
 	/* ===== SAVE SCORE ===== */
+	metaJSON := []byte("null")
+	if req.Meta != nil {
+		if b, err := json.Marshal(req.Meta); err == nil {
+			metaJSON = b
+		}
+	}
+
 	if _, err := tx.Exec(`
 		INSERT INTO mini_game_results
 			(round_id, player_id, game_key, score, meta)
 		VALUES ($1,$2,$3,$4,$5)
-	`, roundID, req.PlayerID, gameKey, req.Score, req.Meta); err != nil {
+	`, roundID, req.PlayerID, gameKey, req.Score, metaJSON); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "save score failed"})
 		return
 	}
@@ -228,6 +252,32 @@ func (rc *RoundController) SubmitScore(c *gin.Context) {
 		SET total_score = total_score + $1
 		WHERE id=$2
 	`, req.Score, req.PlayerID)
+
+	var activePlayers, submittedCount int
+	_ = tx.QueryRow(`
+		SELECT COUNT(*)
+		FROM players
+		WHERE room_id=$1
+		  AND is_host=false
+		  AND connected=true
+	`, roomID).Scan(&activePlayers)
+
+	_ = tx.QueryRow(`
+		SELECT COUNT(*)
+		FROM mini_game_results
+		WHERE round_id=$1
+	`, roundID).Scan(&submittedCount)
+
+	roundEnded := false
+	if activePlayers > 0 && submittedCount >= activePlayers {
+		if _, err := tx.Exec(`
+			UPDATE rounds
+			SET status='finished', ended_at=NOW()
+			WHERE id=$1
+		`, roundID); err == nil {
+			roundEnded = true
+		}
+	}
 
 	if err := tx.Commit(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "commit failed"})
@@ -242,6 +292,17 @@ func (rc *RoundController) SubmitScore(c *gin.Context) {
 			"player_id": req.PlayerID,
 			"score":     req.Score,
 		}),
+	}
+
+	if roundEnded {
+		rc.Hub.Broadcast <- &ws.Message{
+			Room: roomCode,
+			Data: ws.MustJSON(gin.H{
+				"type":        "round_end",
+				"round_id":    roundID,
+				"round_index": roundIndex,
+			}),
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{"ok": true})

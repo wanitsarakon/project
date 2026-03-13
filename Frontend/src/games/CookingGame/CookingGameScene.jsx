@@ -326,7 +326,6 @@ export default class CookingGameScene extends Phaser.Scene {
     // ─── Drag ───
     function onDragStart(e) {
       if (!gs.isGameActive || gs.isStirringEnabled) { e.preventDefault(); return; }
-      console.log("Drag Start:", e.target.dataset.name);
       e.dataTransfer.setData("text/plain", e.target.dataset.name);
       e.dataTransfer.setData("srcId", e.target.id || "");
       window._ckDragSrc = e.target;
@@ -340,7 +339,6 @@ export default class CookingGameScene extends Phaser.Scene {
       const srcEl = window._ckDragSrc;
       if (!name || !srcEl) return;
 
-      console.log("Drop Ingredient:", name);
       gs.steps.push(name);
       document.getElementById("ck-bowl-hint")?.classList.add("ck-hidden");
       srcEl.style.visibility = "hidden";
@@ -468,7 +466,6 @@ export default class CookingGameScene extends Phaser.Scene {
         if (delta >  Math.PI) delta -= Math.PI * 2;
         if (delta < -Math.PI) delta += Math.PI * 2;
         gs.stirProgress += Math.abs(delta) * 2.5;
-        console.log("Stir Progress:", gs.stirProgress);
         const bar = document.getElementById("ck-stir-bar");
         if (bar) bar.style.height = Math.min(gs.stirProgress, 100) + "%";
         if (gs.stirProgress >= 100) finishStirring();
@@ -593,7 +590,6 @@ export default class CookingGameScene extends Phaser.Scene {
       }
       if (correct === recipe.length && gs.gameTimeLeft > 0) score += 30;
       gs.score = score;
-      console.log("Score Calculation:", { steps: gs.steps, score, correct });
 
       let text, grade;
       if (correct === recipe.length) {

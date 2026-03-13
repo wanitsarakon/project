@@ -30,6 +30,11 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
   let activeInstanceId = 0;
 
   let joined = false;
+  const listeners = new Set();
+
+  if (typeof onMessage === "function") {
+    listeners.add(onMessage);
+  }
 
   /* =========================
      CONNECT
@@ -150,7 +155,13 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
 
       /* ALWAYS PASS TO DEFAULT HANDLER */
 
-      onMessage?.(data);
+      listeners.forEach((listener) => {
+        try {
+          listener?.(data);
+        } catch (err) {
+          console.error("WS listener error:", err);
+        }
+      });
 
     };
 
@@ -307,6 +318,24 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
   return {
 
     send: safeSend,
+
+    subscribe(listener) {
+
+      if (typeof listener !== "function") {
+        return () => {};
+      }
+
+      listeners.add(listener);
+
+      return () => {
+        listeners.delete(listener);
+      };
+
+    },
+
+    unsubscribe(listener) {
+      listeners.delete(listener);
+    },
 
     close() {
 

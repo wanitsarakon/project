@@ -24,6 +24,7 @@ export default function GameContainer({
   player,
   wsRef,
   onGameEnd,
+  allowRoundEvents = true,
 }) {
 
   const gameRef = useRef(null);
@@ -57,7 +58,7 @@ export default function GameContainer({
     }
 
     const roundId =
-      currentRoundIdRef.current ?? "solo-mode";
+      currentRoundIdRef.current ?? null;
 
     const backToMap = () => {
 
@@ -88,7 +89,11 @@ export default function GameContainer({
 
         console.log("🏁 Game finished:", result);
 
-        onGameEndRef.current?.(result);
+        onGameEndRef.current?.({
+          ...result,
+          roundId,
+          gameKey,
+        });
 
         backToMap();
 
@@ -104,45 +109,61 @@ export default function GameContainer({
 
   useEffect(() => {
 
-    if (!wsRef?.current) return;
+    if (!allowRoundEvents) return;
+    if (!wsRef) return;
 
-    const socket = wsRef.current;
-
-    const originalHandler = socket.onMessage;
+    let detach = null;
 
     const handleWS = (msg) => {
 
-      originalHandler?.(msg);
-
       if (!msg?.type) return;
 
-      if (
+      const shouldStart =
         msg.type === "round_start" ||
-        msg.type === "game_start"
-      ) {
+        (msg.type === "enter_game" &&
+          msg.player_id === player?.id);
+
+      if (shouldStart) {
 
         if (startedRef.current) return;
 
+        const sceneKey = msg.game_key;
+        if (!sceneKey) return;
+
         startedRef.current = true;
 
-        const roundId =
-          msg.round_id ?? "FishScoopingScene";
+        currentRoundIdRef.current =
+          msg.round_id ?? null;
 
-        currentRoundIdRef.current = roundId;
-
-        startMiniGame(roundId);
+        startMiniGame(sceneKey);
 
       }
 
     };
 
-    socket.onMessage = handleWS;
+    const attach = () => {
+      if (detach || !wsRef?.current) return;
 
-    return () => {
-      socket.onMessage = originalHandler || null;
+      const socket = wsRef.current;
+
+      if (typeof socket.subscribe === "function") {
+        detach = socket.subscribe(handleWS);
+      }
     };
 
-  }, [wsRef]);
+    attach();
+
+    const retryTimer = window.setInterval(() => {
+      attach();
+    }, 200);
+
+    return () => {
+      window.clearInterval(retryTimer);
+      detach?.();
+      detach = null;
+    };
+
+  }, [allowRoundEvents, player?.id, wsRef]);
 
   /* =========================
      INIT PHASER
@@ -201,6 +222,27 @@ export default function GameContainer({
 
     gameRef.current = game;
 
+    if (typeof window !== "undefined") {
+      window.__festivalDebug = {
+        game,
+        startMiniGame,
+        resetToMap: () => {
+          if (!gameRef.current) return;
+          gameRef.current.scene.scenes.forEach((scene) => {
+            if (scene.scene.key !== "FestivalMapScene") {
+              gameRef.current.scene.stop(scene.scene.key);
+            }
+          });
+          gameRef.current.scene.start("FestivalMapScene", {
+            roomCode,
+            player,
+            currentRound: currentRoundIdRef.current,
+            onEnterGame: startMiniGame,
+          });
+        },
+      };
+    }
+
     /* START MAP */
 
     game.scene.start("FestivalMapScene", {
@@ -224,6 +266,10 @@ export default function GameContainer({
 
         gameRef.current = null;
 
+      }
+
+      if (typeof window !== "undefined") {
+        delete window.__festivalDebug;
       }
 
     };

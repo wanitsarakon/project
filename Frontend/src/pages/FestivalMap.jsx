@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import GameContainer from "../games/GameContainer";
 import { createRoomSocket } from "../websocket/wsClient";
 
@@ -16,78 +16,108 @@ export default function FestivalMap({
 
   const [team, setTeam] = useState([]);
   const [scores, setScores] = useState({});
+  const [roundInfo, setRoundInfo] = useState({
+    currentRound: 0,
+    totalRounds: 0,
+    currentGame: null,
+    running: false,
+  });
+  const [startingRound, setStartingRound] = useState(false);
 
   const wsRef = useRef(null);
   const mountedRef = useRef(false);
-
-  /* =========================
-     SAFE SET STATE
-  ========================= */
 
   const safeSet = useCallback((fn) => {
     if (mountedRef.current) fn();
   }, []);
 
-  /* =========================
-     LOAD TEAM FROM SERVER
-  ========================= */
+  const loadScoresFromServer = useCallback(async () => {
 
-  const loadTeamFromServer = useCallback(async () => {
-
-    if (mode !== "team") return;
-    if (!roomCode || !player?.id) return;
+    if (!roomCode) return;
 
     try {
 
       const res = await fetch(`${API_BASE}/rooms/${roomCode}`);
-
       if (!res.ok) return;
 
       const data = await res.json();
-
       if (!Array.isArray(data?.players)) return;
 
-      const me = data.players.find(
-        (p) => p?.id === player.id
-      );
+      const scoreMap = {};
+      data.players.forEach((p) => {
+        scoreMap[p?.id] =
+          p?.total_score ?? p?.score ?? 0;
+      });
 
-      if (!me?.team) return;
+      safeSet(() => setScores(scoreMap));
 
-      const myTeam = data.players.filter(
-        (p) => p?.team === me.team
-      );
-
-      safeSet(() => {
-
-        setTeam(
-          myTeam.map((p) => ({
-            id: p?.id,
-            name: p?.name ?? "player",
-          }))
+      if (mode === "team" && player?.id) {
+        const me = data.players.find(
+          (p) => p?.id === player.id
         );
 
-        const scoreMap = {};
+        if (me?.team) {
+          const myTeam = data.players.filter(
+            (p) => p?.team === me.team
+          );
 
-        myTeam.forEach((p) => {
-          scoreMap[p?.id] =
-            p?.total_score ?? p?.score ?? 0;
-        });
-
-        setScores(scoreMap);
-
-      });
+          safeSet(() =>
+            setTeam(
+              myTeam.map((p) => ({
+                id: p?.id,
+                name: p?.name ?? "player",
+              }))
+            )
+          );
+        }
+      }
 
     } catch (err) {
 
-      console.error("❌ loadTeamFromServer:", err);
+      console.error("❌ loadScoresFromServer:", err);
 
     }
 
-  }, [mode, roomCode, player?.id, safeSet]);
+  }, [mode, player?.id, roomCode, safeSet]);
 
-  /* =========================
-     WEBSOCKET CONNECT
-  ========================= */
+  const submitScore = useCallback(async ({
+    roundId,
+    score,
+    meta = null,
+  }) => {
+
+    if (!roundId || !player?.id) return;
+
+    try {
+
+      const res = await fetch(
+        `${API_BASE}/rounds/${roundId}/submit`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            player_id: player.id,
+            score: Math.max(0, Math.floor(score || 0)),
+            meta,
+          }),
+        }
+      );
+
+      if (!res.ok) {
+        const data =
+          await res.json().catch(() => ({}));
+        console.error("❌ submitScore failed:", data);
+      }
+
+    } catch (err) {
+
+      console.error("❌ submitScore error:", err);
+
+    }
+
+  }, [player?.id]);
 
   useEffect(() => {
 
@@ -99,7 +129,7 @@ export default function FestivalMap({
       };
     }
 
-    if (wsRef.current) return;
+    if (wsRef.current) return undefined;
 
     const socket = createRoomSocket(
       roomCode,
@@ -107,13 +137,8 @@ export default function FestivalMap({
       {
         playerId: player.id,
         mode,
-
-        onTeamUpdate: () => {
-          loadTeamFromServer();
-        },
-
+        onTeamUpdate: loadScoresFromServer,
         onScoreUpdate: ({ player_id, score }) => {
-
           safeSet(() =>
             setScores((prev) => ({
               ...prev,
@@ -121,15 +146,12 @@ export default function FestivalMap({
                 (prev[player_id] || 0) + score,
             }))
           );
-
         },
-
       }
     );
 
     wsRef.current = socket;
-
-    loadTeamFromServer();
+    loadScoresFromServer();
 
     return () => {
 
@@ -143,16 +165,83 @@ export default function FestivalMap({
     };
 
   }, [
-    roomCode,
-    player?.id,
+    loadScoresFromServer,
     mode,
-    loadTeamFromServer,
+    player?.id,
+    roomCode,
     safeSet,
   ]);
 
-  /* =========================
-     HOST VIEW
-  ========================= */
+  useEffect(() => {
+
+    if (!wsRef.current) return undefined;
+
+    const socket = wsRef.current;
+
+    if (typeof socket.subscribe !== "function") {
+      return undefined;
+    }
+
+    return socket.subscribe((msg) => {
+
+      if (!msg?.type) return;
+
+      if (msg.type === "round_start") {
+        safeSet(() => {
+          setRoundInfo({
+            currentRound: msg.round ?? 0,
+            totalRounds: msg.total_rounds ?? 0,
+            currentGame: msg.game_key ?? null,
+            running: true,
+          });
+          setStartingRound(false);
+        });
+      }
+
+      if (msg.type === "round_end") {
+        safeSet(() => {
+          setRoundInfo((prev) => ({
+            ...prev,
+            running: false,
+          }));
+          setStartingRound(false);
+        });
+      }
+
+    });
+
+  }, [safeSet]);
+
+  const startNextRound = useCallback(async () => {
+
+    if (!isHost || !roomCode || startingRound) return;
+
+    setStartingRound(true);
+
+    try {
+
+      const res = await fetch(
+        `${API_BASE}/rooms/${roomCode}/round/start?player_id=${player.id}`,
+        { method: "POST" }
+      );
+
+      if (!res.ok) {
+        const data =
+          await res.json().catch(() => ({}));
+        throw new Error(
+          data?.error || "start round failed"
+        );
+      }
+
+    } catch (err) {
+
+      console.error("❌ startNextRound:", err);
+      alert(err?.message || "เริ่มรอบไม่สำเร็จ");
+      safeSet(() => setStartingRound(false));
+
+    }
+
+  }, [isHost, player?.id, roomCode, safeSet, startingRound]);
 
   if (isHost) {
 
@@ -175,29 +264,86 @@ export default function FestivalMap({
 
         <div
           style={{
-            fontSize: 30,
-            fontWeight: "bold",
-            color: "#5b2c00",
-            marginBottom: 12,
+            width: "100%",
+            maxWidth: 520,
+            background: "rgba(255,255,255,0.94)",
+            borderRadius: 24,
+            padding: 28,
+            boxShadow: "0 12px 32px rgba(0,0,0,0.18)",
           }}
         >
-          🎪 รอบกำลังดำเนินอยู่
-        </div>
 
-        <div
-          style={{
-            fontSize: 18,
-            color: "#7a4a1f",
-            marginBottom: 24,
-          }}
-        >
-          Host ไม่ต้องเข้าเล่น <br />
-          กำลังรอผู้เล่นทำมินิเกม
+          <div
+            style={{
+              fontSize: 32,
+              fontWeight: "bold",
+              color: "#5b2c00",
+              marginBottom: 8,
+            }}
+          >
+            Host Control
+          </div>
+
+          <div
+            style={{
+              color: "#7a4a1f",
+              fontSize: 18,
+              marginBottom: 16,
+            }}
+          >
+            {roundInfo.running
+              ? `กำลังเล่น ${roundInfo.currentGame || "-"}`
+              : "พร้อมเริ่มรอบถัดไป"}
+          </div>
+
+          <div
+            style={{
+              background: "#fff4df",
+              borderRadius: 16,
+              padding: 14,
+              color: "#5b2c00",
+              marginBottom: 18,
+            }}
+          >
+            รอบปัจจุบัน: {roundInfo.currentRound || 0}
+            {roundInfo.totalRounds
+              ? ` / ${roundInfo.totalRounds}`
+              : ""}
+          </div>
+
+          <button
+            onClick={startNextRound}
+            disabled={startingRound || roundInfo.running}
+            style={{
+              padding: "14px 32px",
+              borderRadius: 24,
+              border: "none",
+              background:
+                startingRound || roundInfo.running
+                  ? "#c8a97f"
+                  : "#27ae60",
+              color: "#fff",
+              fontSize: 18,
+              fontFamily: "Kanit",
+              cursor:
+                startingRound || roundInfo.running
+                  ? "default"
+                  : "pointer",
+            }}
+          >
+            {startingRound
+              ? "กำลังเริ่มรอบ..."
+              : roundInfo.running
+              ? "รอผู้เล่นจบรอบ"
+              : "เริ่มรอบถัดไป"}
+          </button>
+
         </div>
 
         <button
           onClick={onLeave}
           style={{
+            marginTop: 20,
             padding: "14px 32px",
             borderRadius: 24,
             border: "none",
@@ -217,10 +363,6 @@ export default function FestivalMap({
 
   }
 
-  /* =========================
-     PLAYER VIEW
-  ========================= */
-
   return (
 
     <div
@@ -235,8 +377,6 @@ export default function FestivalMap({
         fontFamily: "Kanit",
       }}
     >
-
-      {/* HEADER */}
 
       <header
         style={{
@@ -261,12 +401,12 @@ export default function FestivalMap({
             color: "#7a4a1f",
           }}
         >
-          {mode === "team" ? "โหมดทีม" : "โหมดเดี่ยว"}
+          {roundInfo.running
+            ? `รอบ ${roundInfo.currentRound}${roundInfo.totalRounds ? ` / ${roundInfo.totalRounds}` : ""} : ${roundInfo.currentGame || "-"}`
+            : "รอ Host เริ่มรอบถัดไป"}
         </div>
 
       </header>
-
-      {/* TEAM PANEL */}
 
       {mode === "team" && team?.length > 0 && (
 
@@ -288,7 +428,7 @@ export default function FestivalMap({
               marginBottom: 8,
             }}
           >
-            👥 ทีมของคุณ
+            ทีมของคุณ
           </div>
 
           {team.map((p) => (
@@ -319,8 +459,6 @@ export default function FestivalMap({
 
       )}
 
-      {/* PHASER GAME */}
-
       <GameContainer
         roomCode={roomCode}
         player={player}
@@ -329,10 +467,17 @@ export default function FestivalMap({
 
           console.log("🎮 Mini game finished:", result);
 
+          submitScore({
+            roundId: result?.roundId,
+            score: result?.score ?? 0,
+            meta: {
+              game: result?.game || result?.gameKey || null,
+              won: result?.won ?? null,
+            },
+          });
+
         }}
       />
-
-      {/* EXIT */}
 
       <button
         onClick={onLeave}

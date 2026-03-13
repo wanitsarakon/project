@@ -153,15 +153,8 @@ export default function Lobby({
 
           startedRef.current = true;
 
-          if (isMeHostRef.current) {
-
-            safeSet(() => setGameStarted(true));
-
-          } else {
-
-            onStartGame?.();
-
-          }
+          safeSet(() => setGameStarted(true));
+          onStartGame?.();
 
           break;
 
