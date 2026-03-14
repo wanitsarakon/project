@@ -5,7 +5,7 @@ import Phaser from "phaser";
  * แปลงจาก project-cooking/frontend/ → Phaser Scene (DOM overlay)
  * เกมทำลูกชุบ: ลากวัตถุดิบใส่ชาม → คน → จบเกม
  *
- * Assets path: /assets/cooking/images/ และ /assets/cooking/sounds/
+ * Assets path: /cooking/images/ และ /cooking/sounds/
  *
  * รับ props ผ่าน init(data):
  *   - onGameEnd({ score })  ← callback เมื่อเกมจบ
@@ -43,7 +43,7 @@ export default class CookingGameScene extends Phaser.Scene {
 
   /* ─────────────── DOM OVERLAY ─────────────── */
   _buildOverlay() {
-    const BASE = "/assets/cooking/";
+    const BASE = "/cooking/";
     const I    = BASE + "images/";
 
     const overlay = this._el("div", {
@@ -125,13 +125,13 @@ export default class CookingGameScene extends Phaser.Scene {
     // filling assets (inside bowl visuals)
     const fillWrapper = this._el("div", { class: "ck-fill-wrapper" });
     const fillMap = {
-      "fill-bean":    "ถั่วเหลือง_fill.png",
-      "fill-sugar":   "น้ำตาลทรายขาว_fill.png",
-      "fill-coconut": "กะทิ_fill.png",
-      "fill-agar":    "ผงวุ้น_fill.png",
-      "fill-color":   "สีผสมอาหาร_fill.png",
-      "fill-water":   "น้ำเปล่า_fill.png",
-      "fill-salt":    "เกลือ_fill.png",
+      "fill-bean":    "ถั่วเหลือง_full.png",
+      "fill-sugar":   "น้ำตาลทรายขาว.png",
+      "fill-coconut": "กะทิ_pour.png",
+      "fill-agar":    "ผงวุ้น_pour.png",
+      "fill-color":   "สีผสมอาหาร_pour.png",
+      "fill-water":   "น้ำเปล่า_pour.png",
+      "fill-salt":    "เกลือ_pour.png",
     };
     Object.entries(fillMap).forEach(([id, file]) => {
       const img = this._el("img");

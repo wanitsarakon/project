@@ -83,7 +83,7 @@ button:disabled {
 .home-root {
   min-height: 100svh;
   width: 100%;
-  background-image: url("./assets/backgroundHome.png");
+  background-image: url("/assets/backgroundHome.png");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;

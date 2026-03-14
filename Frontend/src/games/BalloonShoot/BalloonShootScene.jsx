@@ -288,15 +288,15 @@ export default class BalloonShootScene extends Phaser.Scene {
     // preload sounds
     const loadAudio = (src) => { const a = new Audio(src); return a; };
     const sounds = {
-      pop:       loadAudio(A + "audio/pop.mp3"),
-      hitShield: loadAudio(A + "audio/hit_shield.mp3"),
-      lightning: loadAudio(A + "audio/lightning.mp3"),
-      bgm:       loadAudio(A + "audio/bgm.mp3"),
-      timeStop:  loadAudio(A + "audio/timestop.mp3"),
-      explosion: loadAudio(A + "audio/explosion.mp3"),
-      count:     loadAudio(A + "audio/count.mp3"),
-      start:     loadAudio(A + "audio/start.mp3"),
-      rain:      loadAudio(A + "audio/rain.mp3"),
+      pop:       loadAudio(A + "pop.mp3"),
+      hitShield: loadAudio(A + "hit_shield.mp3"),
+      lightning: loadAudio(A + "lightning.mp3"),
+      bgm:       loadAudio(A + "bgm.mp3"),
+      timeStop:  loadAudio(A + "timestop.mp3"),
+      explosion: loadAudio(A + "explosion.mp3"),
+      count:     loadAudio(A + "count.mp3"),
+      start:     loadAudio(A + "start.mp3"),
+      rain:      loadAudio(A + "rain.mp3"),
     };
     sounds.bgm.loop  = true; sounds.bgm.volume  = 0.4;
     sounds.rain.loop = true; sounds.rain.volume = 0.5;

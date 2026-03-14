@@ -2,6 +2,17 @@ import Phaser from "phaser";
 import Spoon from "./components/Spoon";
 import Fish from "./components/Fish";
 
+const BG_IMAGE = new URL("./assetsFish/BGfish.png", import.meta.url).href;
+const SPOON_IMAGE = new URL("./assetsFish/Spoon.png", import.meta.url).href;
+const BUCKET_IMAGE = new URL("./assetsFish/WaterBowl.png", import.meta.url).href;
+const FISH_IMAGES = {
+  fish1: new URL("./assetsFish/1.png", import.meta.url).href,
+  fish2: new URL("./assetsFish/2.png", import.meta.url).href,
+  fish3: new URL("./assetsFish/3.png", import.meta.url).href,
+  fish4: new URL("./assetsFish/4.png", import.meta.url).href,
+  fish5: new URL("./assetsFish/5.png", import.meta.url).href,
+};
+
 export default class FishScoopingScene extends Phaser.Scene {
 
 constructor(){
@@ -19,17 +30,17 @@ init(data){
 
 preload(){
 
-  this.load.image("bg","/src/games/FishScooping/assetsFish/BGfish.png");
+  this.load.image("bg", BG_IMAGE);
 
-  this.load.image("spoon","/src/games/FishScooping/assetsFish/Spoon.png");
+  this.load.image("spoon", SPOON_IMAGE);
 
-  this.load.image("bucket","/src/games/FishScooping/assetsFish/WaterBowl.png");
+  this.load.image("bucket", BUCKET_IMAGE);
 
-  this.load.image("fish1","/src/games/FishScooping/assetsFish/1.png");
-  this.load.image("fish2","/src/games/FishScooping/assetsFish/2.png");
-  this.load.image("fish3","/src/games/FishScooping/assetsFish/3.png");
-  this.load.image("fish4","/src/games/FishScooping/assetsFish/4.png");
-  this.load.image("fish5","/src/games/FishScooping/assetsFish/5.png");
+  this.load.image("fish1", FISH_IMAGES.fish1);
+  this.load.image("fish2", FISH_IMAGES.fish2);
+  this.load.image("fish3", FISH_IMAGES.fish3);
+  this.load.image("fish4", FISH_IMAGES.fish4);
+  this.load.image("fish5", FISH_IMAGES.fish5);
 
 }
 
