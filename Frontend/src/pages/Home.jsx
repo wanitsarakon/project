@@ -6,32 +6,21 @@ import React, {
 } from "react";
 
 export default function Home({ onSelect }) {
-  const [step, setStep] = useState("landing"); // landing | form
+  const [step, setStep] = useState("landing");
   const [name, setName] = useState("");
-  const [role, setRole] = useState(null); // host | player
+  const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const inputRef = useRef(null);
 
-  /* =========================
-     Focus input เมื่อเข้า form
-  ========================= */
   useEffect(() => {
     if (step === "form") {
       setTimeout(() => inputRef.current?.focus(), 120);
     }
   }, [step]);
 
-  /* =========================
-     Helpers
-  ========================= */
-  const normalizeName = useCallback((value) => {
-    return value.replace(/\s+/g, " ").trim();
-  }, []);
+  const normalizeName = useCallback((value) => value.replace(/\s+/g, " ").trim(), []);
 
-  /* =========================
-     Submit
-  ========================= */
   const handleConfirm = useCallback(() => {
     if (loading) return;
 
@@ -57,107 +46,117 @@ export default function Home({ onSelect }) {
     setLoading(false);
   }, [loading, name, role, onSelect, normalizeName]);
 
-  /* =========================
-     Keyboard (Enter)
-  ========================= */
   useEffect(() => {
     const onKeyDown = (e) => {
       if (e.key !== "Enter") return;
-      if (loading) return;
-      if (step !== "form") return;
+      if (loading || step !== "form") return;
       handleConfirm();
     };
 
     window.addEventListener("keydown", onKeyDown);
-    return () =>
-      window.removeEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
   }, [handleConfirm, loading, step]);
 
-  /* =========================
-     UI
-  ========================= */
   return (
     <div className="home-root">
-      {/* ===== PANEL กลาง ===== */}
-      <div className="ui-panel">
-        {/* ================= LANDING ================= */}
-        {step === "landing" && (
-          <div className="landing">
+      {step === "landing" ? (
+        <section className="landing-stage">
+          <div className="landing-sky-glow landing-sky-glow-left" />
+          <div className="landing-sky-glow landing-sky-glow-right" />
+          <div className="landing-moon" />
+          <div className="landing-string-light string-top" />
+          <div className="landing-string-light string-mid" />
+          <div className="landing-firework firework-left" />
+          <div className="landing-firework firework-right" />
+          <div className="landing-firework firework-center" />
+
+          <div className="landing-poster">
+            <div className="landing-badge">Temple Fair</div>
+
             <h1 className="landing-title">
-              🎉 Temple fair
+              Temple fair
               <span>mini-game 2D website</span>
             </h1>
 
-            <p className="landing-subtitle">
-              เรียนเชิญเข้าสู่งานวัดชิงรางวัล
-            </p>
+            <p className="landing-subtitle">เรียนเชิญเข้าสู่งานวัดชิงรางวัล</p>
 
             <button
-              className="enter-btn"
+              className="enter-btn temple-enter-btn"
               onClick={() => setStep("form")}
             >
-              ▶ เข้าสู่เกม
+              <span className="enter-btn-arrow">▶</span>
+              เข้าสู่เกม
             </button>
           </div>
-        )}
+        </section>
+      ) : (
+        <section className="festival-form-shell">
+          <div className="landing-string-light string-top" />
+          <div className="landing-string-light string-mid" />
 
-        {/* ================= FORM ================= */}
-        {step === "form" && (
-          <div role="main">
-            <h2 className="form-title">เริ่มเล่นเกม</h2>
+          <div className="festival-form-card" role="main">
+            <h2 className="festival-form-title">กรอกชื่อ + เลือกบทบาท</h2>
 
-            <input
-              ref={inputRef}
-              className="name-input"
-              placeholder="ชื่อของคุณ"
-              value={name}
-              maxLength={20}
-              disabled={loading}
-              onChange={(e) => setName(e.target.value)}
-            />
+            <div className="festival-input-wrap">
+              <input
+                ref={inputRef}
+                className="festival-name-input"
+                placeholder="กรอกชื่อ"
+                value={name}
+                maxLength={20}
+                disabled={loading}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
 
-            <div className="role-row">
+            <p className="festival-form-hint">
+              เลือกบทบาทเพื่อกำหนดว่าจะเป็นผู้สร้างห้องหรือผู้เข้าแข่งขัน
+            </p>
+
+            <div className="festival-role-grid">
               <button
-                className={`role-btn ${
-                  role === "host" ? "active" : ""
-                }`}
+                className={`festival-role-card host-card ${role === "host" ? "active" : ""}`}
                 onClick={() => setRole("host")}
                 disabled={loading}
               >
-                🧑‍💼 Host
+                <span className="festival-role-copy">
+                  <strong>เจ้าภาพแข่งขัน</strong>
+                  <span>Host</span>
+                </span>
               </button>
 
               <button
-                className={`role-btn ${
-                  role === "player" ? "active" : ""
-                }`}
+                className={`festival-role-card player-card ${role === "player" ? "active" : ""}`}
                 onClick={() => setRole("player")}
                 disabled={loading}
               >
-                🎮 Player
+                <span className="festival-role-copy">
+                  <strong>ผู้เข้าแข่งขัน</strong>
+                  <span>Player</span>
+                </span>
               </button>
             </div>
 
-            <button
-              className="confirm-btn"
-              onClick={handleConfirm}
-              disabled={loading}
-            >
-              {loading
-                ? "⏳ กำลังดำเนินการ..."
-                : "ตกลง"}
-            </button>
+            <div className="festival-form-actions">
+              <button
+                className="confirm-btn festival-confirm-btn"
+                onClick={handleConfirm}
+                disabled={loading}
+              >
+                {loading ? "กำลังดำเนินการ..." : "ยืนยัน"}
+              </button>
 
-            <button
-              className="back-btn"
-              onClick={() => setStep("landing")}
-              disabled={loading}
-            >
-              ← กลับ
-            </button>
+              <button
+                className="back-btn festival-back-btn"
+                onClick={() => setStep("landing")}
+                disabled={loading}
+              >
+                ← กลับไปหน้าแรก
+              </button>
+            </div>
           </div>
-        )}
-      </div>
+        </section>
+      )}
     </div>
   );
 }

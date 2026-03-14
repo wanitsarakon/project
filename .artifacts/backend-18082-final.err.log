@@ -48,3 +48,10 @@
 2026/03/15 03:05:53 ❌ WS unregister room=833922 player=633 clients=2
 2026/03/15 03:05:58 ❌ WS unregister room=833922 player=635 clients=1
 2026/03/15 03:07:13 ❌ WS unregister room=833922 player=634 clients=0
+2026/03/15 04:06:44 ✅ WS register room=global player=0 clients=1
+2026/03/15 04:07:01 ❌ WS unregister room=global player=0 clients=0
+2026/03/15 04:07:01 ✅ WS register room=364651 player=637 clients=1
+2026/03/15 04:14:15 ❌ WS unregister room=364651 player=637 clients=0
+2026/03/15 04:20:02 🛑 Shutting down server...
+2026/03/15 04:20:02 🛑 AutoCleanup stopped
+2026/03/15 04:20:02 ✅ Server stopped cleanly

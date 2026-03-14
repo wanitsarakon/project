@@ -10,6 +10,14 @@ const STEPS = [
   { id: "lotus", label: "ดอกบัว", icon: "🪷", color: "#ffcde0" },
 ];
 
+const STICKS = [
+  "เซียมซีเลข 3: จะมีคนคอยช่วยเหลือเมื่อถึงเวลา",
+  "เซียมซีเลข 7: งานที่ตั้งใจจะค่อยๆ สำเร็จอย่างมั่นคง",
+  "เซียมซีเลข 12: มีข่าวดีและโชคเล็กๆ เข้ามาให้ยิ้มได้",
+  "เซียมซีเลข 19: เหนื่อยช่วงต้น แต่ปลายทางงดงามแน่นอน",
+  "เซียมซีเลข 24: ความตั้งใจดีจะพาคนดีเข้ามาในชีวิต",
+];
+
 const BLESSINGS = [
   "สุขภาพแข็งแรง",
   "โชคดีตลอดปี",
@@ -28,6 +36,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
     this.root = null;
     this.state = null;
     this.timerHandle = null;
+    this.countdownTimer = null;
     this.calmBgm = null;
   }
 
@@ -52,7 +61,6 @@ export default class WorshipBoothScene extends Phaser.Scene {
   createInitialState() {
     return {
       phase: "intro",
-      score: 0,
       mistakes: 0,
       round: 1,
       timeLeft: ROUND_TIME,
@@ -60,6 +68,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
       roundSequence: this.generateSequence(),
       completedRounds: 0,
       blessing: null,
+      stick: null,
     };
   }
 
@@ -83,7 +92,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
         .wb-hud{margin-top:18px;display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:12px}
         .wb-box{background:#fff4dc;border-radius:18px;padding:12px 14px;text-align:center;box-shadow:inset 0 0 0 1px rgba(150,84,20,.08)}
         .wb-box strong{display:block;font-size:14px;color:#8e541a}
-        .wb-box span{display:block;font-size:30px;font-weight:800}
+        .wb-box span{display:block;font-size:26px;font-weight:800}
         .wb-sequence{margin-top:18px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
         .wb-pill{min-width:110px;border-radius:999px;padding:12px 18px;background:#fff0d2;border:2px solid transparent;text-align:center;font-weight:700;transition:.18s ease}
         .wb-pill.active{border-color:#b25a0d;transform:translateY(-2px);box-shadow:0 10px 18px rgba(0,0,0,.08)}
@@ -109,7 +118,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
         .wb-subbtn{margin-top:10px;padding:10px 20px;background:rgba(255,245,214,.15);color:#fff3cf}
         .wb-count{font-size:120px;font-weight:900;color:#fff4d2;text-shadow:0 0 24px rgba(255,208,122,.45)}
         .wb-result{width:min(92vw,760px);padding:32px;border-radius:30px;background:rgba(255,247,225,.96);text-align:center;color:#6a3000;box-shadow:0 20px 48px rgba(0,0,0,.24)}
-        .wb-scorebig{font-size:72px;font-weight:900}
+        .wb-scorebig{font-size:54px;font-weight:900}
         .wb-note{margin-top:10px;font-size:20px}
         @media (max-width:760px){.wb-hud{grid-template-columns:repeat(2,minmax(120px,1fr))}.wb-grid{grid-template-columns:1fr}.wb-pill{min-width:92px}}
       </style>
@@ -118,9 +127,9 @@ export default class WorshipBoothScene extends Phaser.Scene {
         <div class="wb-wrap">
           <div class="wb-card">
             <div class="wb-title">ซุ้มไหว้พระขอพร</div>
-            <div class="wb-sub">ทำพิธีให้ถูกลำดับภายในเวลา แล้วรับพรกลับไปพร้อมคะแนน</div>
+            <div class="wb-sub">ด่านปิดท้ายอย่างมงคล ไหว้พระให้ครบพิธีแล้วเสี่ยงเซียมซีรับพรกลับบ้าน</div>
             <div class="wb-hud">
-              <div class="wb-box"><strong>คะแนน</strong><span id="wb-score">0</span></div>
+              <div class="wb-box"><strong>พิธีสำเร็จ</strong><span id="wb-progress">0 / ${TOTAL_ROUNDS}</span></div>
               <div class="wb-box"><strong>เวลา</strong><span id="wb-time">${ROUND_TIME}</span></div>
               <div class="wb-box"><strong>รอบ</strong><span id="wb-round">1 / ${TOTAL_ROUNDS}</span></div>
               <div class="wb-box"><strong>พลาด</strong><span id="wb-mistakes">0</span></div>
@@ -129,7 +138,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
             <div id="wb-msg" class="wb-msg"></div>
             <div id="wb-grid" class="wb-grid"></div>
             <div class="wb-footer">
-              <button id="wb-pray" class="wb-finish" disabled>รับพรและจบเกม</button>
+              <button id="wb-pray" class="wb-finish" disabled>เสี่ยงเซียมซีรับพร</button>
             </div>
           </div>
         </div>
@@ -137,7 +146,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
           <div class="wb-panel">
             <div class="wb-start"></div>
             <h2>ไหว้พระขอพร</h2>
-            <p>จำลำดับเครื่องสักการะของแต่ละรอบให้ดี แล้วกดให้ถูกต้องครบ 3 รอบ หากกดผิดจะเสียคะแนนและต้องเริ่มลำดับรอบนั้นใหม่</p>
+            <p>จำลำดับเครื่องสักการะให้ดี แล้วกดให้ถูกครบ 3 รอบ เมื่อทำพิธีจบจะได้เสี่ยงเซียมซีรับพรกลับบ้านอย่างเป็นมงคล ด่านนี้ไม่นับคะแนนรวม</p>
             <button id="wb-start-btn" class="wb-mainbtn">เริ่มพิธี</button>
             <div><button id="wb-help-btn" class="wb-subbtn">ดูวิธีเล่นอีกครั้ง</button></div>
           </div>
@@ -147,7 +156,8 @@ export default class WorshipBoothScene extends Phaser.Scene {
           <div class="wb-result">
             <h2 style="margin:0">พรที่ได้รับ</h2>
             <div id="wb-final-blessing" class="wb-note" style="font-size:28px;font-weight:800"></div>
-            <div id="wb-final-score" class="wb-scorebig">0</div>
+            <div id="wb-final-score" class="wb-scorebig">ขอพรสำเร็จ</div>
+            <div id="wb-final-stick" class="wb-note"></div>
             <div id="wb-final-meta" class="wb-note"></div>
             <button id="wb-finish-btn" class="wb-mainbtn" style="margin-top:20px">กลับแผนที่</button>
           </div>
@@ -156,7 +166,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
     `;
 
     container.appendChild(this.root);
-    this.scoreEl = this.root.querySelector("#wb-score");
+    this.progressEl = this.root.querySelector("#wb-progress");
     this.timeEl = this.root.querySelector("#wb-time");
     this.roundEl = this.root.querySelector("#wb-round");
     this.mistakesEl = this.root.querySelector("#wb-mistakes");
@@ -170,6 +180,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
     this.resultEl = this.root.querySelector("#wb-result");
     this.finalBlessingEl = this.root.querySelector("#wb-final-blessing");
     this.finalScoreEl = this.root.querySelector("#wb-final-score");
+    this.finalStickEl = this.root.querySelector("#wb-final-stick");
     this.finalMetaEl = this.root.querySelector("#wb-final-meta");
 
     STEPS.forEach((step) => {
@@ -183,17 +194,18 @@ export default class WorshipBoothScene extends Phaser.Scene {
 
     this.root.querySelector("#wb-start-btn")?.addEventListener("click", () => this.startCountdown());
     this.root.querySelector("#wb-help-btn")?.addEventListener("click", () => {
-      this.msgEl.textContent = "กดให้ตรงตามลำดับที่แสดงด้านบน หากผิดจะต้องเริ่มลำดับรอบนั้นใหม่";
+      this.msgEl.textContent = "กดตามลำดับเครื่องสักการะด้านบน ถ้ากดผิดจะต้องเริ่มลำดับของรอบนั้นใหม่";
     });
     this.prayBtn?.addEventListener("click", () => this.finishGame());
     this.root.querySelector("#wb-finish-btn")?.addEventListener("click", () => {
       this.onGameEnd?.({
-        score: this.state.score,
+        score: 0,
         blessing: this.state.blessing,
         meta: {
           mistakes: this.state.mistakes,
           completedRounds: this.state.completedRounds,
           timeLeft: this.state.timeLeft,
+          stick: this.state.stick,
         },
       });
     });
@@ -263,14 +275,12 @@ export default class WorshipBoothScene extends Phaser.Scene {
 
     if (!isCorrect) {
       this.state.mistakes += 1;
-      this.state.score = Math.max(0, this.state.score - 5);
       this.state.stepIndex = 0;
       this.msgEl.textContent = `ผิดลำดับ ต้องเริ่มรอบ ${this.state.round} ใหม่`;
       this.renderState();
       return;
     }
 
-    this.state.score += 15;
     this.state.stepIndex += 1;
     if (this.cache.audio?.exists("worship-bell")) {
       this.sound.play("worship-bell", { volume: 0.18 });
@@ -278,10 +288,9 @@ export default class WorshipBoothScene extends Phaser.Scene {
 
     if (this.state.stepIndex >= this.state.roundSequence.length) {
       this.state.completedRounds += 1;
-      this.state.score += 20;
 
       if (this.state.round >= TOTAL_ROUNDS) {
-        this.msgEl.textContent = "พิธีครบแล้ว กดรับพรได้เลย";
+        this.msgEl.textContent = "พิธีครบแล้ว กดเสี่ยงเซียมซีรับพรได้เลย";
         this.state.phase = "ready";
         this.renderState();
         return;
@@ -308,42 +317,43 @@ export default class WorshipBoothScene extends Phaser.Scene {
 
     this.state.phase = "result";
     this.state.blessing = BLESSINGS[Math.floor(Math.random() * BLESSINGS.length)];
+    this.state.stick = STICKS[Math.floor(Math.random() * STICKS.length)];
+
     if (this.cache.audio?.exists("worship-bell")) {
       this.sound.play("worship-bell", { volume: 0.35 });
     }
-    if (!fromTimeout) {
-      this.state.score += Math.max(10, this.state.timeLeft);
-    }
 
     this.finalBlessingEl.textContent = this.state.blessing;
-    this.finalScoreEl.textContent = String(this.state.score);
-    this.finalMetaEl.textContent =
-      fromTimeout
-        ? `หมดเวลาก่อนจบพิธี พลาด ${this.state.mistakes} ครั้ง สำเร็จ ${this.state.completedRounds}/${TOTAL_ROUNDS} รอบ`
-        : `ทำพิธีครบ ${this.state.completedRounds}/${TOTAL_ROUNDS} รอบ พลาด ${this.state.mistakes} ครั้ง เหลือเวลา ${this.state.timeLeft} วินาที`;
+    this.finalScoreEl.textContent = "ขอพรสำเร็จ";
+    this.finalStickEl.textContent = this.state.stick;
+    this.finalMetaEl.textContent = fromTimeout
+      ? `หมดเวลาก่อนจบพิธี ทำสำเร็จ ${this.state.completedRounds}/${TOTAL_ROUNDS} รอบ พลาด ${this.state.mistakes} ครั้ง`
+      : `ทำพิธีครบ ${this.state.completedRounds}/${TOTAL_ROUNDS} รอบ พลาด ${this.state.mistakes} ครั้ง เหลือเวลา ${this.state.timeLeft} วินาที`;
     this.resultEl.style.display = "flex";
     this.renderState();
   }
 
   renderState() {
-    this.scoreEl.textContent = String(this.state.score);
-    this.timeEl.textContent = String(this.state.timeLeft);
-    this.roundEl.textContent = `${Math.min(this.state.round, TOTAL_ROUNDS)} / ${TOTAL_ROUNDS}`;
-    this.mistakesEl.textContent = String(this.state.mistakes);
+    if (this.progressEl) this.progressEl.textContent = `${this.state.completedRounds} / ${TOTAL_ROUNDS}`;
+    if (this.timeEl) this.timeEl.textContent = String(this.state.timeLeft);
+    if (this.roundEl) this.roundEl.textContent = `${Math.min(this.state.round, TOTAL_ROUNDS)} / ${TOTAL_ROUNDS}`;
+    if (this.mistakesEl) this.mistakesEl.textContent = String(this.state.mistakes);
 
-    this.sequenceEl.innerHTML = this.state.roundSequence
-      .map((stepId, index) => {
-        const step = STEPS.find((item) => item.id === stepId);
-        const classes = [
-          "wb-pill",
-          index < this.state.stepIndex ? "done" : "",
-          index === this.state.stepIndex && (this.state.phase === "playing" || this.state.phase === "ready") ? "active" : "",
-        ].filter(Boolean).join(" ");
-        return `<div class="${classes}" style="background:${index < this.state.stepIndex ? "#e7ffd8" : step.color}">${step.icon} ${step.label}</div>`;
-      })
-      .join("");
+    if (this.sequenceEl) {
+      this.sequenceEl.innerHTML = this.state.roundSequence
+        .map((stepId, index) => {
+          const step = STEPS.find((item) => item.id === stepId);
+          const classes = [
+            "wb-pill",
+            index < this.state.stepIndex ? "done" : "",
+            index === this.state.stepIndex && (this.state.phase === "playing" || this.state.phase === "ready") ? "active" : "",
+          ].filter(Boolean).join(" ");
+          return `<div class="${classes}" style="background:${index < this.state.stepIndex ? "#e7ffd8" : step.color}">${step.icon} ${step.label}</div>`;
+        })
+        .join("");
+    }
 
-    this.prayBtn.disabled = this.state.phase !== "ready";
+    if (this.prayBtn) this.prayBtn.disabled = this.state.phase !== "ready";
   }
 
   cleanup() {

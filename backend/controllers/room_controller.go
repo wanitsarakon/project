@@ -539,6 +539,11 @@ func (rc *RoomController) CompleteGame(c *gin.Context) {
 		return
 	}
 
+	effectiveScore := maxInt(req.Score, 0)
+	if gameKey == "WorshipBoothScene" {
+		effectiveScore = 0
+	}
+
 	if _, err := tx.Exec(`
 		UPDATE player_game_progress
 		SET status='completed',
@@ -546,7 +551,7 @@ func (rc *RoomController) CompleteGame(c *gin.Context) {
 		    meta=$2,
 		    completed_at=NOW()
 		WHERE room_id=$3 AND player_id=$4 AND game_key=$5
-	`, maxInt(req.Score, 0), metaJSON, roomID, req.PlayerID, gameKey); err != nil {
+	`, effectiveScore, metaJSON, roomID, req.PlayerID, gameKey); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "update progress failed"})
 		return
 	}
@@ -555,7 +560,7 @@ func (rc *RoomController) CompleteGame(c *gin.Context) {
 		UPDATE players
 		SET total_score = total_score + $1
 		WHERE id=$2
-	`, maxInt(req.Score, 0), req.PlayerID); err != nil {
+	`, effectiveScore, req.PlayerID); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "update score failed"})
 		return
 	}
@@ -596,7 +601,7 @@ func (rc *RoomController) CompleteGame(c *gin.Context) {
 	rc.broadcastRoom(code, gin.H{
 		"type":      "score_update",
 		"player_id": req.PlayerID,
-		"score":     maxInt(req.Score, 0),
+		"score":     effectiveScore,
 	})
 
 	rc.broadcastRoom(code, gin.H{

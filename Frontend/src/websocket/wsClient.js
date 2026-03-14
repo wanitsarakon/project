@@ -7,7 +7,7 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
     if (!apiBase) {
       return window.location.protocol === "https:"
         ? `wss://${window.location.host}`
-        : "ws://localhost:8080";
+        : "ws://127.0.0.1:18082";
     }
 
     try {
@@ -18,7 +18,7 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
     } catch {
       return window.location.protocol === "https:"
         ? `wss://${window.location.host}`
-        : "ws://localhost:8080";
+        : "ws://127.0.0.1:18082";
     }
   })();
 

@@ -31,7 +31,6 @@ func NewRoundController(db *sql.DB, hub *ws.Hub) *RoundController {
 var GameSequence = []string{
 	"FishScoopingScene",
 	"HorseDeliveryScene",
-	"WorshipBoothScene",
 	"BoxingGameScene",
 	"CookingGameScene",
 	"BalloonShootScene",
@@ -39,6 +38,7 @@ var GameSequence = []string{
 	"FlowerGameScene",
 	"HauntedHouseScene",
 	"TugOfWarScene",
+	"WorshipBoothScene",
 }
 
 /* =========================

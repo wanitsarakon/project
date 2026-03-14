@@ -4,53 +4,400 @@ import GameContainer from "../games/GameContainer";
 import { FESTIVAL_BOOTHS } from "../games/FestivalMapScene";
 import { createRoomSocket } from "../websocket/wsClient";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8080";
+const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:18082";
 const TOTAL_GAMES = FESTIVAL_BOOTHS.length;
+const MAP_BGM_PATH = "/assets/boxing/sounds/bg_music.mp3";
 
-function RewardBar({ prizes }) {
+function fmtTeamName(team) {
+  if (!team) return "ยังไม่จัดทีม";
+  return `ทีม ${team}`;
+}
+
+function BottomPrizeBar({ prizes }) {
   return (
     <div
       style={{
-        width: "min(760px, calc(100vw - 32px))",
-        background: "rgba(17,13,11,0.7)",
-        borderRadius: 20,
+        display: "flex",
+        flexWrap: "wrap",
+        gap: 12,
+        justifyContent: "center",
+      }}
+    >
+      {prizes?.length ? (
+        prizes.map((prize, index) => (
+          <div
+            key={`${prize}-${index}`}
+            style={{
+              minWidth: 132,
+              padding: "10px 14px",
+              borderRadius: 16,
+              border: "2px solid rgba(255,218,118,0.72)",
+              background:
+                "linear-gradient(180deg, rgba(93,49,11,0.92) 0%, rgba(52,25,8,0.94) 100%)",
+              color: "#fff1c2",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.25)",
+              textAlign: "center",
+            }}
+          >
+            <div style={{ fontSize: 13, opacity: 0.85 }}>อันดับ {index + 1}</div>
+            <div style={{ fontWeight: 700, lineHeight: 1.25 }}>{prize}</div>
+          </div>
+        ))
+      ) : (
+        <div
+          style={{
+            padding: "10px 14px",
+            borderRadius: 16,
+            border: "2px dashed rgba(255,218,118,0.4)",
+            color: "#ffe6ac",
+          }}
+        >
+          ห้องนี้ยังไม่ได้ตั้งของรางวัล
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlayerBottomHud({
+  player,
+  roomMeta,
+  meProgress,
+  completedGames,
+  currentScore,
+  myTeamScore,
+  teamMembers,
+}) {
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left: "50%",
+        bottom: 16,
+        transform: "translateX(-50%)",
+        width: "min(1180px, calc(100vw - 24px))",
         padding: 16,
-        boxShadow: "0 10px 24px rgba(0,0,0,0.22)",
-        backdropFilter: "blur(10px)",
-        color: "#fff6df",
+        borderRadius: 28,
+        border: "3px solid rgba(255,221,133,0.88)",
+        background:
+          "linear-gradient(180deg, rgba(78,35,12,0.96) 0%, rgba(44,21,9,0.96) 55%, rgba(26,13,6,0.98) 100%)",
+        boxShadow: "0 18px 42px rgba(0,0,0,0.38), inset 0 2px 0 rgba(255,255,255,0.18)",
+        zIndex: 20,
+        color: "#fff4d6",
+      }}
+    >
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+            gap: 14,
+            alignItems: "stretch",
+          }}
+      >
+        <div
+          style={{
+            borderRadius: 18,
+            padding: 14,
+            background: "rgba(255,223,146,0.08)",
+            border: "1px solid rgba(255,224,140,0.24)",
+          }}
+        >
+          <div style={{ fontSize: 13, color: "#ffd88c", marginBottom: 6 }}>ผู้เล่น</div>
+          <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.1 }}>
+            {player?.name || "ผู้เล่น"}
+          </div>
+          <div style={{ color: "#ffe7b5", marginTop: 6 }}>
+            {roomMeta.mode === "team" ? fmtTeamName(meProgress?.team) : "โหมดเดี่ยว"}
+          </div>
+        </div>
+
+        <div
+          style={{
+            borderRadius: 18,
+            padding: 14,
+            background: "rgba(255,223,146,0.08)",
+            border: "1px solid rgba(255,224,140,0.24)",
+          }}
+        >
+          <div style={{ fontSize: 13, color: "#ffd88c", marginBottom: 6 }}>คะแนนปัจจุบัน</div>
+          <div style={{ fontSize: 32, fontWeight: 800, lineHeight: 1 }}>{currentScore}</div>
+          <div style={{ color: "#ffe7b5", marginTop: 8 }}>
+            เล่นแล้ว {completedGames.length} / {TOTAL_GAMES} เกม
+          </div>
+          <div style={{ color: "#ffd88c", marginTop: 4 }}>
+            {meProgress?.done
+              ? "เล่นครบทุกซุ้มแล้ว รอ Host สรุปผล"
+              : `ซุ้มถัดไป: ${meProgress?.next_game_key || "-"}`}
+          </div>
+        </div>
+
+        <div
+          style={{
+            borderRadius: 18,
+            padding: 14,
+            background: "rgba(255,223,146,0.08)",
+            border: "1px solid rgba(255,224,140,0.24)",
+          }}
+        >
+          <div style={{ fontSize: 13, color: "#ffd88c", marginBottom: 8 }}>ของรางวัล</div>
+          <BottomPrizeBar prizes={roomMeta.prizes} />
+        </div>
+      </div>
+
+      {roomMeta.mode === "team" && teamMembers.length > 0 && (
+        <div
+          style={{
+            marginTop: 14,
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 10,
+            alignItems: "center",
+          }}
+        >
+          <div
+            style={{
+              padding: "8px 14px",
+              borderRadius: 999,
+              background: "rgba(255,241,198,0.12)",
+              border: "1px solid rgba(255,224,140,0.24)",
+              color: "#fff0c0",
+              fontWeight: 700,
+            }}
+          >
+            คะแนนรวมทีม {myTeamScore}
+          </div>
+
+          {teamMembers.map((entry) => (
+            <div
+              key={entry.id}
+              style={{
+                padding: "8px 12px",
+                borderRadius: 999,
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,224,140,0.18)",
+                color: "#ffe9bb",
+              }}
+            >
+              {entry.name}
+              {entry.id === player?.id ? " (คุณ)" : ""}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HostMonitor({ roomMeta, playerStatuses, completedPlayers, progressData, teamStandings, onFinalize, finalizing, onLeave }) {
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        width: "100vw",
+        background:
+          "radial-gradient(circle at top, #251036 0%, #121730 45%, #080d1b 100%)",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 24,
+        fontFamily: "Kanit",
       }}
     >
       <div
         style={{
-          fontWeight: 700,
-          fontSize: 18,
-          color: "#ffe2a3",
-          marginBottom: 8,
+          width: "min(1180px, calc(100vw - 24px))",
+          borderRadius: 30,
+          border: "3px solid rgba(255,219,125,0.84)",
+          background:
+            "linear-gradient(180deg, rgba(57,27,12,0.96) 0%, rgba(26,12,8,0.98) 100%)",
+          boxShadow: "0 24px 60px rgba(0,0,0,0.42)",
+          color: "#fff2cf",
+          padding: 24,
         }}
       >
-        ของรางวัลประจำห้อง
-      </div>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 18,
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+            marginBottom: 18,
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 16, color: "#ffd88c", marginBottom: 6 }}>Host Monitor</div>
+            <div style={{ fontSize: 34, fontWeight: 800, lineHeight: 1.05 }}>รอผู้เล่นเคลียร์ทุกซุ้ม</div>
+            <div style={{ color: "#ffe7b8", marginTop: 8 }}>
+              เล่นครบแล้ว {completedPlayers} / {playerStatuses.length} คน
+            </div>
+          </div>
 
-      {prizes?.length ? (
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
-          {prizes.map((prize, index) => (
-            <div
-              key={`${prize}-${index}`}
+          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+            <button
+              onClick={onFinalize}
+              disabled={!progressData?.all_completed || finalizing}
               style={{
-                padding: "8px 12px",
+                padding: "14px 24px",
                 borderRadius: 999,
-                background: "rgba(255,244,223,0.96)",
-                color: "#5b2c00",
-                fontWeight: 600,
+                border: "none",
+                background:
+                  !progressData?.all_completed || finalizing
+                    ? "#8c6b40"
+                    : "linear-gradient(180deg, #38c96a 0%, #159249 100%)",
+                color: "#fff",
+                fontFamily: "Kanit",
+                fontSize: 18,
+                fontWeight: 700,
+                cursor: !progressData?.all_completed || finalizing ? "default" : "pointer",
               }}
             >
-              #{index + 1} {prize}
+              {finalizing
+                ? "กำลังสรุปผล..."
+                : progressData?.all_completed
+                  ? "สรุปผู้ชนะ"
+                  : "รอผู้เล่นให้ครบก่อน"}
+            </button>
+
+            <button
+              onClick={onLeave}
+              style={{
+                padding: "14px 24px",
+                borderRadius: 999,
+                border: "none",
+                background: "linear-gradient(180deg, #ff725f 0%, #d94432 100%)",
+                color: "#fff",
+                fontFamily: "Kanit",
+                fontSize: 18,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              ออกจากห้อง
+            </button>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+            gap: 16,
+          }}
+        >
+          <div
+            style={{
+              borderRadius: 22,
+              padding: 16,
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,219,125,0.2)",
+            }}
+          >
+            <div style={{ fontSize: 14, color: "#ffd88c", marginBottom: 10 }}>ข้อมูลห้อง</div>
+            <div style={{ marginBottom: 6 }}>ชื่อห้อง: {roomMeta.name || "Thai Festival Room"}</div>
+            <div style={{ marginBottom: 6 }}>โหมด: {roomMeta.mode === "team" ? "ทีม" : "เดี่ยว"}</div>
+            <div>ของรางวัล: {roomMeta.prizes?.length || 0} รายการ</div>
+          </div>
+
+          <div
+            style={{
+              borderRadius: 22,
+              padding: 16,
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,219,125,0.2)",
+            }}
+          >
+            <div style={{ fontSize: 14, color: "#ffd88c", marginBottom: 10 }}>ของรางวัล</div>
+            <BottomPrizeBar prizes={roomMeta.prizes} />
+          </div>
+
+          {teamStandings.length > 0 ? (
+            <div
+              style={{
+                borderRadius: 22,
+                padding: 16,
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,219,125,0.2)",
+              }}
+            >
+              <div style={{ fontSize: 14, color: "#ffd88c", marginBottom: 10 }}>คะแนนรวมทีม</div>
+              <div style={{ display: "grid", gap: 10 }}>
+                {teamStandings.map((entry) => (
+                  <div
+                    key={entry.team}
+                    style={{
+                      borderRadius: 16,
+                      padding: 12,
+                      background: "rgba(255,233,174,0.08)",
+                      border: "1px solid rgba(255,219,125,0.2)",
+                    }}
+                  >
+                    <div style={{ fontWeight: 700 }}>
+                      {fmtTeamName(entry.team)} • {entry.totalScore} คะแนน
+                    </div>
+                    <div style={{ color: "#ffe7b8", marginTop: 4 }}>
+                      สมาชิกที่เล่นครบ {entry.completedPlayers} / {entry.members.length}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                borderRadius: 22,
+                padding: 16,
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,219,125,0.2)",
+              }}
+            >
+              <div style={{ fontSize: 14, color: "#ffd88c", marginBottom: 10 }}>สถานะภาพรวม</div>
+              <div style={{ fontSize: 24, fontWeight: 800 }}>
+                {completedPlayers} / {playerStatuses.length}
+              </div>
+              <div style={{ color: "#ffe7b8", marginTop: 6 }}>ผู้เล่นที่เคลียร์ครบทุกซุ้มแล้ว</div>
+            </div>
+          )}
+        </div>
+
+        <div
+          style={{
+            marginTop: 18,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+            gap: 14,
+          }}
+        >
+          {playerStatuses.map((entry) => (
+            <div
+              key={entry.player_id}
+              style={{
+                borderRadius: 20,
+                padding: 16,
+                background: entry.done ? "rgba(49,167,97,0.16)" : "rgba(255,255,255,0.06)",
+                border: `2px solid ${entry.done ? "rgba(87,232,144,0.5)" : "rgba(255,219,125,0.16)"}`,
+              }}
+            >
+              <div style={{ fontWeight: 700, fontSize: 20 }}>
+                {entry.name}
+                {entry.team ? ` • ${fmtTeamName(entry.team)}` : ""}
+              </div>
+              <div style={{ color: "#ffe7b8", marginTop: 6 }}>
+                สถานะ: {entry.connected ? "ออนไลน์" : "ออฟไลน์"}
+              </div>
+              <div style={{ color: "#ffe7b8", marginTop: 4 }}>
+                ความคืบหน้า {entry.completed} / {TOTAL_GAMES}
+              </div>
+              <div style={{ color: "#ffe7b8", marginTop: 4 }}>
+                คะแนนรวม {entry.total_score ?? 0}
+              </div>
+              <div style={{ color: "#ffd88c", marginTop: 8 }}>
+                {entry.done ? "เล่นครบทุกเกมแล้ว" : `ซุ้มถัดไป: ${entry.next_game_key || "-"}`}
+              </div>
             </div>
           ))}
         </div>
-      ) : (
-        <div style={{ color: "#ffe2a3" }}>ยังไม่ได้ตั้งของรางวัล</div>
-      )}
+      </div>
     </div>
   );
 }
@@ -80,14 +427,61 @@ export default function FestivalMap({
   });
   const [submittingGame, setSubmittingGame] = useState(false);
   const [finalizing, setFinalizing] = useState(false);
+  const [activeMiniGame, setActiveMiniGame] = useState(null);
 
   const wsRef = useRef(null);
   const mountedRef = useRef(false);
   const summaryShownRef = useRef(false);
+  const bgmRef = useRef(null);
 
   const safeSet = useCallback((fn) => {
     if (mountedRef.current) fn();
   }, []);
+
+  const ensureMapMusic = useCallback(() => {
+    if (isHost || activeMiniGame) return;
+    if (!bgmRef.current) {
+      const audio = new Audio(MAP_BGM_PATH);
+      audio.loop = true;
+      audio.volume = 0.32;
+      bgmRef.current = audio;
+    }
+
+    const playPromise = bgmRef.current.play();
+    if (playPromise?.catch) {
+      playPromise.catch(() => {});
+    }
+  }, [activeMiniGame, isHost]);
+
+  useEffect(() => {
+    if (isHost) return undefined;
+
+    const handleInteraction = () => {
+      ensureMapMusic();
+    };
+
+    window.addEventListener("pointerdown", handleInteraction, { passive: true });
+    window.addEventListener("keydown", handleInteraction);
+    ensureMapMusic();
+
+    return () => {
+      window.removeEventListener("pointerdown", handleInteraction);
+      window.removeEventListener("keydown", handleInteraction);
+      if (bgmRef.current) {
+        bgmRef.current.pause();
+        bgmRef.current.currentTime = 0;
+      }
+    };
+  }, [ensureMapMusic, isHost]);
+
+  useEffect(() => {
+    if (!bgmRef.current) return;
+    if (activeMiniGame) {
+      bgmRef.current.pause();
+    } else if (!isHost) {
+      ensureMapMusic();
+    }
+  }, [activeMiniGame, ensureMapMusic, isHost]);
 
   const loadSummary = useCallback(async () => {
     if (!roomCode || summaryShownRef.current) return;
@@ -135,17 +529,15 @@ export default function FestivalMap({
       if ((data?.mode ?? mode) === "team" && player?.id) {
         const me = players.find((entry) => entry?.id === player.id);
         if (me?.team) {
-          safeSet(() =>
-            setTeamMembers(
-              players
-                .filter((entry) => entry?.team === me.team)
-                .map((entry) => ({
-                  id: entry?.id,
-                  name: entry?.name ?? "player",
-                  team: entry?.team ?? "",
-                })),
-            ),
-          );
+          safeSet(() => setTeamMembers(
+            players
+              .filter((entry) => entry?.team === me.team)
+              .map((entry) => ({
+                id: entry?.id,
+                name: entry?.name ?? "player",
+                team: entry?.team ?? "",
+              })),
+          ));
         } else {
           safeSet(() => setTeamMembers([]));
         }
@@ -233,11 +625,11 @@ export default function FestivalMap({
       if (!msg?.type) return;
 
       if (
-        msg.type === "room_update" ||
-        msg.type === "progress_update" ||
-        msg.type === "player_disconnect" ||
-        msg.type === "score_update" ||
-        msg.type === "game_start"
+        msg.type === "room_update"
+        || msg.type === "progress_update"
+        || msg.type === "player_disconnect"
+        || msg.type === "score_update"
+        || msg.type === "game_start"
       ) {
         loadRoom();
         loadProgress();
@@ -316,6 +708,7 @@ export default function FestivalMap({
     async (result) => {
       if (!player?.id || !result?.gameKey || submittingGame) return;
 
+      setActiveMiniGame(null);
       safeSet(() => setSubmittingGame(true));
 
       try {
@@ -378,191 +771,16 @@ export default function FestivalMap({
 
   if (isHost) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          width: "100vw",
-          background:
-            "radial-gradient(circle at top, #1a2558 0%, #0b1231 58%, #060916 100%)",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
-          alignItems: "center",
-          padding: 24,
-          textAlign: "center",
-          fontFamily: "Kanit",
-          gap: 18,
-        }}
-      >
-        <RewardBar prizes={roomMeta.prizes} />
-
-        <div
-          style={{
-            width: "min(920px, calc(100vw - 32px))",
-            background: "rgba(255,255,255,0.94)",
-            borderRadius: 24,
-            padding: 28,
-            boxShadow: "0 12px 32px rgba(0,0,0,0.18)",
-          }}
-        >
-          <div
-            style={{
-              fontSize: 32,
-              fontWeight: "bold",
-              color: "#5b2c00",
-              marginBottom: 8,
-            }}
-          >
-            หน้าควบคุม Host
-          </div>
-
-          <div
-            style={{
-              color: "#7a4a1f",
-              fontSize: 18,
-              marginBottom: 14,
-            }}
-          >
-            รอให้ผู้เล่นทุกคนเล่นครบทุกซุ้ม แล้วค่อยกดสรุปผู้ชนะ
-          </div>
-
-          <div
-            style={{
-              background: "#fff4df",
-              borderRadius: 16,
-              padding: 14,
-              color: "#5b2c00",
-              marginBottom: 18,
-              fontWeight: 600,
-            }}
-          >
-            ผู้เล่นที่เล่นครบแล้ว {completedPlayers} / {playerStatuses.length}
-          </div>
-
-          {teamStandings.length > 0 && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-                gap: 14,
-                textAlign: "left",
-                marginBottom: 18,
-              }}
-            >
-              {teamStandings.map((entry) => (
-                <div
-                  key={`team-${entry.team}`}
-                  style={{
-                    background: "#f5f0ff",
-                    border: "2px solid #9b7cff",
-                    borderRadius: 18,
-                    padding: 14,
-                  }}
-                >
-                  <div style={{ fontWeight: 700, color: "#44206b", marginBottom: 6 }}>
-                    ทีม {entry.team}
-                  </div>
-                  <div style={{ color: "#5e3b86", marginBottom: 4 }}>
-                    คะแนนรวมทีม {entry.totalScore}
-                  </div>
-                  <div style={{ color: "#5e3b86" }}>
-                    สมาชิกที่เล่นครบ {entry.completedPlayers} / {entry.members.length}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: 14,
-              textAlign: "left",
-              marginBottom: 18,
-            }}
-          >
-            {playerStatuses.map((entry) => (
-              <div
-                key={entry?.player_id}
-                style={{
-                  background: entry?.done ? "#e7fff0" : "#fff9ef",
-                  border: `2px solid ${entry?.done ? "#38a169" : "#f0c36d"}`,
-                  borderRadius: 18,
-                  padding: 14,
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 10,
-                    marginBottom: 8,
-                    fontWeight: 700,
-                    color: "#4d2a0d",
-                  }}
-                >
-                  <span>
-                    {entry?.name || "player"}
-                    {entry?.team ? ` • ทีม ${entry.team}` : ""}
-                  </span>
-                  <span>{entry?.connected ? "ออนไลน์" : "ออฟไลน์"}</span>
-                </div>
-                <div style={{ color: "#6b3d16", marginBottom: 4 }}>
-                  เล่นแล้ว {entry?.completed ?? 0} / {TOTAL_GAMES}
-                </div>
-                <div style={{ color: "#6b3d16", marginBottom: 4 }}>
-                  คะแนนรวม {entry?.total_score ?? 0}
-                </div>
-                <div style={{ color: "#6b3d16" }}>
-                  {entry?.done
-                    ? "เล่นครบทุกซุ้มแล้ว"
-                    : `ซุ้มถัดไป: ${entry?.next_game_key || "-"}`}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <button
-            onClick={finalizeGame}
-            disabled={!progressData?.all_completed || finalizing}
-            style={{
-              padding: "14px 32px",
-              borderRadius: 24,
-              border: "none",
-              background:
-                !progressData?.all_completed || finalizing ? "#c8a97f" : "#27ae60",
-              color: "#fff",
-              fontSize: 18,
-              fontFamily: "Kanit",
-              cursor:
-                !progressData?.all_completed || finalizing ? "default" : "pointer",
-            }}
-          >
-            {finalizing
-              ? "กำลังสรุปผล..."
-              : progressData?.all_completed
-                ? "สรุปผู้ชนะ"
-                : "รอให้ผู้เล่นครบก่อน"}
-          </button>
-        </div>
-
-        <button
-          onClick={onLeave}
-          style={{
-            padding: "14px 32px",
-            borderRadius: 24,
-            border: "none",
-            background: "#e74c3c",
-            color: "#fff",
-            fontSize: 18,
-            fontFamily: "Kanit",
-            cursor: "pointer",
-          }}
-        >
-          ออกจากห้อง
-        </button>
-      </div>
+      <HostMonitor
+        roomMeta={roomMeta}
+        playerStatuses={playerStatuses}
+        completedPlayers={completedPlayers}
+        progressData={progressData}
+        teamStandings={teamStandings}
+        onFinalize={finalizeGame}
+        finalizing={finalizing}
+        onLeave={onLeave}
+      />
     );
   }
 
@@ -583,138 +801,83 @@ export default function FestivalMap({
         wsRef={wsRef}
         allowRoundEvents={false}
         mapData={{ boothStates }}
+        onGameStart={setActiveMiniGame}
         onGameEnd={submitBoothResult}
       />
 
-      <div
-        style={{
-          position: "absolute",
-          top: 16,
-          left: 16,
-          right: 16,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          gap: 10,
-          zIndex: 20,
-          pointerEvents: "none",
-        }}
-      >
-        <header style={{ textAlign: "center", pointerEvents: "auto" }}>
+      {!activeMiniGame && (
+        <>
           <div
             style={{
-              fontSize: 30,
-              fontWeight: "bold",
-              color: "#fff3cb",
-              textShadow: "0 4px 18px rgba(0,0,0,0.6)",
-            }}
-          >
-            แผนที่ซุ้มเกม
-          </div>
-
-          <div
-            style={{
-              fontSize: 16,
-              color: "#ffe5a8",
-              textShadow: "0 2px 10px rgba(0,0,0,0.55)",
-            }}
-          >
-            เล่นให้ครบทีละซุ้มเพื่อปลดล็อกซุ้มถัดไป
-          </div>
-        </header>
-
-        <div
-          style={{
-            width: "100%",
-            display: "flex",
-            justifyContent: "center",
-            pointerEvents: "auto",
-          }}
-        >
-          <RewardBar prizes={roomMeta.prizes} />
-        </div>
-      </div>
-
-      <div
-        style={{
-          position: "absolute",
-          left: 16,
-          bottom: 88,
-          width: "min(420px, calc(100vw - 32px))",
-          background: "rgba(255,255,255,0.92)",
-          borderRadius: 16,
-          padding: 14,
-          boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
-          zIndex: 20,
-        }}
-      >
-        <div style={{ fontWeight: 600, marginBottom: 8 }}>ความคืบหน้าของคุณ</div>
-
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-          <span>เล่นครบแล้ว</span>
-          <strong>
-            {meProgress?.completed ?? 0} / {TOTAL_GAMES}
-          </strong>
-        </div>
-        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-          <span>คะแนนรวม</span>
-          <strong>{scores[player?.id] || 0}</strong>
-        </div>
-        <div style={{ color: "#6b3d16" }}>
-          {meProgress?.done
-            ? "คุณเล่นครบทุกเกมแล้ว รอ Host ประกาศผลได้เลย"
-            : `ซุ้มถัดไป: ${meProgress?.next_game_key || "-"}`}
-        </div>
-      </div>
-
-      {(roomMeta.mode === "team" || mode === "team") && teamMembers?.length > 0 && (
-        <div
-          style={{
-            position: "absolute",
-            right: 16,
-            bottom: 88,
-            width: "min(360px, calc(100vw - 32px))",
-            background: "rgba(255,255,255,0.92)",
-            borderRadius: 16,
-            padding: 14,
-            boxShadow: "0 8px 20px rgba(0,0,0,0.15)",
-            zIndex: 20,
-          }}
-        >
-          <div style={{ fontWeight: 600, marginBottom: 8 }}>ทีมของคุณ</div>
-
-          <div
-            style={{
+              position: "absolute",
+              top: 16,
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 20,
+              width: "min(880px, calc(100vw - 24px))",
               display: "flex",
               justifyContent: "space-between",
-              padding: "0 0 8px",
-              marginBottom: 6,
-              borderBottom: "1px solid rgba(107,61,22,0.15)",
-              fontWeight: 700,
-              color: "#6b3d16",
+              alignItems: "center",
+              gap: 12,
+              padding: "12px 18px",
+              borderRadius: 999,
+              border: "2px solid rgba(255,221,133,0.72)",
+              background: "rgba(39,17,8,0.62)",
+              color: "#fff0c0",
+              boxShadow: "0 12px 28px rgba(0,0,0,0.28)",
+              backdropFilter: "blur(10px)",
             }}
           >
-            <span>คะแนนรวมทีม</span>
-            <span>{myTeamScore}</span>
-          </div>
+            <div>
+              <div style={{ fontSize: 14, color: "#ffd88c" }}>แผนที่ซุ้มเกม</div>
+              <div style={{ fontSize: 24, fontWeight: 800 }}>
+                เล่นเรียงทีละซุ้มเพื่อปลดล็อกด่านถัดไป
+              </div>
+            </div>
 
-          {teamMembers.map((entry) => (
             <div
-              key={entry?.id}
               style={{
-                display: "flex",
-                justifyContent: "space-between",
-                padding: "4px 0",
+                padding: "10px 14px",
+                borderRadius: 999,
+                background: "rgba(255,240,202,0.1)",
+                color: "#ffecc2",
+                whiteSpace: "nowrap",
               }}
             >
-              <span>
-                {entry?.name}
-                {entry?.id === player?.id && " (คุณ)"}
-              </span>
-              <span>{scores[entry?.id] || 0}</span>
+              ความคืบหน้า {completedGames.length} / {TOTAL_GAMES}
             </div>
-          ))}
-        </div>
+          </div>
+
+          <PlayerBottomHud
+            player={player}
+            roomMeta={roomMeta}
+            meProgress={meProgress}
+            completedGames={completedGames}
+            currentScore={scores[player?.id] || 0}
+            myTeamScore={myTeamScore}
+            teamMembers={teamMembers}
+          />
+
+          <button
+            onClick={onLeave}
+            style={{
+              position: "absolute",
+              right: 18,
+              top: 92,
+              padding: "12px 18px",
+              borderRadius: 999,
+              border: "2px solid rgba(255,221,133,0.66)",
+              background: "rgba(130,28,24,0.78)",
+              color: "#fff",
+              fontSize: 16,
+              fontWeight: 700,
+              cursor: "pointer",
+              zIndex: 20,
+            }}
+          >
+            ออกจากห้อง
+          </button>
+        </>
       )}
 
       {submittingGame && (
@@ -722,11 +885,11 @@ export default function FestivalMap({
           style={{
             position: "absolute",
             inset: 0,
-            background: "rgba(8,10,18,0.52)",
+            background: "rgba(8,10,18,0.56)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            zIndex: 25,
+            zIndex: 30,
             color: "#fff5d7",
             fontSize: 28,
             fontWeight: 700,
@@ -736,25 +899,6 @@ export default function FestivalMap({
           กำลังบันทึกคะแนน...
         </div>
       )}
-
-      <button
-        onClick={onLeave}
-        style={{
-          position: "absolute",
-          right: 16,
-          bottom: 16,
-          padding: "14px 32px",
-          borderRadius: 24,
-          border: "none",
-          background: "#e74c3c",
-          color: "#fff",
-          fontSize: 18,
-          cursor: "pointer",
-          zIndex: 20,
-        }}
-      >
-        ออกจากห้อง
-      </button>
     </div>
   );
 }

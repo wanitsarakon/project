@@ -24,6 +24,7 @@ export default function GameContainer({
   player,
   wsRef,
   onGameEnd,
+  onGameStart,
   allowRoundEvents = false,
   mapData = {},
 }) {
@@ -33,6 +34,7 @@ export default function GameContainer({
 
   const currentRoundIdRef = useRef(null);
   const onGameEndRef = useRef(onGameEnd);
+  const onGameStartRef = useRef(onGameStart);
   const startedRef = useRef(false);
   const mapDataRef = useRef(mapData);
 
@@ -43,6 +45,10 @@ export default function GameContainer({
   useEffect(() => {
     onGameEndRef.current = onGameEnd;
   }, [onGameEnd]);
+
+  useEffect(() => {
+    onGameStartRef.current = onGameStart;
+  }, [onGameStart]);
 
   useEffect(() => {
     mapDataRef.current = mapData;
@@ -89,6 +95,8 @@ export default function GameContainer({
     };
 
     console.log("🎮 Start game:", gameKey);
+
+    onGameStartRef.current?.(gameKey);
 
     game.scene.start(gameKey, {
 
