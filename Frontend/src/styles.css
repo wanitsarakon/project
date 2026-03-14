@@ -41,6 +41,7 @@ body {
   width: 100%;
   height: 100%;
   margin: 0;
+  overflow-x: hidden;
 }
 
 body {
@@ -54,6 +55,7 @@ body {
 
 #root {
   min-height: 100%;
+  width: 100%;
 }
 
 /* =========================
@@ -82,7 +84,7 @@ button:disabled {
 ========================= */
 .home-root {
   min-height: 100svh;
-  width: 100%;
+  width: 100vw;
   background-image: url("/assets/backgroundHome.png");
   background-size: cover;
   background-position: center;

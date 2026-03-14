@@ -111,6 +111,8 @@ export default class HauntedHouseScene extends Phaser.Scene {
     this.typeTimer = null;
     this.activeVoice = null;
     this.bgm = null;
+    this.isCleaningUp = false;
+    this.pendingTimeouts = new Set();
   }
 
   init(data = {}) {
@@ -118,6 +120,8 @@ export default class HauntedHouseScene extends Phaser.Scene {
   }
 
   create() {
+    this.isCleaningUp = false;
+    this.pendingTimeouts.clear();
     this.state = {
       phase: "intro",
       roomIndex: 0,
@@ -174,7 +178,7 @@ export default class HauntedHouseScene extends Phaser.Scene {
     this.root.querySelector("#resultBtn")?.addEventListener("click", () => this.finishPuzzle());
     this.root.querySelector("#finish")?.addEventListener("click", () => this.finishScene());
     this.root.querySelector("#miss")?.addEventListener("click", (event) => {
-      if (event.target === this.root.querySelector("#miss")) this.handleMiss();
+      if (event.target === event.currentTarget) this.handleMiss();
     });
   }
 
@@ -201,7 +205,7 @@ export default class HauntedHouseScene extends Phaser.Scene {
 
   renderRoom() {
     const room = ROOMS[this.state.roomIndex];
-    if (!room) return;
+    if (!room || !this.roomBgEl || !this.roomSignEl || !this.roomTitleEl || !this.timeEl || !this.roomItemsEl || !this.roomStageEl) return;
     this.roomBgEl.style.backgroundImage = `url('${room.background}')`;
     this.roomSignEl.src = room.sign;
     this.roomTitleEl.textContent = room.title;
@@ -234,15 +238,19 @@ export default class HauntedHouseScene extends Phaser.Scene {
     if (!this.state.inventory.includes(itemId)) this.state.inventory.push(itemId);
     this.renderRoom();
     const room = ROOMS[this.state.roomIndex];
-    if (room.items.every((item) => this.state.roomFound[item.id])) window.setTimeout(() => this.nextRoom(), 280);
+    if (room.items.every((item) => this.state.roomFound[item.id])) {
+      this.scheduleTimeout(() => {
+        if (!this.isCleaningUp) this.nextRoom();
+      }, 280);
+    }
   }
 
   startRoomTimer() {
     window.clearInterval(this.roomTimer);
     this.roomTimer = window.setInterval(() => {
-      if (this.state.phase !== "room") return;
+      if (this.isCleaningUp || !this.root || this.state.phase !== "room") return;
       this.state.timeLeft -= 1;
-      this.timeEl.textContent = `${Math.max(0, this.state.timeLeft)}`;
+      if (this.timeEl) this.timeEl.textContent = `${Math.max(0, this.state.timeLeft)}`;
       if (this.state.timeLeft > 0 && this.state.timeLeft <= 5) this.playSfx(`${ASSET_BASE}/sounds/heartbeat.mp3`, 0.22);
       if (this.state.timeLeft <= 0) this.nextRoom();
     }, 1000);
@@ -253,7 +261,8 @@ export default class HauntedHouseScene extends Phaser.Scene {
     this.state.transitioning = true;
     this.playSfx(`${ASSET_BASE}/sounds/ghost_laugh.mp3`, 0.38);
     this.transitionEl?.classList.add("on");
-    window.setTimeout(() => {
+    this.scheduleTimeout(() => {
+      if (this.isCleaningUp || !this.root) return;
       this.state.roomIndex += 1;
       this.state.timeLeft = ROOM_TIME;
       this.state.transitioning = false;
@@ -270,6 +279,7 @@ export default class HauntedHouseScene extends Phaser.Scene {
   }
 
   renderPuzzle() {
+    if (!this.dialogEl || !this.ghostsEl || !this.inventoryEl) return;
     this.dialogEl.innerHTML = this.state.dialogHtml;
     this.ghostsEl.innerHTML = GHOSTS.map((ghost) => {
       const given = this.state.ghostGiven[ghost.id] || [];
@@ -312,7 +322,11 @@ export default class HauntedHouseScene extends Phaser.Scene {
       : `<strong>${ghost.name}</strong>: ความปรารถนาของฉัน${correctCount === 2 ? "สมบูรณ์แล้ว" : "คลี่คลายลงบางส่วน"}... ขอบคุณที่มาที่นี่`;
     this.typeDialog(message);
     this.renderPuzzle();
-    if (this.state.inventory.length === 0) window.setTimeout(() => this.finishPuzzle(), 1500);
+    if (this.state.inventory.length === 0) {
+      this.scheduleTimeout(() => {
+        if (!this.isCleaningUp) this.finishPuzzle();
+      }, 1500);
+    }
   }
 
   finishPuzzle() {
@@ -334,6 +348,7 @@ export default class HauntedHouseScene extends Phaser.Scene {
   }
 
   renderResult() {
+    if (!this.scoreEl || !this.summaryEl) return;
     this.scoreEl.textContent = `${this.state.score} / ${MAX_SCORE}`;
     this.summaryEl.innerHTML = GHOSTS.map((ghost) => {
       const given = this.state.ghostGiven[ghost.id] || [];
@@ -356,10 +371,10 @@ export default class HauntedHouseScene extends Phaser.Scene {
   }
 
   handleMiss() {
-    if (this.state.phase !== "room") return;
+    if (this.state.phase !== "room" || !this.root) return;
     this.state.misses += 1;
     this.root?.classList.add("hh-shake");
-    window.setTimeout(() => this.root?.classList.remove("hh-shake"), 240);
+    this.scheduleTimeout(() => this.root?.classList.remove("hh-shake"), 240);
     this.playSfx(`${ASSET_BASE}/sounds/ghost_scream.mp3`, 0.32);
   }
 
@@ -371,6 +386,7 @@ export default class HauntedHouseScene extends Phaser.Scene {
     const body = text.replace(/^.*?:\s*/, "");
     let index = 0;
     const step = () => {
+      if (this.isCleaningUp || !this.root) return;
       this.state.dialogHtml = title + body.slice(0, index);
       if (this.dialogEl) this.dialogEl.innerHTML = this.state.dialogHtml;
       if (index < body.length) {
@@ -379,6 +395,17 @@ export default class HauntedHouseScene extends Phaser.Scene {
       }
     };
     step();
+  }
+
+  scheduleTimeout(callback, delay) {
+    const timeoutId = window.setTimeout(() => {
+      this.pendingTimeouts.delete(timeoutId);
+      if (!this.isCleaningUp) {
+        callback();
+      }
+    }, delay);
+    this.pendingTimeouts.add(timeoutId);
+    return timeoutId;
   }
 
   playSfx(src, volume = 0.4) {
@@ -413,11 +440,17 @@ export default class HauntedHouseScene extends Phaser.Scene {
   }
 
   cleanup() {
+    this.isCleaningUp = true;
     window.clearInterval(this.roomTimer);
     window.clearTimeout(this.typeTimer);
+    this.pendingTimeouts.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    this.pendingTimeouts.clear();
     this.activeVoice?.pause();
     this.stopBgm();
     if (this.root?.parentNode) this.root.parentNode.removeChild(this.root);
     this.root = null;
+    this.dialogEl = null;
+    this.timeEl = null;
+    this.roomStageEl = null;
   }
 }

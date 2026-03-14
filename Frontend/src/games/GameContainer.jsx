@@ -193,14 +193,21 @@ export default function GameContainer({
     if (gameRef.current) return;
     if (!containerRef.current) return;
 
+    const getViewport = () => ({
+      width: window.innerWidth,
+      height: window.innerHeight,
+    });
+
+    const viewport = getViewport();
+
     const config = {
 
       type: Phaser.AUTO,
 
       parent: containerRef.current,
 
-      width: 800,
-      height: 600,
+      width: viewport.width,
+      height: viewport.height,
 
       backgroundColor: "#000",
 
@@ -213,7 +220,7 @@ export default function GameContainer({
       },
 
       scale: {
-        mode: Phaser.Scale.FIT,
+        mode: Phaser.Scale.RESIZE,
         autoCenter: Phaser.Scale.CENTER_BOTH
       },
 
@@ -241,6 +248,13 @@ export default function GameContainer({
 
     gameRef.current = game;
 
+    const handleResize = () => {
+      if (!gameRef.current) return;
+      const next = getViewport();
+      gameRef.current.scale.resize(next.width, next.height);
+    };
+    window.addEventListener("resize", handleResize);
+
     if (typeof window !== "undefined") {
       window.__festivalDebug = {
         game,
@@ -249,6 +263,16 @@ export default function GameContainer({
           if (!gameRef.current) return;
           gameRef.current.scene.scenes.forEach((scene) => {
             if (scene.scene.key !== "FestivalMapScene") {
+              try {
+                if (typeof scene._removeOverlay === "function") {
+                  scene._removeOverlay();
+                }
+                if (typeof scene.shutdown === "function") {
+                  scene.shutdown();
+                }
+              } catch (err) {
+                console.warn("QA reset cleanup failed:", scene.scene.key, err);
+              }
               gameRef.current.scene.stop(scene.scene.key);
             }
           });
@@ -303,6 +327,8 @@ export default function GameContainer({
         delete window.__festivalDebug;
       }
 
+      window.removeEventListener("resize", handleResize);
+
     };
 
   }, []);
@@ -317,14 +343,13 @@ export default function GameContainer({
       ref={containerRef}
       id="phaser-root"
       style={{
-        width: "100%",
-        maxWidth: 900,
-        aspectRatio: "4 / 3",
-        margin: "0 auto",
-        borderRadius: 16,
+        width: "100vw",
+        height: "100vh",
+        margin: 0,
+        borderRadius: 0,
         overflow: "hidden",
         background: "#000",
-        boxShadow: "0 12px 32px rgba(0,0,0,0.45)"
+        boxShadow: "none"
       }}
     />
 

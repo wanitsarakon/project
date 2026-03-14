@@ -5,8 +5,8 @@ import Fish from "./components/Fish";
 const BG_IMAGE = new URL("./assetsFish/BGfish.jpg", import.meta.url).href;
 const SPOON_IMAGE = new URL("./assetsFish/Spoon.png", import.meta.url).href;
 const BUCKET_IMAGE = new URL("./assetsFish/WaterBowl.png", import.meta.url).href;
-const START_IMAGE = new URL("./assetsFish/fish_start.jpg", import.meta.url).href;
-const RESULT_IMAGE = new URL("./assetsFish/fish_score.jpg", import.meta.url).href;
+const START_IMAGE = new URL("./assetsFish/fish_start.png", import.meta.url).href;
+const RESULT_IMAGE = new URL("./assetsFish/fish_score.png", import.meta.url).href;
 const FISH_IMAGES = {
   fish1: new URL("./assetsFish/1.png", import.meta.url).href,
   fish2: new URL("./assetsFish/2.png", import.meta.url).href,
@@ -65,7 +65,12 @@ export default class FishScoopingScene extends Phaser.Scene {
 
     this.add.image(width / 2, height / 2, "bg").setDisplaySize(width, height);
 
-    this.waterZone = new Phaser.Geom.Rectangle(220, 180, 510, 330);
+    this.waterZone = new Phaser.Geom.Rectangle(
+      width * 0.275,
+      height * 0.29,
+      width * 0.64,
+      height * 0.56,
+    );
     this.physics.world.setBounds(
       this.waterZone.x,
       this.waterZone.y,
@@ -73,8 +78,8 @@ export default class FishScoopingScene extends Phaser.Scene {
       this.waterZone.height,
     );
 
-    this.bucket = this.physics.add.image(122, 486, "bucket")
-      .setScale(0.35)
+    this.bucket = this.physics.add.image(width * 0.1525, height * 0.81, "bucket")
+      .setScale(Math.min(width / 800, height / 600) * 0.35)
       .setImmovable(true)
       .setDepth(3);
     this.bucket.body.allowGravity = false;
@@ -95,6 +100,8 @@ export default class FishScoopingScene extends Phaser.Scene {
   }
 
   createHud() {
+    const { width, height } = this.scale;
+
     const createPanel = (x, y, label, valueColor) => {
       const bg = this.add.rectangle(x, y, 178, 68, 0x2f1f0f, 0.76)
         .setStrokeStyle(2, 0xffec9b, 0.9)
@@ -116,9 +123,9 @@ export default class FishScoopingScene extends Phaser.Scene {
       return { bg, labelText, valueText };
     };
 
-    this.hud.score = createPanel(120, 54, "คะแนน", "#fff7cc");
-    this.hud.timer = createPanel(682, 54, "เวลา", "#ffd86a");
-    this.hud.note = this.add.text(400, 92, "ช้อนปลาให้ไว แล้วเอาไปลงอ่างน้ำด้านซ้าย", {
+    this.hud.score = createPanel(width * 0.13, 54, "คะแนน", "#fff7cc");
+    this.hud.timer = createPanel(width * 0.87, 54, "เวลา", "#ffd86a");
+    this.hud.note = this.add.text(width / 2, 92, "ช้อนปลาให้ไว แล้วเอาไปลงอ่างน้ำด้านซ้าย", {
       fontFamily: "Kanit",
       fontSize: "18px",
       color: "#fffaf0",
@@ -221,7 +228,7 @@ export default class FishScoopingScene extends Phaser.Scene {
     this.phase = "countdown";
     this.startOverlay.setVisible(false);
 
-    this.countdownText = this.add.text(400, 300, "3", {
+    this.countdownText = this.add.text(this.scale.width / 2, this.scale.height / 2, "3", {
       fontFamily: "Kanit",
       fontSize: "130px",
       fontStyle: "bold",
@@ -361,7 +368,7 @@ export default class FishScoopingScene extends Phaser.Scene {
   }
 
   showToast(message, color) {
-    const toast = this.add.text(400, 136, message, {
+    const toast = this.add.text(this.scale.width / 2, 136, message, {
       fontFamily: "Kanit",
       fontSize: "24px",
       color: "#381600",

@@ -414,7 +414,54 @@ export default class TugOfWarScene extends Phaser.Scene {
     ];
 
     /* ── helper ── */
-    const $ = (id) => document.getElementById(id);
+    const isLive = () => !scene._cleanupDone && Boolean(document.getElementById("tug-overlay"));
+    const timeoutIds = new Set();
+    const intervalIds = new Set();
+    const frameIds = new Set();
+    const setTimeout = (fn, delay = 0) => {
+      const id = window.setTimeout(() => {
+        timeoutIds.delete(id);
+        if (isLive()) fn();
+      }, delay);
+      timeoutIds.add(id);
+      return id;
+    };
+    const clearTimeout = (id) => {
+      timeoutIds.delete(id);
+      window.clearTimeout(id);
+    };
+    const setInterval = (fn, delay = 0) => {
+      const id = window.setInterval(() => {
+        if (!isLive()) {
+          clearInterval(id);
+          return;
+        }
+        fn();
+      }, delay);
+      intervalIds.add(id);
+      return id;
+    };
+    const clearInterval = (id) => {
+      intervalIds.delete(id);
+      window.clearInterval(id);
+    };
+    const requestAnimationFrame = (fn) => {
+      const id = window.requestAnimationFrame((ts) => {
+        frameIds.delete(id);
+        if (isLive()) fn(ts);
+      });
+      frameIds.add(id);
+      return id;
+    };
+    const clearAsyncWork = () => {
+      timeoutIds.forEach((id) => window.clearTimeout(id));
+      timeoutIds.clear();
+      intervalIds.forEach((id) => window.clearInterval(id));
+      intervalIds.clear();
+      frameIds.forEach((id) => window.cancelAnimationFrame(id));
+      frameIds.clear();
+    };
+    const $ = (id) => (isLive() ? document.getElementById(id) : null);
 
     /* ── SCREENS ── */
     const screens = {
@@ -480,6 +527,7 @@ export default class TugOfWarScene extends Phaser.Scene {
     /* ── RENDER CHAR LIST ── */
     function renderList() {
       const list = $("char-list");
+      if (!list) return;
       list.innerHTML = "";
 
       const charAbilities = [
@@ -515,6 +563,7 @@ export default class TugOfWarScene extends Phaser.Scene {
     window.tugSelectItem = tugSelectItem;
 
     function tugPlayRPS(pChoice) {
+      if (!isLive()) return;
       if (typeof pickSound !== "undefined") {
         pickSound.pause(); pickSound.currentTime = 0;
         pickSound.play().catch(() => {});
@@ -522,20 +571,22 @@ export default class TugOfWarScene extends Phaser.Scene {
       const opts = ["rock","paper","scissors"];
       const aiChoice = opts[Math.floor(Math.random() * 3)];
       const win = { rock:"scissors", paper:"rock", scissors:"paper" };
-      const choicesUI = document.querySelector(".rps-choices");
+      const choicesUI = isLive() ? document.querySelector(".rps-choices") : null;
       const pHandImg = $("player-hand");
       const aiHandImg = $("ai-hand");
       if (pHandImg && aiHandImg) {
-        pHandImg.src = `/assets/tugofwar/images/${pChoice}.png`;
-        aiHandImg.src = `/assets/tugofwar/images/${aiChoice}.png`;
+        pHandImg.src = "/assets/tugofwar/images/" + pChoice + ".png";
+        aiHandImg.src = "/assets/tugofwar/images/" + aiChoice + ".png";
         pHandImg.classList.add("show");
         aiHandImg.classList.add("show");
       }
       const rpsResult = $("rps-result");
       setTimeout(() => {
+        if (!isLive()) return;
         if (pChoice === aiChoice) {
-          rpsResult.innerText = "เสมอ! เป่าใหม่...";
+          if (rpsResult) rpsResult.innerText = "????! ????????...";
           setTimeout(() => {
+            if (!isLive()) return;
             pHandImg?.classList.remove("show");
             aiHandImg?.classList.remove("show");
           }, 1000);
@@ -543,58 +594,70 @@ export default class TugOfWarScene extends Phaser.Scene {
         }
         isMyTurn = win[pChoice] === aiChoice;
         canPick = true;
-        rpsResult.innerText = isMyTurn ? "คุณชนะ! เลือกตัวละครได้" : "คุณแพ้! ทีมคู่แข่งเลือกก่อน";
+        if (rpsResult) {
+          rpsResult.innerText = isMyTurn ? "??????! ???????????????" : "??????! ???????????????????";
+        }
         if (choicesUI) choicesUI.style.display = "none";
         handleTurn();
       }, 600);
     }
 
     function handleTurn() {
+      if (!isLive()) return;
+      const turnDisplay = $("turn-display");
       if (myTeam.length >= 3 && aiTeam.length >= 3) {
-        $("char-list").style.display = "none";
-        $("item-selection-area").style.display = "block";
+        const charList = $("char-list");
+        const itemSelectionArea = $("item-selection-area");
+        if (charList) charList.style.display = "none";
+        if (itemSelectionArea) itemSelectionArea.style.display = "block";
         if (!isMyTurn) {
-          $("turn-display").innerText = "ตาทีมคู่แข่งเลือก...";
-          setTimeout(aiPickItem, 1000);
+          if (turnDisplay) turnDisplay.innerText = "?????????????????...";
+          setTimeout(() => { if (isLive()) aiPickItem(); }, 1000);
         } else {
-          $("turn-display").innerText = "ตาทีมคุณเลือก...";
+          if (turnDisplay) turnDisplay.innerText = "?????????????...";
         }
         return;
       }
       if (!isMyTurn) {
-        $("turn-display").innerText = "ตาทีมคู่แข่งเลือก...";
-        setTimeout(aiPickFn, 1000);
+        if (turnDisplay) turnDisplay.innerText = "?????????????????...";
+        setTimeout(() => { if (isLive()) aiPickFn(); }, 1000);
       } else {
-        $("turn-display").innerText = "ตาทีมคุณเลือก...";
+        if (turnDisplay) turnDisplay.innerText = "?????????????...";
       }
     }
 
     function tugSelectItem(itemName, element) {
+      if (!isLive()) return;
       if (!isMyTurn || myItem || element.classList.contains("item-disabled")) return;
       myItem = itemName;
       if (pickSound) { pickSound.currentTime = 0; pickSound.play().catch(() => {}); }
-      const slots = $("my-team-slots").children;
+      const teamSlots = $("my-team-slots");
+      if (!teamSlots) return;
+      const slots = teamSlots.children;
       if (slots[3]) {
-        slots[3].innerHTML = `<img src="/assets/tugofwar/images/item_${itemName}.png" style="width:100%;height:100%;object-fit:contain;">`;
+        slots[3].innerHTML = '<img src="/assets/tugofwar/images/item_' + itemName + '.png" style="width:100%;height:100%;object-fit:contain;">';
         slots[3].classList.add("has-char");
       }
       element.classList.add("item-disabled");
       isMyTurn = false;
-      setTimeout(checkItemPhaseEnd, 1000);
+      setTimeout(() => { if (isLive()) checkItemPhaseEnd(); }, 1000);
     }
 
     function aiPickItem() {
+      if (!isLive()) return;
       if (isMyTurn || aiItem) return;
       const items = ["amulet","drink","oil"];
       const avail = items.filter(it => it !== myItem);
       aiItem = avail[Math.floor(Math.random() * avail.length)];
-      const aiSlots = $("ai-team-slots").children;
+      const aiTeamSlots = $("ai-team-slots");
+      if (!aiTeamSlots) return;
+      const aiSlots = aiTeamSlots.children;
       if (aiSlots[3]) {
-        aiSlots[3].innerHTML = `<img src="/assets/tugofwar/images/item_${aiItem}.png" style="width:100%;height:100%;object-fit:contain;">`;
+        aiSlots[3].innerHTML = '<img src="/assets/tugofwar/images/item_' + aiItem + '.png" style="width:100%;height:100%;object-fit:contain;">';
         aiSlots[3].classList.add("has-char");
       }
       if (pickSound) { pickSound.currentTime = 0; pickSound.play().catch(() => {}); }
-      const itemEls = document.querySelectorAll("#item-selection-area .char-item");
+      const itemEls = isLive() ? document.querySelectorAll("#item-selection-area .char-item") : [];
       itemEls.forEach(el => {
         const oc = el.getAttribute("onclick") || "";
         if (oc.includes(aiItem)) el.classList.add("item-disabled");
@@ -604,15 +667,17 @@ export default class TugOfWarScene extends Phaser.Scene {
     }
 
     function checkItemPhaseEnd() {
+      if (!isLive()) return;
+      const turnDisplay = $("turn-display");
       if (myItem && aiItem) {
-        $("turn-display").innerText = "เตรียมตัวเข้าสู่สนาม!";
-        setTimeout(prepareArena, 1500);
+        if (turnDisplay) turnDisplay.innerText = "????????????????????!";
+        setTimeout(() => { if (isLive()) prepareArena(); }, 1500);
       } else {
         if (!isMyTurn) {
-          $("turn-display").innerText = "ตาทีมคู่แข่งเลือก...";
-          setTimeout(aiPickItem, 1000);
+          if (turnDisplay) turnDisplay.innerText = "?????????????????...";
+          setTimeout(() => { if (isLive()) aiPickItem(); }, 1000);
         } else {
-          $("turn-display").innerText = "ตาทีมคุณเลือก...";
+          if (turnDisplay) turnDisplay.innerText = "?????????????...";
         }
       }
     }
@@ -630,6 +695,7 @@ export default class TugOfWarScene extends Phaser.Scene {
     }
 
     function aiPickFn() {
+      if (!isLive()) return;
       if (!canPick) return;
       const selectable = [];
       characters.forEach((_, i) => {
@@ -642,14 +708,16 @@ export default class TugOfWarScene extends Phaser.Scene {
         const idx = selectable[Math.floor(Math.random() * selectable.length)];
         aiTeam.push(characters[idx]);
         updateSlots("ai-team-slots", aiTeam);
-        $(`char-${idx}`).classList.add("selected");
+        $(`char-${idx}`)?.classList.add("selected");
       }
       isMyTurn = true;
       handleTurn();
     }
 
     function updateSlots(id, team) {
-      const slots = $(id).children;
+      const target = $(id);
+      if (!target) return;
+      const slots = target.children;
       team.forEach((char, index) => {
         if (slots[index]) {
           slots[index].innerHTML = `<img src="/assets/tugofwar/images/${char.image}">`;
@@ -659,18 +727,21 @@ export default class TugOfWarScene extends Phaser.Scene {
     }
 
     function prepareArena() {
+      if (!isLive()) return;
       setupCanvas();
       totalPower  = myTeam.reduce((s, c) => s + (c.power || 0), 0);
       totalSpeed  = myTeam.reduce((s, c) => s + (c.speed || 0), 0);
       aiTotalPower = aiTeam.reduce((s, c) => s + (c.power || 0), 0);
       aiTotalSpeed = aiTeam.reduce((s, c) => s + (c.speed || 0), 0);
+      if (!screens.setup || !screens.arena) return;
       screens.setup.style.display = "none";
       screens.arena.style.display = "block";
       showItemInArena();
-      $("game-container").style.backgroundImage = "url('/assets/tugofwar/images/bg21.png')";
+      const gameContainer = $("game-container");
+      if (gameContainer) gameContainer.style.backgroundImage = "url('/assets/tugofwar/images/bg21.png')";
       battleBgm.currentTime = 0;
       battleBgm.play().catch(() => {});
-      setTimeout(startCountdown, 500);
+      setTimeout(() => { if (isLive()) startCountdown(); }, 500);
       requestAnimationFrame(gameLoop);
     }
 
@@ -701,6 +772,7 @@ export default class TugOfWarScene extends Phaser.Scene {
     }
 
     function startCountdown() {
+      if (!isLive()) return;
       const overlay = document.createElement("div");
       overlay.id = "countdown-overlay";
       Object.assign(overlay.style, {
@@ -714,12 +786,18 @@ export default class TugOfWarScene extends Phaser.Scene {
 
       let count = 3;
       const timer = setInterval(() => {
+        if (!isLive()) {
+          clearInterval(timer);
+          overlay.remove();
+          return;
+        }
         if (count > 0) {
           countSound.currentTime = 0; countSound.play().catch(() => {});
           overlay.innerText = count;
           overlay.style.transform = "translate(-50%,-50%) scale(1.5)";
           overlay.style.opacity = "1";
           setTimeout(() => {
+            if (!isLive()) return;
             overlay.style.transform = "translate(-50%,-50%) scale(1)";
             overlay.style.opacity = "0.5";
           }, 500);
@@ -727,15 +805,20 @@ export default class TugOfWarScene extends Phaser.Scene {
         } else {
           clearInterval(timer);
           startGoSound.currentTime = 0; startGoSound.play().catch(() => {});
-          overlay.innerText = "เริ่ม!";
+          overlay.innerText = "?????!";
           overlay.style.transform = "translate(-50%,-50%) scale(1.8)";
           overlay.style.opacity = "1";
-          setTimeout(() => { overlay.remove(); isPlaying = true; }, 800);
+          setTimeout(() => {
+            if (!isLive()) return;
+            overlay.remove();
+            isPlaying = true;
+          }, 800);
         }
       }, 1000);
     }
 
     function gameLoop(timestamp) {
+      if (!isLive()) return;
       if (isPlaying) {
         if (playerStamina < maxStamina) playerStamina += staminaRecover;
         if (isExhausted && playerStamina > 25) isExhausted = false;
@@ -787,10 +870,11 @@ export default class TugOfWarScene extends Phaser.Scene {
         if (ropePos > 1100) return endGame("ทีมคู่แข่ง ชนะแล้ว...");
       }
       renderGame();
-      requestAnimationFrame(gameLoop);
+      if (isLive()) requestAnimationFrame(gameLoop);
     }
 
     function renderGame() {
+      if (!isLive() || !screens.canvas) return;
       const ctx = screens.canvas.getContext("2d");
       const screenW = window.innerWidth;
       ctx.clearRect(0, 0, screens.canvas.width, screens.canvas.height);
@@ -844,6 +928,7 @@ export default class TugOfWarScene extends Phaser.Scene {
     }
 
     function endGame(m) {
+      if (!isLive()) return;
       isPlaying = false;
       if (screens.arena) screens.arena.style.display = "none";
       battleBgm.pause();
@@ -866,6 +951,7 @@ export default class TugOfWarScene extends Phaser.Scene {
       // ─── ส่งคะแนนกลับไปยัง GameContainer ─────
       if (scene.onGameEnd) {
         setTimeout(() => {
+          if (!isLive()) return;
           scene._removeOverlay();
           scene.onGameEnd({ score, won, game: "TugOfWar" });
         }, 3000);
@@ -875,6 +961,7 @@ export default class TugOfWarScene extends Phaser.Scene {
     }
 
     function showSkillMessage(text, color = "#ffeb3b") {
+      if (!isLive()) return;
       const msg = document.createElement("div");
       msg.innerText = text;
       Object.assign(msg.style, {
@@ -885,11 +972,16 @@ export default class TugOfWarScene extends Phaser.Scene {
         pointerEvents:"none", transition:"all 0.5s ease-out",
       });
       document.body.appendChild(msg);
-      setTimeout(() => { msg.style.top = "25%"; }, 10);
-      setTimeout(() => { msg.style.opacity = "0"; setTimeout(() => msg.remove(), 500); }, 1500);
+      setTimeout(() => { if (isLive()) msg.style.top = "25%"; }, 10);
+      setTimeout(() => {
+        if (!isLive()) return;
+        msg.style.opacity = "0";
+        setTimeout(() => msg.remove(), 500);
+      }, 1500);
     }
 
     function setupCanvas() {
+      if (!isLive() || !screens.canvas) return;
       const canvas = screens.canvas;
       const ctx = canvas.getContext("2d");
       const dpr = window.devicePixelRatio || 1;
@@ -901,6 +993,7 @@ export default class TugOfWarScene extends Phaser.Scene {
     }
 
     function showItemInArena() {
+      if (!isLive()) return;
       const myArenaSlot = $("my-item-slot-arena");
       if (myItem && myArenaSlot) {
         myArenaSlot.innerHTML = `<div class="key-hint">ไอเท็มทีมคุณ</div><img src="/assets/tugofwar/images/item_${myItem}.png">`;
@@ -1010,7 +1103,7 @@ export default class TugOfWarScene extends Phaser.Scene {
     const btnSpace = $("key-space");
     const btnS = $("key-s");
     const btnD = $("key-d");
-    if (btnSpace) { btnSpace.style.cursor = "pointer"; btnSpace.onclick = () => { const ev = new KeyboardEvent("keydown",{code:"Space",key:" "}); window.dispatchEvent(ev); setTimeout(()=>{ window.dispatchEvent(new KeyboardEvent("keyup",{code:"Space",key:" "})); },100); }; }
+    if (btnSpace) { btnSpace.style.cursor = "pointer"; btnSpace.onclick = () => { const ev = new KeyboardEvent("keydown",{code:"Space",key:" "}); window.dispatchEvent(ev); setTimeout(()=>{ if (isLive()) window.dispatchEvent(new KeyboardEvent("keyup",{code:"Space",key:" "})); },100); }; }
     if (btnS) { btnS.style.cursor = "pointer"; btnS.onclick = () => useSkillS(); }
     if (btnD) { btnD.style.cursor = "pointer"; btnD.onclick = () => useSkillD(); }
 
@@ -1037,7 +1130,7 @@ export default class TugOfWarScene extends Phaser.Scene {
     if (enterBtn) {
       enterBtn.onclick = () => {
         const ss = $("start-screen");
-        if (ss) { ss.style.opacity = "0"; ss.style.pointerEvents = "none"; setTimeout(() => { ss.style.display = "none"; }, 500); }
+        if (ss) { ss.style.opacity = "0"; ss.style.pointerEvents = "none"; setTimeout(() => { if (isLive() && ss) ss.style.display = "none"; }, 500); }
         const gc = $("game-content");
         if (gc) gc.classList.remove("initial-blur");
         renderList();
@@ -1046,6 +1139,7 @@ export default class TugOfWarScene extends Phaser.Scene {
 
     /* ── cleanup keyboard เมื่อ scene shutdown ── */
     this.events.once("shutdown", () => {
+      clearAsyncWork();
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("keyup", onKeyUp);
       delete window.tugPlayRPS;

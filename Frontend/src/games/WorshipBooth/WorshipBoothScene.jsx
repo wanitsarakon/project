@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 
-const START_IMAGE = new URL("./assetsWSB/ไหว้พระเริ่มเกม.jpg", import.meta.url).href;
+const START_IMAGE = new URL("./assetsWSB/ไหว้พระเริ่มเกม.png", import.meta.url).href;
 const BELL_SOUND = new URL("./sounds/temple_bell.wav", import.meta.url).href;
 const CALM_AMBIENCE = new URL("./sounds/calm_ambience.wav", import.meta.url).href;
 
@@ -28,6 +28,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
     this.root = null;
     this.state = null;
     this.timerHandle = null;
+    this.calmBgm = null;
   }
 
   init(data = {}) {
@@ -216,12 +217,14 @@ export default class WorshipBoothScene extends Phaser.Scene {
         window.clearInterval(this.countdownTimer);
         this.countdownTimer = null;
         this.countdownEl.style.display = "none";
-        this.calmBgm = this.sound.add("worship-calm", {
-          loop: true,
-          volume: 0.18,
-        });
-        if (!this.calmBgm.isPlaying) {
-          this.calmBgm.play();
+        if (this.cache.audio?.exists("worship-calm")) {
+          this.calmBgm = this.sound.add("worship-calm", {
+            loop: true,
+            volume: 0.18,
+          });
+          if (!this.calmBgm.isPlaying) {
+            this.calmBgm.play();
+          }
         }
         this.startRoundTimer();
         this.state.phase = "playing";
@@ -269,7 +272,9 @@ export default class WorshipBoothScene extends Phaser.Scene {
 
     this.state.score += 15;
     this.state.stepIndex += 1;
-    this.sound.play("worship-bell", { volume: 0.18 });
+    if (this.cache.audio?.exists("worship-bell")) {
+      this.sound.play("worship-bell", { volume: 0.18 });
+    }
 
     if (this.state.stepIndex >= this.state.roundSequence.length) {
       this.state.completedRounds += 1;
@@ -303,7 +308,9 @@ export default class WorshipBoothScene extends Phaser.Scene {
 
     this.state.phase = "result";
     this.state.blessing = BLESSINGS[Math.floor(Math.random() * BLESSINGS.length)];
-    this.sound.play("worship-bell", { volume: 0.35 });
+    if (this.cache.audio?.exists("worship-bell")) {
+      this.sound.play("worship-bell", { volume: 0.35 });
+    }
     if (!fromTimeout) {
       this.state.score += Math.max(10, this.state.timeLeft);
     }

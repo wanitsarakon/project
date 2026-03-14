@@ -10,6 +10,8 @@ export default class Fish extends Phaser.Physics.Arcade.Sprite {
     this.type = type;
     this.isCaught = false;
     this.setScale(0.28);
+    this.body.setSize(this.width * 0.36, this.height * 0.2);
+    this.body.setOffset(this.width * 0.3, this.height * 0.38);
     this.setCollideWorldBounds(false);
 
     this.baseSpeed = type === "gold" ? 78 : 42;

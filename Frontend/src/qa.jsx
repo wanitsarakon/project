@@ -19,8 +19,4 @@ function QAApp() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode>
-    <QAApp />
-  </React.StrictMode>,
-);
+ReactDOM.createRoot(document.getElementById("root")).render(<QAApp />);
