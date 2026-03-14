@@ -70,11 +70,16 @@ async function run() {
     await resetToMap(page);
 
     await startScene(page, "WorshipBoothScene");
-    await page.getByRole("button", { name: /ธูป/i }).click();
-    await page.getByRole("button", { name: /เทียน/i }).click();
-    await page.getByRole("button", { name: /ดอกบัว/i }).click();
-    await page.getByRole("button", { name: /ขอพร/i }).click();
-    await page.waitForTimeout(2000);
+    await page.locator("#wb-start-btn").click({ force: true });
+    await page.waitForTimeout(5200);
+    const sequence = await page.locator("#wb-sequence .wb-pill").allTextContents();
+    for (const item of sequence) {
+      if (item.includes("???")) await page.locator('[data-step-id="incense"]').click({ force: true });
+      if (item.includes("?????")) await page.locator('[data-step-id="candle"]').click({ force: true });
+      if (item.includes("??????")) await page.locator('[data-step-id="lotus"]').click({ force: true });
+      await page.waitForTimeout(250);
+    }
+    await page.waitForTimeout(1000);
 
     await startScene(page, "BoxingGameScene");
     await page.getByRole("button", { name: /เริ่ม/i }).click();
