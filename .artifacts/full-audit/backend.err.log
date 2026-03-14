@@ -124,3 +124,11 @@
 2026/03/14 20:05:59 ✅ WS register room=601185 player=530 clients=2
 2026/03/14 20:06:19 ❌ WS unregister room=601185 player=530 clients=1
 2026/03/14 20:06:19 ❌ WS unregister room=601185 player=529 clients=0
+2026/03/14 22:00:01 ✅ WS register room=019351 player=531 clients=1
+2026/03/14 22:00:22 ✅ WS register room=global player=0 clients=2
+2026/03/14 22:00:23 ❌ WS unregister room=global player=0 clients=1
+2026/03/14 22:00:23 ✅ WS register room=019351 player=532 clients=2
+2026/03/14 22:00:34 ❌ WS unregister room=019351 player=532 clients=1
+2026/03/14 22:00:34 ❌ WS unregister room=019351 player=531 clients=0
+2026/03/14 22:00:34 ✅ WS register room=019351 player=531 clients=1
+2026/03/14 22:00:34 ✅ WS register room=019351 player=532 clients=2
