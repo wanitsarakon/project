@@ -6,13 +6,13 @@ import Items from "./components/Items";
 import ScoreManager from "./components/ScoreManager";
 
 const GAME_TIME = 60;
-const BG_IMAGE = new URL("./assetsHorse/BGhorse.jpg", import.meta.url).href;
-const HORSE_IMAGE = new URL("./assetsHorse/horse.png", import.meta.url).href;
-const OBSTACLE_IMAGE = new URL("./assetsHorse/obstacle.png", import.meta.url).href;
-const ITEM_CANDY = new URL("./assetsHorse/item_candy.png", import.meta.url).href;
-const ITEM_COIN = new URL("./assetsHorse/item_coin.png", import.meta.url).href;
-const ITEM_GIFT = new URL("./assetsHorse/item_gift.png", import.meta.url).href;
-const ITEM_HAY = new URL("./assetsHorse/item_hay.png", import.meta.url).href;
+const BG_IMAGE = "/assetsHorse/BGhorse.png";
+const HORSE_IMAGE = "/assetsHorse/horse.png";
+const OBSTACLE_IMAGE = "/assetsHorse/obstacle.png";
+const ITEM_CANDY = "/assetsHorse/item_candy.png";
+const ITEM_COIN = "/assetsHorse/item_coin.png";
+const ITEM_GIFT = "/assetsHorse/item_gift.png";
+const ITEM_HAY = "/assetsHorse/item_hay.png";
 const START_SIGN = new URL("./assetsHorse/ขี่ม้าเริ่มเกม.png", import.meta.url).href;
 const RESULT_SIGN = new URL("./assetsHorse/ขี่ม้าคะเนน.png", import.meta.url).href;
 const COUNT_SOUND = new URL("./sounds/countdown.mp3", import.meta.url).href;
@@ -274,16 +274,16 @@ export default class HorseDeliveryScene extends Phaser.Scene {
 
   spawnObstacle() {
     if (this.ended) return;
-    const obstacle = new Obstacle(this, this.scale.width + 100, this.groundY + 2);
-    obstacle.setVelocityX(-(320 + (GAME_TIME - this.timeLeft) * 2.6));
+    const obstacle = new Obstacle(this, this.scale.width + 72, this.groundY + 2);
     this.obstacles.add(obstacle);
+    obstacle.setVelocityX(-(320 + (GAME_TIME - this.timeLeft) * 2.6));
   }
 
   spawnItem() {
     if (this.ended) return;
-    const item = new Items(this, this.scale.width + 100, this.groundY - Phaser.Math.Between(70, 150));
-    item.setVelocityX(-(290 + (GAME_TIME - this.timeLeft) * 2.2));
+    const item = new Items(this, this.scale.width + 72, this.groundY - Phaser.Math.Between(84, 168));
     this.items.add(item);
+    item.setVelocityX(-(290 + (GAME_TIME - this.timeLeft) * 2.2));
   }
 
   update() {

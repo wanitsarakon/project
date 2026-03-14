@@ -71,15 +71,18 @@ func RegisterRoutes(
 
 		/* ---------- PUBLIC ---------- */
 
-		room.POST("", roomCtrl.CreateRoom)      // create room
-		room.GET("", roomCtrl.ListRooms)        // list rooms
-		room.GET("/:code", roomCtrl.GetRoom)    // room detail
+		room.POST("", roomCtrl.CreateRoom)   // create room
+		room.GET("", roomCtrl.ListRooms)     // list rooms
+		room.GET("/:code", roomCtrl.GetRoom) // room detail
+		room.GET("/:code/progress", roomCtrl.GetProgress)
 		room.GET("/:code/summary", roomCtrl.GetSummary)
-		room.POST("/join", roomCtrl.JoinRoom)   // join room
+		room.POST("/join", roomCtrl.JoinRoom) // join room
 
 		/* ---------- HOST ACTION ---------- */
 
 		room.POST("/:code/start", roomCtrl.StartGame) // start session
+		room.POST("/:code/finalize", roomCtrl.FinalizeGame)
+		room.POST("/:code/games/:game_key/complete", roomCtrl.CompleteGame)
 		room.PATCH("/:code/prizes", roomCtrl.UpdatePrizes)
 
 	}

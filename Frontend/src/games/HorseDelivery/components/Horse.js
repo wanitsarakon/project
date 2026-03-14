@@ -7,14 +7,14 @@ export default class Horse extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    this.setScale(0.78);
+    this.setScale(0.33);
     this.setOrigin(0.5, 1);
     this.setDepth(6);
     this.setCollideWorldBounds(true);
 
     this.body.setGravityY(1200);
-    this.body.setSize(this.width * 0.54, this.height * 0.54);
-    this.body.setOffset(this.width * 0.25, this.height * 0.36);
+    this.body.setSize(this.displayWidth * 0.46, this.displayHeight * 0.42, true);
+    this.body.setOffset(this.displayWidth * 0.3, this.displayHeight * 0.42);
   }
 
   jump() {

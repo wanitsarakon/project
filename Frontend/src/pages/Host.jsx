@@ -28,11 +28,7 @@ export default function Host({
   const [maxPlayers, setMaxPlayers] = useState(8);
   const [isPrivate, setIsPrivate] = useState(false);
   const [password, setPassword] = useState("");
-  const [prizes, setPrizes] = useState([
-    "ตุ๊กตาตัวใหญ่",
-    "ชุดขนมไทย",
-    "พวงกุญแจงานวัด",
-  ]);
+  const [prizes, setPrizes] = useState([]);
 
   /* =========================
      REFS
@@ -151,6 +147,7 @@ export default function Host({
     maxPlayers,
     isPrivate,
     password,
+    prizes,
     normalize,
     setSafeState,
   ]);
@@ -274,6 +271,18 @@ export default function Host({
                 🏆 ของรางวัลตามอันดับ
               </div>
 
+              {prizes.length === 0 && (
+                <div
+                  style={{
+                    color: "#ffe6b0",
+                    marginBottom: 10,
+                    opacity: 0.9,
+                  }}
+                >
+                  ยังไม่ได้ตั้งของรางวัล กด "เพิ่มรางวัล" เพื่อเริ่มเพิ่มได้เลย
+                </div>
+              )}
+
               {prizes.map((prize, index) => (
                 <div
                   key={`prize-${index}`}
@@ -307,7 +316,7 @@ export default function Host({
                     }
                     disabled={loading}
                   />
-                  {prizes.length > 1 && (
+                  {prizes.length > 0 && (
                     <button
                       type="button"
                       className="role-btn"

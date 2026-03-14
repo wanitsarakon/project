@@ -22,6 +22,7 @@ type RoomController struct {
 }
 
 func NewRoomController(db *sql.DB, hub *ws.Hub) *RoomController {
+	ensureProgressSchema(db)
 	return &RoomController{DB: db, Hub: hub}
 }
 
@@ -32,10 +33,10 @@ func NewRoomController(db *sql.DB, hub *ws.Hub) *RoomController {
 func (rc *RoomController) CreateRoom(c *gin.Context) {
 
 	var req struct {
-		Name       string `json:"name"`
-		Mode       string `json:"mode"`
-		HostName   string `json:"host_name"`
-		MaxPlayers int    `json:"max_players"`
+		Name       string   `json:"name"`
+		Mode       string   `json:"mode"`
+		HostName   string   `json:"host_name"`
+		MaxPlayers int      `json:"max_players"`
 		Prizes     []string `json:"prizes"`
 	}
 
@@ -309,10 +310,10 @@ func (rc *RoomController) GetRoom(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"name":   roomName,
-		"mode":   mode,
-		"status": status,
-		"prizes": decodePrizeList(prizeText.String),
+		"name":    roomName,
+		"mode":    mode,
+		"status":  status,
+		"prizes":  decodePrizeList(prizeText.String),
 		"players": players,
 	})
 }
@@ -416,6 +417,272 @@ func (rc *RoomController) GetSummary(c *gin.Context) {
 }
 
 /* =========================
+   ROOM PROGRESS
+========================= */
+
+func (rc *RoomController) GetProgress(c *gin.Context) {
+	code := c.Param("code")
+	playerID, _ := strconv.Atoi(c.Query("player_id"))
+
+	progress, err := buildRoomProgress(rc.DB, code, playerID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "room not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, progress)
+}
+
+/* =========================
+   COMPLETE GAME (PLAYER)
+========================= */
+
+func (rc *RoomController) CompleteGame(c *gin.Context) {
+	code := c.Param("code")
+	gameKey := c.Param("game_key")
+
+	var req struct {
+		PlayerID int         `json:"player_id"`
+		Score    int         `json:"score"`
+		Meta     interface{} `json:"meta"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil || req.PlayerID == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid payload"})
+		return
+	}
+
+	gameOrder := gameSequenceIndex(gameKey)
+	if gameOrder == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid game"})
+		return
+	}
+
+	tx, err := rc.DB.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
+		return
+	}
+	defer tx.Rollback()
+
+	var roomID int
+	var roomStatus string
+	if err := tx.QueryRow(`
+		SELECT id, status
+		FROM rooms
+		WHERE code=$1
+		FOR UPDATE
+	`, code).Scan(&roomID, &roomStatus); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "room not found"})
+		return
+	}
+
+	if roomStatus != "playing" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "room not active"})
+		return
+	}
+
+	var playerExists bool
+	if err := tx.QueryRow(`
+		SELECT EXISTS (
+			SELECT 1
+			FROM players
+			WHERE id=$1 AND room_id=$2 AND is_host=false
+		)
+	`, req.PlayerID, roomID).Scan(&playerExists); err != nil || !playerExists {
+		c.JSON(http.StatusForbidden, gin.H{"error": "player not allowed"})
+		return
+	}
+
+	var progressStatus string
+	if err := tx.QueryRow(`
+		SELECT status
+		FROM player_game_progress
+		WHERE room_id=$1 AND player_id=$2 AND game_key=$3
+		FOR UPDATE
+	`, roomID, req.PlayerID, gameKey).Scan(&progressStatus); err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "game not unlocked yet"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "progress lookup failed"})
+		return
+	}
+
+	if progressStatus == "completed" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "game already completed"})
+		return
+	}
+
+	metaJSON := []byte("null")
+	if req.Meta != nil {
+		if b, err := json.Marshal(req.Meta); err == nil {
+			metaJSON = b
+		}
+	}
+
+	if _, err := tx.Exec(`
+		UPDATE player_game_progress
+		SET status='completed',
+		    score=$1,
+		    meta=$2,
+		    completed_at=NOW()
+		WHERE room_id=$3 AND player_id=$4 AND game_key=$5
+	`, maxInt(req.Score, 0), metaJSON, roomID, req.PlayerID, gameKey); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "update progress failed"})
+		return
+	}
+
+	if _, err := tx.Exec(`
+		UPDATE players
+		SET total_score = total_score + $1
+		WHERE id=$2
+	`, maxInt(req.Score, 0), req.PlayerID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "update score failed"})
+		return
+	}
+
+	nextGameKey := ""
+	if gameOrder < len(GameSequence) {
+		nextGameKey = GameSequence[gameOrder]
+		_, err = tx.Exec(`
+			INSERT INTO player_game_progress
+				(room_id, player_id, game_key, game_order, status)
+			VALUES ($1,$2,$3,$4,'unlocked')
+			ON CONFLICT (room_id, player_id, game_key) DO NOTHING
+		`, roomID, req.PlayerID, nextGameKey, gameOrder+1)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "unlock next game failed"})
+			return
+		}
+	}
+
+	var completedCount int
+	_ = tx.QueryRow(`
+		SELECT COUNT(*)
+		FROM player_game_progress
+		WHERE room_id=$1 AND player_id=$2 AND status='completed'
+	`, roomID, req.PlayerID).Scan(&completedCount)
+
+	allCompleted, err := roomAllPlayersCompletedTx(tx, roomID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "completion check failed"})
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "commit failed"})
+		return
+	}
+
+	rc.broadcastRoom(code, gin.H{
+		"type":      "score_update",
+		"player_id": req.PlayerID,
+		"score":     maxInt(req.Score, 0),
+	})
+
+	rc.broadcastRoom(code, gin.H{
+		"type":          "progress_update",
+		"player_id":     req.PlayerID,
+		"game_key":      gameKey,
+		"completed":     completedCount,
+		"total_games":   len(GameSequence),
+		"next_game_key": nextGameKey,
+		"all_completed": allCompleted,
+	})
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":            true,
+		"completed":     completedCount,
+		"total_games":   len(GameSequence),
+		"next_game_key": nextGameKey,
+		"all_completed": allCompleted,
+	})
+}
+
+/* =========================
+   FINALIZE GAME (HOST)
+========================= */
+
+func (rc *RoomController) FinalizeGame(c *gin.Context) {
+	code := c.Param("code")
+	playerID, _ := strconv.Atoi(c.Query("player_id"))
+
+	tx, err := rc.DB.Begin()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
+		return
+	}
+	defer tx.Rollback()
+
+	var roomID int
+	var status string
+	if err := tx.QueryRow(`
+		SELECT id, status
+		FROM rooms
+		WHERE code=$1
+		FOR UPDATE
+	`, code).Scan(&roomID, &status); err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "room not found"})
+		return
+	}
+
+	if status != "playing" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "room not active"})
+		return
+	}
+
+	var isHost bool
+	if err := tx.QueryRow(`
+		SELECT is_host
+		FROM players
+		WHERE id=$1 AND room_id=$2
+	`, playerID, roomID).Scan(&isHost); err != nil || !isHost {
+		c.JSON(http.StatusForbidden, gin.H{"error": "only host can finalize"})
+		return
+	}
+
+	allCompleted, err := roomAllPlayersCompletedTx(tx, roomID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "completion check failed"})
+		return
+	}
+	if !allCompleted {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "players are still playing"})
+		return
+	}
+
+	if _, err := tx.Exec(`
+		UPDATE rooms
+		SET status='finished'
+		WHERE id=$1
+	`, roomID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "finalize room failed"})
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "commit failed"})
+		return
+	}
+
+	summary, err := buildRoomSummary(rc.DB, code)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "summary build failed"})
+		return
+	}
+
+	rc.broadcastRoom(code, gin.H{
+		"type": "game_finished",
+	})
+
+	c.JSON(http.StatusOK, gin.H{
+		"ok":      true,
+		"summary": summary,
+	})
+}
+
+/* =========================
    START GAME
 ========================= */
 
@@ -435,13 +702,14 @@ func (rc *RoomController) StartGame(c *gin.Context) {
 
 	var roomID int
 	var status string
+	var roomMode string
 
 	err = tx.QueryRow(`
-	SELECT id,status
+	SELECT id,status,mode
 	FROM rooms
 	WHERE code=$1
 	FOR UPDATE
-	`, code).Scan(&roomID, &status)
+	`, code).Scan(&roomID, &status, &roomMode)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "room not found"})
@@ -479,16 +747,78 @@ func (rc *RoomController) StartGame(c *gin.Context) {
 		return
 	}
 
+	if roomMode == "team" {
+		rows, err := tx.Query(`
+			SELECT id
+			FROM players
+			WHERE room_id=$1 AND is_host=false
+			ORDER BY id
+		`, roomID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "load players failed"})
+			return
+		}
+
+		teamKeys := []string{"red", "blue"}
+		playerIDs := make([]int, 0)
+		for rows.Next() {
+			var pid int
+			if err := rows.Scan(&pid); err != nil {
+				rows.Close()
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "scan players failed"})
+				return
+			}
+			playerIDs = append(playerIDs, pid)
+		}
+		rows.Close()
+
+		assignIndex := 0
+		for _, pid := range playerIDs {
+			teamKey := teamKeys[assignIndex%len(teamKeys)]
+			assignIndex += 1
+			if _, err := tx.Exec(`
+				UPDATE players
+				SET team=$1
+				WHERE id=$2
+			`, teamKey, pid); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "assign team failed"})
+				return
+			}
+		}
+	}
+
 	tx.Exec(`
 	UPDATE rooms
 	SET status='playing'
 	WHERE id=$1
 	`, roomID)
 
-	tx.Commit()
+	if len(GameSequence) > 0 {
+		if _, err := tx.Exec(`
+			INSERT INTO player_game_progress
+				(room_id, player_id, game_key, game_order, status)
+			SELECT $1, p.id, $2, 1, 'unlocked'
+			FROM players p
+			WHERE p.room_id=$1 AND p.is_host=false
+			ON CONFLICT (room_id, player_id, game_key) DO NOTHING
+		`, roomID, GameSequence[0]); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "init player progress failed"})
+			return
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "commit failed"})
+		return
+	}
 
 	rc.broadcastRoom(code, gin.H{
 		"type": "game_start",
+	})
+
+	rc.broadcastRoom(code, gin.H{
+		"type":          "progress_update",
+		"all_completed": false,
 	})
 
 	c.JSON(http.StatusOK, gin.H{"ok": true})
@@ -715,6 +1045,218 @@ func normalizePrizeList(prizes []string) []string {
 		return normalized[:10]
 	}
 	return normalized
+}
+
+func ensureProgressSchema(db *sql.DB) {
+	if db == nil {
+		return
+	}
+
+	_, _ = db.Exec(`
+		CREATE TABLE IF NOT EXISTS player_game_progress (
+			id SERIAL PRIMARY KEY,
+			room_id INT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,
+			player_id INT NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+			game_key VARCHAR(50) NOT NULL,
+			game_order INT NOT NULL CHECK (game_order >= 1),
+			status VARCHAR(20) NOT NULL DEFAULT 'unlocked'
+				CHECK (status IN ('unlocked','completed')),
+			score INT NOT NULL DEFAULT 0 CHECK (score >= 0),
+			meta JSONB,
+			completed_at TIMESTAMPTZ,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			CONSTRAINT uq_progress_room_player_game UNIQUE (room_id, player_id, game_key)
+		)
+	`)
+	_, _ = db.Exec(`CREATE INDEX IF NOT EXISTS idx_progress_room_player ON player_game_progress(room_id, player_id)`)
+	_, _ = db.Exec(`CREATE INDEX IF NOT EXISTS idx_progress_room_status ON player_game_progress(room_id, status)`)
+}
+
+func buildRoomProgress(db *sql.DB, code string, currentPlayerID int) (gin.H, error) {
+	var roomID int
+	var roomName, mode, status string
+	var prizeText sql.NullString
+	if err := db.QueryRow(`
+		SELECT id, name, mode, status, prize
+		FROM rooms
+		WHERE code=$1
+	`, code).Scan(&roomID, &roomName, &mode, &status, &prizeText); err != nil {
+		return nil, err
+	}
+
+	rows, err := db.Query(`
+		SELECT p.id, p.name, p.is_host, p.connected, p.team, p.total_score, pg.game_key, pg.status, pg.score
+		FROM players p
+		LEFT JOIN player_game_progress pg
+		  ON pg.player_id=p.id AND pg.room_id=p.room_id
+		WHERE p.room_id=$1
+		ORDER BY p.is_host DESC, p.id, pg.game_order
+	`, roomID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	type playerProgressState struct {
+		PlayerID       int      `json:"player_id"`
+		Name           string   `json:"name"`
+		IsHost         bool     `json:"is_host"`
+		Connected      bool     `json:"connected"`
+		Team           string   `json:"team,omitempty"`
+		TotalScore     int      `json:"total_score"`
+		Completed      int      `json:"completed"`
+		TotalGames     int      `json:"total_games"`
+		NextGameKey    string   `json:"next_game_key,omitempty"`
+		UnlockedGames  []string `json:"unlocked_games"`
+		CompletedGames []string `json:"completed_games"`
+	}
+
+	playerMap := make(map[int]*playerProgressState)
+	playerOrder := make([]int, 0)
+
+	for rows.Next() {
+		var id, totalScore int
+		var name string
+		var isHost, connected bool
+		var gameKey, progressStatus, team sql.NullString
+		var gameScore sql.NullInt64
+
+		if err := rows.Scan(&id, &name, &isHost, &connected, &team, &totalScore, &gameKey, &progressStatus, &gameScore); err != nil {
+			continue
+		}
+
+		entry, ok := playerMap[id]
+		if !ok {
+			entry = &playerProgressState{
+				PlayerID:       id,
+				Name:           name,
+				IsHost:         isHost,
+				Connected:      connected,
+				Team:           team.String,
+				TotalScore:     totalScore,
+				TotalGames:     len(GameSequence),
+				UnlockedGames:  make([]string, 0),
+				CompletedGames: make([]string, 0),
+			}
+			playerMap[id] = entry
+			playerOrder = append(playerOrder, id)
+		}
+
+		if !gameKey.Valid || !progressStatus.Valid {
+			continue
+		}
+
+		switch progressStatus.String {
+		case "completed":
+			entry.Completed += 1
+			entry.CompletedGames = append(entry.CompletedGames, gameKey.String)
+		case "unlocked":
+			entry.UnlockedGames = append(entry.UnlockedGames, gameKey.String)
+			if entry.NextGameKey == "" {
+				entry.NextGameKey = gameKey.String
+			}
+		}
+	}
+
+	players := make([]gin.H, 0, len(playerOrder))
+	var me gin.H
+	allCompleted := true
+	activePlayers := 0
+
+	for _, id := range playerOrder {
+		entry := playerMap[id]
+		payload := gin.H{
+			"player_id":       entry.PlayerID,
+			"name":            entry.Name,
+			"is_host":         entry.IsHost,
+			"connected":       entry.Connected,
+			"team":            entry.Team,
+			"total_score":     entry.TotalScore,
+			"completed":       entry.Completed,
+			"total_games":     entry.TotalGames,
+			"next_game_key":   entry.NextGameKey,
+			"unlocked_games":  entry.UnlockedGames,
+			"completed_games": entry.CompletedGames,
+			"done":            entry.Completed >= entry.TotalGames,
+		}
+		players = append(players, payload)
+
+		if !entry.IsHost && entry.Connected {
+			activePlayers += 1
+			if entry.Completed < entry.TotalGames {
+				allCompleted = false
+			}
+		}
+
+		if currentPlayerID > 0 && entry.PlayerID == currentPlayerID {
+			me = payload
+		}
+	}
+
+	if activePlayers == 0 {
+		allCompleted = false
+	}
+
+	return gin.H{
+		"room_code":      code,
+		"room_name":      roomName,
+		"mode":           mode,
+		"status":         status,
+		"prizes":         decodePrizeList(prizeText.String),
+		"sequence":       GameSequence,
+		"players":        players,
+		"me":             me,
+		"all_completed":  allCompleted,
+		"active_players": activePlayers,
+	}, nil
+}
+
+func roomAllPlayersCompletedTx(tx *sql.Tx, roomID int) (bool, error) {
+	rows, err := tx.Query(`
+		SELECT p.id,
+		       COALESCE(COUNT(pg.id) FILTER (WHERE pg.status='completed'), 0) AS completed_count
+		FROM players p
+		LEFT JOIN player_game_progress pg
+		  ON pg.player_id=p.id AND pg.room_id=p.room_id
+		WHERE p.room_id=$1
+		  AND p.is_host=false
+		  AND p.connected=true
+		GROUP BY p.id
+	`, roomID)
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+
+	playerCount := 0
+	for rows.Next() {
+		var id, completedCount int
+		if err := rows.Scan(&id, &completedCount); err != nil {
+			return false, err
+		}
+		playerCount += 1
+		if completedCount < len(GameSequence) {
+			return false, nil
+		}
+	}
+
+	return playerCount > 0, nil
+}
+
+func gameSequenceIndex(gameKey string) int {
+	for idx, key := range GameSequence {
+		if key == gameKey {
+			return idx + 1
+		}
+	}
+	return 0
+}
+
+func maxInt(value, minValue int) int {
+	if value < minValue {
+		return minValue
+	}
+	return value
 }
 
 func min(a, b int) int {

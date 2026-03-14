@@ -65,7 +65,7 @@ export default function Lobby({
           mode: data?.mode ?? "solo",
           prizes: nextPrizes,
         });
-        setPrizeDraft(nextPrizes.length ? nextPrizes : [""]);
+        setPrizeDraft(nextPrizes);
       });
     } catch (err) {
       console.error("loadRoom failed", err);
@@ -224,6 +224,12 @@ export default function Lobby({
 
           {isMeHost && !gameStarted ? (
             <>
+              {prizeDraft.length === 0 && (
+                <div style={{ color: "#ffe2a3", marginBottom: 12 }}>
+                  ยังไม่ได้ตั้งของรางวัล กด "เพิ่มรางวัล" เพื่อเพิ่มรายการเอง
+                </div>
+              )}
+
               {prizeDraft.map((prize, index) => (
                 <div
                   key={`prize-${index}`}
@@ -246,7 +252,7 @@ export default function Lobby({
                     }
                     disabled={savingPrizes}
                   />
-                  {prizeDraft.length > 1 && (
+                  {prizeDraft.length > 0 && (
                     <button
                       className="role-btn"
                       style={{ padding: "10px 14px" }}

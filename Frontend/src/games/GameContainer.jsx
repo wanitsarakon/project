@@ -24,7 +24,8 @@ export default function GameContainer({
   player,
   wsRef,
   onGameEnd,
-  allowRoundEvents = true,
+  allowRoundEvents = false,
+  mapData = {},
 }) {
 
   const gameRef = useRef(null);
@@ -33,6 +34,7 @@ export default function GameContainer({
   const currentRoundIdRef = useRef(null);
   const onGameEndRef = useRef(onGameEnd);
   const startedRef = useRef(false);
+  const mapDataRef = useRef(mapData);
 
   /* =========================
      KEEP CALLBACK UPDATED
@@ -41,6 +43,14 @@ export default function GameContainer({
   useEffect(() => {
     onGameEndRef.current = onGameEnd;
   }, [onGameEnd]);
+
+  useEffect(() => {
+    mapDataRef.current = mapData;
+    const mapScene = gameRef.current?.scene?.keys?.FestivalMapScene;
+    if (mapScene && typeof mapScene.applyMapData === "function") {
+      mapScene.applyMapData(mapData);
+    }
+  }, [mapData]);
 
   /* =========================
      START MINI GAME
@@ -72,7 +82,8 @@ export default function GameContainer({
         roomCode,
         player,
         currentRound: roundId,
-        onEnterGame: startMiniGame
+        onEnterGame: startMiniGame,
+        boothStates: mapDataRef.current?.boothStates ?? {},
       });
 
     };
@@ -281,6 +292,7 @@ export default function GameContainer({
             player,
             currentRound: currentRoundIdRef.current,
             onEnterGame: startMiniGame,
+            boothStates: mapDataRef.current?.boothStates ?? {},
           });
         },
       };
@@ -294,8 +306,8 @@ export default function GameContainer({
       player,
 
       currentRound: currentRoundIdRef.current,
-
-      onEnterGame: startMiniGame
+      onEnterGame: startMiniGame,
+      boothStates: mapDataRef.current?.boothStates ?? {},
 
     });
 

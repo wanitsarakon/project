@@ -2,9 +2,9 @@ import Phaser from "phaser";
 
 const WORLD_WIDTH = 7200;
 
-const BOOTHS = [
+export const FESTIVAL_BOOTHS = [
   { key: "fish", label: "ตักปลา", scene: "FishScoopingScene", texture: "/assets/fish_booth.png", x: 620, accent: 0x63d5ff, icon: "ปลา" },
-  { key: "horse", label: "ขี่ม้าส่งของ", scene: "HorseDeliveryScene", texture: "/assets/carousel_booth.png", x: 1320, accent: 0xffc857, icon: "ม้า" },
+  { key: "horse", label: "ขี่ม้าส่งของ", scene: "HorseDeliveryScene", texture: "/assetsHorse/horse.png", x: 1320, accent: 0xffc857, icon: "ม้า" },
   { key: "worship", label: "ไหว้พระ", scene: "WorshipBoothScene", texture: "/assets/worship_booth.png", x: 2020, accent: 0xffde8a, icon: "พร" },
   { key: "boxing", label: "มวยไทย", scene: "BoxingGameScene", texture: "/assets/boxing_booth.png", x: 2720, accent: 0xff8a80, icon: "มวย" },
   { key: "cooking", label: "ทำขนม", scene: "CookingGameScene", texture: "/assets/cooking_booth.png", x: 3420, accent: 0xffd37b, icon: "ครัว" },
@@ -15,23 +15,32 @@ const BOOTHS = [
   { key: "tug", label: "ชักเย่อ", scene: "TugOfWarScene", texture: "/assets/tug_booth.png", x: 6920, accent: 0x87ffb0, icon: "ทีม" },
 ];
 
+const BOOTH_THUMBNAIL_LAYOUT = {
+  horse: { x: 28, y: 10, scale: 0.115 },
+  fish: { x: 24, y: 6, scale: 0.16 },
+};
+
 export default class FestivalMapScene extends Phaser.Scene {
   constructor() {
     super({ key: "FestivalMapScene" });
     this.onEnterGame = null;
     this.entering = false;
     this.dragging = false;
+    this.boothStates = {};
+    this.boothCards = {};
   }
 
   init(data = {}) {
     this.onEnterGame = data?.onEnterGame ?? null;
     this.entering = false;
+    this.boothStates = data?.boothStates ?? {};
   }
 
   preload() {
-    BOOTHS.forEach((booth) => {
-      if (!this.textures.exists(booth.key)) {
-        this.load.image(booth.key, booth.texture);
+    FESTIVAL_BOOTHS.forEach((booth) => {
+      const textureKey = `booth-${booth.key}`;
+      if (!this.textures.exists(textureKey)) {
+        this.load.image(textureKey, booth.texture);
       }
     });
   }
@@ -47,9 +56,10 @@ export default class FestivalMapScene extends Phaser.Scene {
     cam.setBounds(0, 0, WORLD_WIDTH, height);
     cam.scrollX = 0;
 
-    this.boothContainers = BOOTHS.map((booth, index) =>
+    this.boothContainers = FESTIVAL_BOOTHS.map((booth, index) =>
       this.createBoothCard(booth, height - 172 - (index % 2 === 0 ? 0 : 10)),
     );
+    this.applyMapData({ boothStates: this.boothStates });
 
     this.createMapHints(width, height);
     this.installCameraControls();
@@ -290,8 +300,9 @@ export default class FestivalMapScene extends Phaser.Scene {
       padding: { left: 10, right: 10, top: 6, bottom: 6 },
     }).setOrigin(0.5);
 
-    const thumbnail = this.add.image(18, -6, booth.key);
-    thumbnail.setScale(0.17);
+    const thumbLayout = BOOTH_THUMBNAIL_LAYOUT[booth.key] ?? { x: 18, y: -6, scale: 0.17 };
+    const thumbnail = this.add.image(thumbLayout.x, thumbLayout.y, `booth-${booth.key}`);
+    thumbnail.setScale(thumbLayout.scale);
     thumbnail.setAngle(Phaser.Math.Between(-2, 2));
 
     const lamps = [
@@ -302,11 +313,34 @@ export default class FestivalMapScene extends Phaser.Scene {
 
     const button = this.add.rectangle(0, 155, 170, 42, 0x20100a, 0.85);
     button.setStrokeStyle(2, booth.accent, 0.85);
-    const buttonText = this.add.text(0, 155, "เข้าเล่น", {
+    const buttonText = this.add.text(0, 155, "\u0e40\u0e02\u0e49\u0e32\u0e40\u0e25\u0e48\u0e19", {
       fontFamily: "Kanit",
       fontSize: "20px",
       fontStyle: "bold",
       color: "#fff8e4",
+    }).setOrigin(0.5);
+    const statePill = this.add.text(0, 116, "", {
+      fontFamily: "Kanit",
+      fontSize: "18px",
+      fontStyle: "bold",
+      color: "#fff8e4",
+      backgroundColor: "rgba(24,14,8,0.72)",
+      padding: { left: 12, right: 12, top: 5, bottom: 5 },
+    }).setOrigin(0.5);
+    const lockOverlay = this.add.rectangle(0, 24, 252, 214, 0x06060a, 0.56);
+    const lockIcon = this.add.text(0, 16, "\u0e25\u0e47\u0e2d\u0e01", {
+      fontFamily: "Kanit",
+      fontSize: "30px",
+      fontStyle: "bold",
+      color: "#fff0c8",
+    }).setOrigin(0.5);
+    const completeBadge = this.add.text(0, 18, "\u0e1c\u0e48\u0e32\u0e19\u0e41\u0e25\u0e49\u0e27", {
+      fontFamily: "Kanit",
+      fontSize: "20px",
+      fontStyle: "bold",
+      color: "#083b22",
+      backgroundColor: "#b8ffd1",
+      padding: { left: 12, right: 12, top: 6, bottom: 6 },
     }).setOrigin(0.5);
 
     container.add([
@@ -320,8 +354,12 @@ export default class FestivalMapScene extends Phaser.Scene {
       iconText,
       thumbnail,
       ...lamps,
+      statePill,
       button,
       buttonText,
+      lockOverlay,
+      lockIcon,
+      completeBadge,
     ]);
 
     container.setSize(320, 360);
@@ -337,7 +375,7 @@ export default class FestivalMapScene extends Phaser.Scene {
       });
       this.tweens.add({
         targets: [thumbnail],
-        scale: 0.19,
+        scale: thumbLayout.scale + 0.02,
         duration: 180,
       });
     });
@@ -351,17 +389,70 @@ export default class FestivalMapScene extends Phaser.Scene {
       });
       this.tweens.add({
         targets: [thumbnail],
-        scale: 0.17,
+        scale: thumbLayout.scale,
         duration: 180,
       });
     });
 
     container.on("pointerdown", () => {
       if (this.entering) return;
+      const boothState = this.boothStates?.[booth.scene] ?? "locked";
+      if (boothState !== "unlocked") return;
       this.entering = true;
       this.onEnterGame?.(booth.scene);
     });
 
+    this.boothCards[booth.scene] = {
+      container,
+      thumbnail,
+      button,
+      buttonText,
+      statePill,
+      lockOverlay,
+      lockIcon,
+      completeBadge,
+    };
+    this.applyBoothState(booth.scene, this.boothStates?.[booth.scene] ?? "locked");
+
     return container;
+  }
+
+  applyMapData(data = {}) {
+    this.boothStates = data?.boothStates ?? {};
+    FESTIVAL_BOOTHS.forEach((booth) => {
+      this.applyBoothState(booth.scene, this.boothStates?.[booth.scene] ?? "locked");
+    });
+  }
+
+  applyBoothState(sceneKey, state) {
+    const card = this.boothCards?.[sceneKey];
+    if (!card) return;
+
+    const unlocked = state === "unlocked";
+    const completed = state === "completed";
+    const locked = !unlocked && !completed;
+
+    card.thumbnail.setAlpha(locked ? 0.3 : 1);
+    card.button.setFillStyle(
+      completed ? 0x1a6b46 : locked ? 0x3d3130 : 0x20100a,
+      completed ? 0.95 : 0.85,
+    );
+    card.buttonText.setText(
+      completed
+        ? "\u0e1c\u0e48\u0e32\u0e19\u0e41\u0e25\u0e49\u0e27"
+        : locked
+          ? "\u0e25\u0e47\u0e2d\u0e01"
+          : "\u0e40\u0e02\u0e49\u0e32\u0e40\u0e25\u0e48\u0e19",
+    );
+    card.statePill.setText(
+      completed
+        ? "\u0e40\u0e01\u0e47\u0e1a\u0e04\u0e30\u0e41\u0e19\u0e19\u0e41\u0e25\u0e49\u0e27"
+        : unlocked
+          ? "\u0e1e\u0e23\u0e49\u0e2d\u0e21\u0e40\u0e25\u0e48\u0e19"
+          : "\u0e15\u0e49\u0e2d\u0e07\u0e40\u0e04\u0e25\u0e35\u0e22\u0e23\u0e4c\u0e0b\u0e38\u0e49\u0e21\u0e01\u0e48\u0e2d\u0e19\u0e2b\u0e19\u0e49\u0e32",
+    );
+    card.lockOverlay.setVisible(locked);
+    card.lockIcon.setVisible(locked);
+    card.completeBadge.setVisible(completed);
   }
 }
