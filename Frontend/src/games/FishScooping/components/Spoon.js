@@ -1,50 +1,45 @@
 import Phaser from "phaser";
 
-export default class Spoon extends Phaser.Physics.Arcade.Image{
+export default class Spoon extends Phaser.Physics.Arcade.Image {
+  constructor(scene, x, y) {
+    super(scene, x, y, "spoon");
 
-constructor(scene,x,y){
+    scene.add.existing(this);
+    scene.physics.add.existing(this);
 
-super(scene,x,y,"spoon");
+    this.setScale(0.2);
+    this.setDepth(5);
+    this.body.setCircle(28);
+    this.body.allowGravity = false;
 
-scene.add.existing(this);
-scene.physics.add.existing(this);
+    this.holdingFish = null;
+  }
 
-this.setScale(0.2);
+  update(pointer, enabled = true) {
+    if (!pointer) return;
 
-this.body.setCircle(25);
+    this.x = Phaser.Math.Clamp(pointer.worldX, 52, this.scene.scale.width - 52);
+    this.y = Phaser.Math.Clamp(pointer.worldY, 52, this.scene.scale.height - 52);
 
-this.holdingFish = null;
+    if (!enabled && this.holdingFish) {
+      this.releaseFish();
+    }
 
-}
+    if (this.holdingFish) {
+      this.holdingFish.x = this.x;
+      this.holdingFish.y = this.y;
+    }
+  }
 
-update(pointer){
+  catchFish(fish) {
+    if (this.holdingFish) return;
 
-this.x = pointer.worldX;
-this.y = pointer.worldY;
+    this.holdingFish = fish;
+    fish.isCaught = true;
+    fish.body.enable = false;
+  }
 
-if(this.holdingFish){
-
-this.holdingFish.x = this.x;
-this.holdingFish.y = this.y;
-
-}
-
-}
-
-catchFish(fish){
-
-if(this.holdingFish) return;
-
-this.holdingFish = fish;
-
-fish.body.enable = false;
-
-}
-
-releaseFish(){
-
-this.holdingFish = null;
-
-}
-
+  releaseFish() {
+    this.holdingFish = null;
+  }
 }

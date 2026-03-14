@@ -1,64 +1,24 @@
-import Phaser from "phaser"
+import Phaser from "phaser";
+
+const TYPES = ["item_candy", "item_coin", "item_gift", "item_hay"];
 
 export default class Items extends Phaser.Physics.Arcade.Sprite {
-
   constructor(scene, x, y) {
+    super(scene, x, y, Phaser.Utils.Array.GetRandom(TYPES));
 
-    /* ======================
-       RANDOM ITEM TYPE
-    ====================== */
+    scene.add.existing(this);
+    scene.physics.add.existing(this);
 
-    const types = [
-      "item_candy",
-      "item_coin",
-      "item_gift",
-      "item_hay"
-    ]
-
-    const texture =
-      Phaser.Utils.Array.GetRandom(types)
-
-    super(scene, x, y, texture)
-
-    /* ======================
-       ADD TO SCENE
-    ====================== */
-
-    scene.add.existing(this)
-    scene.physics.add.existing(this)
-
-    this.scene = scene
-
-    /* ======================
-       VISUAL
-    ====================== */
-
-    this.setScale(0.5)
-
-    /* ======================
-       PHYSICS
-    ====================== */
-
-    this.setVelocityX(-320)
-
-    this.body.allowGravity = false
-
+    this.setScale(0.42);
+    this.setDepth(5);
+    this.body.allowGravity = false;
+    this.body.setCircle(Math.min(this.width, this.height) * 0.18);
   }
-
-  /* ======================
-     AUTO DESTROY
-  ====================== */
 
   preUpdate(time, delta) {
-
-    super.preUpdate(time, delta)
-
-    if (this.x < -100) {
-
-      this.destroy()
-
+    super.preUpdate(time, delta);
+    if (this.x < -120) {
+      this.destroy();
     }
-
   }
-
 }

@@ -1,69 +1,33 @@
-import Phaser from "phaser"
+import Phaser from "phaser";
 
 export default class Horse extends Phaser.Physics.Arcade.Sprite {
-
   constructor(scene, x, y) {
+    super(scene, x, y, "horse");
 
-    super(scene, x, y, "horse")
+    scene.add.existing(this);
+    scene.physics.add.existing(this);
 
-    /* ======================
-       ADD TO SCENE
-    ====================== */
+    this.setScale(0.78);
+    this.setOrigin(0.5, 1);
+    this.setDepth(6);
+    this.setCollideWorldBounds(true);
 
-    scene.add.existing(this)
-    scene.physics.add.existing(this)
-
-    this.scene = scene
-
-    /* ======================
-       VISUAL
-    ====================== */
-
-    this.setScale(0.8)
-    this.setOrigin(0.5, 1)
-
-    /* ======================
-       PHYSICS
-    ====================== */
-
-    this.setCollideWorldBounds(true)
-
-    this.body.setGravityY(1000)
-
-    /* ======================
-       HITBOX
-    ====================== */
-
-    this.body.setSize(
-      this.width * 0.6,
-      this.height * 0.7
-    )
-
-    this.body.setOffset(
-      this.width * 0.2,
-      this.height * 0.2
-    )
-
+    this.body.setGravityY(1200);
+    this.body.setSize(this.width * 0.54, this.height * 0.54);
+    this.body.setOffset(this.width * 0.25, this.height * 0.36);
   }
-
-  /* ======================
-     JUMP
-  ====================== */
 
   jump() {
+    if (!this.body) return;
 
-    if (!this.body) return
-
-    const onGround =
-      this.body.blocked.down ||
-      this.body.touching.down
-
+    const onGround = this.body.blocked.down || this.body.touching.down;
     if (onGround) {
-
-      this.setVelocityY(-520)
-
+      this.setVelocityY(-620);
     }
-
   }
 
+  update() {
+    if (!this.body) return;
+    this.rotation = Phaser.Math.Clamp(this.body.velocity.y / 1600, -0.12, 0.22);
+  }
 }

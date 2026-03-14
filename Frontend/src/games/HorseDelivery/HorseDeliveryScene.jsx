@@ -1,400 +1,392 @@
-import Phaser from "phaser"
+import Phaser from "phaser";
 
-import Horse from "./components/Horse"
-import Obstacle from "./components/Obstacle"
-import Items from "./components/Items"
-import ScoreManager from "./components/ScoreManager"
+import Horse from "./components/Horse";
+import Obstacle from "./components/Obstacle";
+import Items from "./components/Items";
+import ScoreManager from "./components/ScoreManager";
 
-const GAME_TIME = 60
+const GAME_TIME = 60;
+const BG_IMAGE = new URL("./assetsHorse/BGhorse.jpg", import.meta.url).href;
+const HORSE_IMAGE = new URL("./assetsHorse/horse.png", import.meta.url).href;
+const OBSTACLE_IMAGE = new URL("./assetsHorse/obstacle.png", import.meta.url).href;
+const ITEM_CANDY = new URL("./assetsHorse/item_candy.png", import.meta.url).href;
+const ITEM_COIN = new URL("./assetsHorse/item_coin.png", import.meta.url).href;
+const ITEM_GIFT = new URL("./assetsHorse/item_gift.png", import.meta.url).href;
+const ITEM_HAY = new URL("./assetsHorse/item_hay.png", import.meta.url).href;
+const START_SIGN = new URL("./assetsHorse/ขี่ม้าเริ่มเกม.jpg", import.meta.url).href;
+const RESULT_SIGN = new URL("./assetsHorse/ขี่ม้าคะเนน.jpg", import.meta.url).href;
+const COUNT_SOUND = new URL("./sounds/countdown.mp3", import.meta.url).href;
+const START_SOUND = new URL("./sounds/start.mp3", import.meta.url).href;
+const HORSE_GALLOP = new URL("./sounds/horse_gallop.wav", import.meta.url).href;
+const HORSE_NEIGH = new URL("./sounds/horse_neigh.wav", import.meta.url).href;
+const FAIR_AMBIENCE = new URL("./sounds/fair_ambience.wav", import.meta.url).href;
 
 export default class HorseDeliveryScene extends Phaser.Scene {
-
-constructor(){
-super("HorseDeliveryScene")
-}
-
-/* ================= INIT ================= */
-
-init(data={}){
-
-this.playerData = data.player ?? null
-this.onGameEnd = data.onGameEnd ?? null
-
-this.timeLeft = GAME_TIME
-this.ended = false
-
-}
-
-/* ================= PRELOAD ================= */
-
-preload(){
-
-this.load.image("bg","/assetsHorse/BGhorse.png")
-this.load.image("horse","/assetsHorse/horse.png")
-this.load.image("obstacle","/assetsHorse/obstacle.png")
-
-this.load.image("item_candy","/assetsHorse/item_candy.png")
-this.load.image("item_coin","/assetsHorse/item_coin.png")
-this.load.image("item_gift","/assetsHorse/item_gift.png")
-this.load.image("item_hay","/assetsHorse/item_hay.png")
-
-this.load.image("sign","/assetsHorse/sign.png")
-
-}
-
-/* ================= CREATE ================= */
-
-create(){
-
-const width = this.scale.width
-const height = this.scale.height
-
-this.physics.world.gravity.y = 900
-
-/* background */
-
-this.add.image(width/2,height/2,"bg")
-.setDisplaySize(width,height)
-
-/* start sign */
-
-this.showStartSign()
-
-}
-
-/* ================= START SIGN ================= */
-
-showStartSign(){
-
-const width = this.scale.width
-const height = this.scale.height
-
-const sign = this.add.image(width/2,height/2,"sign")
-.setScale(0.8)
-.setDepth(100)
-
-sign.setInteractive()
-
-sign.once("pointerdown",()=>{
-
-sign.destroy()
-this.startGame()
-
-})
-
-}
-
-/* ================= START GAME ================= */
-
-startGame(){
-
-const width = this.scale.width
-const height = this.scale.height
-
-/* score */
-
-this.scoreManager = new ScoreManager(this)
-
-/* timer UI */
-
-this.timeText = this.add.text(
-width-20,
-20,
-`เวลา: ${GAME_TIME}`,
-{
-fontSize:"24px",
-color:"#ffffff"
-}
-).setOrigin(1,0)
-
-/* player */
-
-this.player = new Horse(this,200,height-200)
-
-/* groups */
-
-this.obstacles = this.physics.add.group({
-maxSize:20
-})
-
-this.items = this.physics.add.group({
-maxSize:20
-})
-
-/* smoother spawn timers */
-
-this.obstacleTimer = this.time.addEvent({
-
-delay:1500,
-loop:true,
-
-callback:()=>{
-
-this.spawnObstacle()
-
-}
-
-})
-
-this.itemTimer = this.time.addEvent({
-
-delay:2000,
-loop:true,
-
-callback:()=>{
-
-this.spawnItem()
-
-}
-
-})
-
-/* collisions */
-
-this.physics.add.collider(
-this.player,
-this.obstacles,
-this.hitObstacle,
-null,
-this
-)
-
-this.physics.add.overlap(
-this.player,
-this.items,
-this.collectItem,
-null,
-this
-)
-
-/* input */
-
-this.input.on("pointerdown",()=>{
-this.player.jump()
-})
-
-/* timer */
-
-this.timer = this.time.addEvent({
-
-delay:1000,
-loop:true,
-
-callback:()=>{
-
-if(this.ended)return
-
-this.timeLeft--
-
-this.timeText.setText(`เวลา: ${this.timeLeft}`)
-
-if(this.timeLeft<=0){
-
-this.endGame()
-
-}
-
-}
-
-})
-
-}
-
-/* ================= SPAWN ================= */
-
-spawnObstacle(){
-
-const width = this.scale.width
-const height = this.scale.height
-
-const obstacle = new Obstacle(
-this,
-width+100,
-height-180
-)
-
-this.obstacles.add(obstacle)
-
-}
-
-spawnItem(){
-
-const width = this.scale.width
-const height = this.scale.height
-
-const item = new Items(
-this,
-width+100,
-height-250
-)
-
-this.items.add(item)
-
-}
-
-/* ================= UPDATE ================= */
-
-update(){
-
-if(this.ended)return
-if(!this.obstacles || !this.items)return
-
-/* recycle objects instead of destroy */
-
-this.obstacles.children.each((obs)=>{
-
-if(obs.active && obs.x < -100){
-
-obs.destroy()
-
-}
-
-})
-
-this.items.children.each((item)=>{
-
-if(item.active && item.x < -100){
-
-item.destroy()
-
-}
-
-})
-
-}
-
-/* ================= COLLISION ================= */
-
-hitObstacle(player, obstacle){
-
-obstacle.destroy()
-
-this.scoreManager.addScore(-1)
-
-}
-
-collectItem(player, item){
-
-const type = item.texture.key
-
-item.destroy()
-
-if(type==="item_gift"){
-
-this.scoreManager.addScore(2)
-
-}
-else if(type==="item_hay"){
-
-this.scoreManager.addScore(-1)
-
-}
-else{
-
-this.scoreManager.addScore(1)
-
-}
-
-}
-
-/* ================= END GAME ================= */
-
-endGame(){
-
-if(this.ended)return
-
-this.ended=true
-
-this.obstacleTimer?.remove()
-this.itemTimer?.remove()
-this.timer?.remove()
-
-this.physics.pause()
-
-this.showSummary()
-
-}
-
-/* ================= SUMMARY ================= */
-
-showSummary(){
-
-const width = this.scale.width
-const height = this.scale.height
-
-this.add.rectangle(
-width/2,
-height/2,
-420,
-260,
-0x000000,
-0.8
-)
-
-this.add.text(
-width/2,
-height/2-40,
-"จบเกม!",
-{
-fontSize:"36px",
-color:"#ffffff"
-}
-).setOrigin(0.5)
-
-this.add.text(
-width/2,
-height/2,
-`คะแนน: ${this.scoreManager.score}`,
-{
-fontSize:"28px",
-color:"#ffff66"
-}
-).setOrigin(0.5)
-
-let countdown = 5
-
-const text = this.add.text(
-width/2,
-height/2+60,
-`กลับซุ้มใน ${countdown}`,
-{
-fontSize:"22px",
-color:"#ffffff"
-}
-).setOrigin(0.5)
-
-this.time.addEvent({
-
-delay:1000,
-repeat:4,
-
-callback:()=>{
-
-countdown--
-
-text.setText(`กลับซุ้มใน ${countdown}`)
-
-if(countdown<=0){
-
-if(this.onGameEnd){
-
-this.onGameEnd({
-score:this.scoreManager.score,
-player:this.playerData
-})
-
-}else{
-
-this.scene.start("FestivalMapScene")
-
-}
-
-}
-
-}
-
-})
-
-}
-
+  constructor() {
+    super("HorseDeliveryScene");
+    this.spawnClock = null;
+    this.itemClock = null;
+    this.timerEvent = null;
+  }
+
+  init(data = {}) {
+    this.playerData = data.player ?? null;
+    this.onGameEnd = data.onGameEnd ?? null;
+    this.roundId = data.roundId ?? null;
+
+    this.timeLeft = GAME_TIME;
+    this.ended = false;
+    this.started = false;
+  }
+
+  preload() {
+    this.load.image("horse-bg", BG_IMAGE);
+    this.load.image("horse", HORSE_IMAGE);
+    this.load.image("obstacle", OBSTACLE_IMAGE);
+    this.load.image("item_candy", ITEM_CANDY);
+    this.load.image("item_coin", ITEM_COIN);
+    this.load.image("item_gift", ITEM_GIFT);
+    this.load.image("item_hay", ITEM_HAY);
+    this.load.image("horse-start-sign", START_SIGN);
+    this.load.image("horse-result-sign", RESULT_SIGN);
+    this.load.audio("horse-count", COUNT_SOUND);
+    this.load.audio("horse-start", START_SOUND);
+    this.load.audio("horse-gallop", HORSE_GALLOP);
+    this.load.audio("horse-neigh", HORSE_NEIGH);
+    this.load.audio("horse-fair-bgm", FAIR_AMBIENCE);
+  }
+
+  create() {
+    const { width, height } = this.scale;
+
+    this.add.image(width / 2, height / 2, "horse-bg").setDisplaySize(width, height);
+    this.add.rectangle(width / 2, height - 76, width, 160, 0x5f3517, 0.01);
+
+    this.groundY = height - 130;
+    this.ground = this.physics.add.staticImage(width / 2, this.groundY + 30)
+      .setDisplaySize(width, 90)
+      .setVisible(false);
+    this.ground.refreshBody();
+
+    this.createHud();
+    this.createStartOverlay();
+    this.createResultOverlay();
+
+    this.events.once("shutdown", () => this.cleanup());
+    this.events.once("destroy", () => this.cleanup());
+  }
+
+  createHud() {
+    const { width } = this.scale;
+
+    this.scoreManager = new ScoreManager(this);
+    this.scoreManager.hide();
+
+    this.timeText = this.add.text(width - 28, 32, `เวลา ${GAME_TIME}`, {
+      fontFamily: "Kanit",
+      fontSize: "30px",
+      color: "#fff4bf",
+      stroke: "#4f1e00",
+      strokeThickness: 5,
+    }).setOrigin(1, 0).setDepth(20).setVisible(false);
+
+    this.infoText = this.add.text(width / 2, 32, "แตะหน้าจอหรือกด Space เพื่อกระโดดข้ามสิ่งกีดขวาง", {
+      fontFamily: "Kanit",
+      fontSize: "18px",
+      color: "#fffbe6",
+      backgroundColor: "rgba(51,26,4,0.5)",
+      padding: { left: 14, right: 14, top: 6, bottom: 6 },
+    }).setOrigin(0.5, 0).setDepth(20).setVisible(false);
+  }
+
+  createStartOverlay() {
+    const { width, height } = this.scale;
+    this.startOverlay = this.add.container(0, 0).setDepth(40);
+    const dim = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.58);
+    const banner = this.add.image(width / 2, height / 2, "horse-start-sign").setDisplaySize(720, 480);
+    const copy = this.add.text(width / 2, height / 2 + 70, "ขี่ม้าส่งของให้ไว เก็บของดี หลบของเสีย และอย่าชนสิ่งกีดขวาง", {
+      fontFamily: "Kanit",
+      fontSize: "20px",
+      color: "#fff7db",
+      stroke: "#3c1e00",
+      strokeThickness: 5,
+      wordWrap: { width: 500 },
+      align: "center",
+    }).setOrigin(0.5);
+    const button = this.add.text(width / 2, height / 2 + 160, "เริ่มแข่ง", {
+      fontFamily: "Kanit",
+      fontSize: "28px",
+      color: "#fff7d9",
+      backgroundColor: "#b44b12",
+      padding: { left: 24, right: 24, top: 10, bottom: 10 },
+      stroke: "#632500",
+      strokeThickness: 4,
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    button.on("pointerdown", () => this.startCountdown());
+
+    this.startOverlay.add([dim, banner, copy, button]);
+  }
+
+  createResultOverlay() {
+    const { width, height } = this.scale;
+    this.resultOverlay = this.add.container(0, 0).setDepth(50).setVisible(false);
+    const dim = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7);
+    const banner = this.add.image(width / 2, height / 2, "horse-result-sign").setDisplaySize(720, 480);
+    this.resultScoreText = this.add.text(width / 2, height / 2 + 18, "0", {
+      fontFamily: "Kanit",
+      fontSize: "60px",
+      fontStyle: "bold",
+      color: "#702500",
+      stroke: "#fff1b6",
+      strokeThickness: 6,
+    }).setOrigin(0.5);
+    this.resultHintText = this.add.text(width / 2, height / 2 + 96, "", {
+      fontFamily: "Kanit",
+      fontSize: "20px",
+      color: "#5f2400",
+      align: "center",
+    }).setOrigin(0.5);
+    const button = this.add.text(width / 2, height / 2 + 172, "กลับแผนที่", {
+      fontFamily: "Kanit",
+      fontSize: "26px",
+      color: "#fff5dd",
+      backgroundColor: "#8f3d13",
+      padding: { left: 24, right: 24, top: 10, bottom: 10 },
+      stroke: "#532000",
+      strokeThickness: 4,
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    button.on("pointerdown", () => {
+      this.onGameEnd?.({
+        score: this.scoreManager.getScore(),
+        roundId: this.roundId,
+        meta: {
+          timeLeft: this.timeLeft,
+          deliveries: this.deliveries ?? 0,
+          crashes: this.crashes ?? 0,
+        },
+      });
+    });
+
+    this.resultOverlay.add([dim, banner, this.resultScoreText, this.resultHintText, button]);
+  }
+
+  startCountdown() {
+    if (this.started) return;
+    this.started = true;
+    this.startOverlay.setVisible(false);
+    this.deliveries = 0;
+    this.crashes = 0;
+
+    this.countdownText = this.add.text(this.scale.width / 2, this.scale.height / 2, "3", {
+      fontFamily: "Kanit",
+      fontSize: "132px",
+      fontStyle: "bold",
+      color: "#fff0c5",
+      stroke: "#4e1b00",
+      strokeThickness: 8,
+    }).setOrigin(0.5).setDepth(45);
+
+    let count = 3;
+    this.sound.play("horse-count", { volume: 0.5 });
+    this.countdownEvent = this.time.addEvent({
+      delay: 1000,
+      repeat: 3,
+      callback: () => {
+        count -= 1;
+        if (count > 0) {
+          this.countdownText.setText(String(count));
+          this.sound.play("horse-count", { volume: 0.5 });
+        } else if (count === 0) {
+          this.countdownText.setText("ไป!");
+          this.sound.play("horse-start", { volume: 0.6 });
+        } else {
+          this.countdownText.destroy();
+          this.startGame();
+        }
+      },
+    });
+  }
+
+  startGame() {
+    const { width, height } = this.scale;
+
+    this.gallopBgm = this.sound.add("horse-gallop", {
+      loop: true,
+      volume: 0.28,
+    });
+    this.fairBgm = this.sound.add("horse-fair-bgm", {
+      loop: true,
+      volume: 0.15,
+    });
+    if (!this.gallopBgm.isPlaying) this.gallopBgm.play();
+    if (!this.fairBgm.isPlaying) this.fairBgm.play();
+    this.sound.play("horse-neigh", { volume: 0.35 });
+
+    this.scoreManager.show();
+    this.timeText.setVisible(true);
+    this.infoText.setVisible(true);
+
+    this.player = new Horse(this, 180, this.groundY);
+    this.physics.add.collider(this.player, this.ground);
+
+    this.obstacles = this.physics.add.group({ maxSize: 24 });
+    this.items = this.physics.add.group({ maxSize: 24 });
+
+    this.spawnClock = this.time.addEvent({
+      delay: 1450,
+      loop: true,
+      callback: () => this.spawnObstacle(),
+    });
+
+    this.itemClock = this.time.addEvent({
+      delay: 1750,
+      loop: true,
+      callback: () => this.spawnItem(),
+    });
+
+    this.physics.add.collider(this.player, this.obstacles, this.hitObstacle, null, this);
+    this.physics.add.overlap(this.player, this.items, this.collectItem, null, this);
+
+    this.jumpHandler = () => this.player?.jump();
+    this.input.on("pointerdown", this.jumpHandler);
+
+    this.keyJump = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+    this.keyJump?.on("down", this.jumpHandler);
+
+    this.timerEvent = this.time.addEvent({
+      delay: 1000,
+      loop: true,
+      callback: () => {
+        if (this.ended) return;
+        this.timeLeft -= 1;
+        this.timeText.setText(`เวลา ${Math.max(0, this.timeLeft)}`);
+        if (this.timeLeft === 25) {
+          this.infoText.setText("ช่วงท้ายแล้ว ของจะมาไวขึ้นอีก ระวังให้ดี!");
+        }
+        if (this.timeLeft <= 0) {
+          this.endGame();
+        }
+      },
+    });
+
+    this.cameras.main.setBounds(0, 0, width, height);
+  }
+
+  spawnObstacle() {
+    if (this.ended) return;
+    const obstacle = new Obstacle(this, this.scale.width + 100, this.groundY + 2);
+    obstacle.setVelocityX(-(320 + (GAME_TIME - this.timeLeft) * 2.6));
+    this.obstacles.add(obstacle);
+  }
+
+  spawnItem() {
+    if (this.ended) return;
+    const item = new Items(this, this.scale.width + 100, this.groundY - Phaser.Math.Between(70, 150));
+    item.setVelocityX(-(290 + (GAME_TIME - this.timeLeft) * 2.2));
+    this.items.add(item);
+  }
+
+  update() {
+    if (this.ended || !this.player) return;
+
+    this.player.update();
+
+    this.obstacles?.children?.each((obs) => {
+      if (obs?.active && obs.x < -100) {
+        obs.destroy();
+      }
+    });
+
+    this.items?.children?.each((item) => {
+      if (item?.active && item.x < -100) {
+        item.destroy();
+      }
+    });
+  }
+
+  hitObstacle(player, obstacle) {
+    if (this.ended || obstacle.hitRegistered) return;
+    obstacle.hitRegistered = true;
+    obstacle.destroy();
+    this.crashes += 1;
+    this.scoreManager.addScore(-2);
+    this.flashFeedback("-2 ชนสิ่งกีดขวาง", "#ffd7d7");
+    this.cameras.main.shake(180, 0.008);
+  }
+
+  collectItem(player, item) {
+    if (this.ended) return;
+
+    const type = item.texture.key;
+    item.destroy();
+
+    if (type === "item_gift") {
+      this.deliveries += 1;
+      this.scoreManager.addScore(3);
+      this.flashFeedback("+3 ของขวัญพิเศษ", "#ffefbe");
+      this.sound.play("horse-neigh", { volume: 0.28 });
+    } else if (type === "item_hay") {
+      this.scoreManager.addScore(-1);
+      this.flashFeedback("-1 เก็บฟางผิดจังหวะ", "#ffe0cf");
+    } else {
+      this.deliveries += 1;
+      this.scoreManager.addScore(1);
+      this.flashFeedback("+1 ส่งของสำเร็จ", "#ddffd8");
+    }
+  }
+
+  flashFeedback(message, color) {
+    const toast = this.add.text(this.scale.width / 2, 112, message, {
+      fontFamily: "Kanit",
+      fontSize: "22px",
+      color: "#3b1800",
+      backgroundColor: color,
+      padding: { left: 14, right: 14, top: 8, bottom: 8 },
+    }).setOrigin(0.5).setDepth(30);
+
+    this.tweens.add({
+      targets: toast,
+      y: 90,
+      alpha: 0,
+      duration: 650,
+      onComplete: () => toast.destroy(),
+    });
+  }
+
+  endGame() {
+    if (this.ended) return;
+
+    this.ended = true;
+    this.gallopBgm?.stop();
+    this.fairBgm?.stop();
+    this.physics.pause();
+    this.spawnClock?.remove(false);
+    this.itemClock?.remove(false);
+    this.timerEvent?.remove(false);
+    this.countdownEvent?.remove(false);
+    this.infoText.setVisible(false);
+
+    this.resultScoreText.setText(String(this.scoreManager.getScore()));
+    this.resultHintText.setText(
+      `ส่งของสำเร็จ ${this.deliveries} ครั้ง  •  ชนสิ่งกีดขวาง ${this.crashes} ครั้ง  •  เวลาคงเหลือ ${Math.max(0, this.timeLeft)} วินาที`,
+    );
+    this.resultOverlay.setVisible(true);
+  }
+
+  cleanup() {
+    this.gallopBgm?.stop();
+    this.gallopBgm?.destroy();
+    this.gallopBgm = null;
+    this.fairBgm?.stop();
+    this.fairBgm?.destroy();
+    this.fairBgm = null;
+    this.spawnClock?.remove(false);
+    this.itemClock?.remove(false);
+    this.timerEvent?.remove(false);
+    this.countdownEvent?.remove(false);
+    if (this.jumpHandler) {
+      this.input.off("pointerdown", this.jumpHandler);
+      this.keyJump?.off("down", this.jumpHandler);
+    }
+  }
 }
