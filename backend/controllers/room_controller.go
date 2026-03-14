@@ -424,6 +424,14 @@ func (rc *RoomController) GetProgress(c *gin.Context) {
 	code := c.Param("code")
 	playerID, _ := strconv.Atoi(c.Query("player_id"))
 
+	if playerID > 0 {
+		_, _ = rc.DB.Exec(`
+			UPDATE players
+			SET connected=true, last_seen_at=NOW()
+			WHERE id=$1
+		`, playerID)
+	}
+
 	progress, err := buildRoomProgress(rc.DB, code, playerID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "room not found"})
@@ -519,6 +527,16 @@ func (rc *RoomController) CompleteGame(c *gin.Context) {
 		if b, err := json.Marshal(req.Meta); err == nil {
 			metaJSON = b
 		}
+	}
+
+	if _, err := tx.Exec(`
+		UPDATE players
+		SET connected=true,
+		    last_seen_at=NOW()
+		WHERE id=$1
+	`, req.PlayerID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "touch player failed"})
+		return
 	}
 
 	if _, err := tx.Exec(`
@@ -624,6 +642,25 @@ func (rc *RoomController) FinalizeGame(c *gin.Context) {
 		FOR UPDATE
 	`, code).Scan(&roomID, &status); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "room not found"})
+		return
+	}
+
+	if status == "finished" {
+		if err := tx.Rollback(); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "rollback failed"})
+			return
+		}
+
+		summary, err := buildRoomSummary(rc.DB, code)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "summary build failed"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"ok":      true,
+			"summary": summary,
+		})
 		return
 	}
 
@@ -772,17 +809,35 @@ func (rc *RoomController) StartGame(c *gin.Context) {
 		}
 		rows.Close()
 
+		rand.Shuffle(len(playerIDs), func(i, j int) {
+			playerIDs[i], playerIDs[j] = playerIDs[j], playerIDs[i]
+		})
+
+		baseSize := 0
+		extraPlayers := 0
+		if len(teamKeys) > 0 {
+			baseSize = len(playerIDs) / len(teamKeys)
+			extraPlayers = len(playerIDs) % len(teamKeys)
+		}
+
 		assignIndex := 0
-		for _, pid := range playerIDs {
-			teamKey := teamKeys[assignIndex%len(teamKeys)]
-			assignIndex += 1
-			if _, err := tx.Exec(`
+		for teamIndex, teamKey := range teamKeys {
+			teamSize := baseSize
+			if teamIndex < extraPlayers {
+				teamSize += 1
+			}
+
+			for i := 0; i < teamSize && assignIndex < len(playerIDs); i += 1 {
+				pid := playerIDs[assignIndex]
+				assignIndex += 1
+				if _, err := tx.Exec(`
 				UPDATE players
 				SET team=$1
 				WHERE id=$2
 			`, teamKey, pid); err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "assign team failed"})
-				return
+					c.JSON(http.StatusInternalServerError, gin.H{"error": "assign team failed"})
+					return
+				}
 			}
 		}
 	}
@@ -1162,6 +1217,7 @@ func buildRoomProgress(db *sql.DB, code string, currentPlayerID int) (gin.H, err
 	var me gin.H
 	allCompleted := true
 	activePlayers := 0
+	totalPlayers := 0
 
 	for _, id := range playerOrder {
 		entry := playerMap[id]
@@ -1181,8 +1237,11 @@ func buildRoomProgress(db *sql.DB, code string, currentPlayerID int) (gin.H, err
 		}
 		players = append(players, payload)
 
-		if !entry.IsHost && entry.Connected {
-			activePlayers += 1
+		if !entry.IsHost {
+			totalPlayers += 1
+			if entry.Connected {
+				activePlayers += 1
+			}
 			if entry.Completed < entry.TotalGames {
 				allCompleted = false
 			}
@@ -1193,7 +1252,7 @@ func buildRoomProgress(db *sql.DB, code string, currentPlayerID int) (gin.H, err
 		}
 	}
 
-	if activePlayers == 0 {
+	if totalPlayers == 0 {
 		allCompleted = false
 	}
 
@@ -1208,6 +1267,7 @@ func buildRoomProgress(db *sql.DB, code string, currentPlayerID int) (gin.H, err
 		"me":             me,
 		"all_completed":  allCompleted,
 		"active_players": activePlayers,
+		"total_players":  totalPlayers,
 	}, nil
 }
 
@@ -1220,7 +1280,6 @@ func roomAllPlayersCompletedTx(tx *sql.Tx, roomID int) (bool, error) {
 		  ON pg.player_id=p.id AND pg.room_id=p.room_id
 		WHERE p.room_id=$1
 		  AND p.is_host=false
-		  AND p.connected=true
 		GROUP BY p.id
 	`, roomID)
 	if err != nil {

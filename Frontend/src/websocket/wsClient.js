@@ -28,8 +28,8 @@ export function createRoomSocket(roomCode, onMessage, options = {}) {
 
     urlBase = derivedUrlBase,
 
-    reconnectDelay = 2000,
-    heartbeatInterval = 30000,
+    reconnectDelay = 1000,
+    heartbeatInterval = 15000,
     debug = false,
 
     onOpen,

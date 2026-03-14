@@ -196,6 +196,19 @@ export default function FestivalMap({
   }, [loadProgress, loadRoom]);
 
   useEffect(() => {
+    if (!roomCode) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      loadRoom();
+      loadProgress();
+    }, 12000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [loadProgress, loadRoom, roomCode]);
+
+  useEffect(() => {
     if (!roomCode || !player?.id || wsRef.current) return undefined;
 
     const socket = createRoomSocket(roomCode, () => {}, {
