@@ -21,13 +21,16 @@ const SCOOP_SOUND = new URL("./sounds/scoop.wav", import.meta.url).href;
 const FAIR_AMBIENCE = new URL("./sounds/fair_ambience.wav", import.meta.url).href;
 const GAME_TIME = 60;
 const MAX_FISH = 10;
+const HOLD_LIMIT_MS = 1000;
 
 export default class FishScoopingScene extends Phaser.Scene {
   constructor() {
     super("FishScoopingScene");
     this.spawnTimer = null;
     this.gameTimer = null;
+    this.countdownTimer = null;
     this.hud = {};
+    this.escapeTimer = null;
   }
 
   init(data = {}) {
@@ -65,21 +68,15 @@ export default class FishScoopingScene extends Phaser.Scene {
 
     this.add.image(width / 2, height / 2, "bg").setDisplaySize(width, height);
 
-    this.waterZone = new Phaser.Geom.Rectangle(
-      width * 0.275,
-      height * 0.29,
-      width * 0.64,
-      height * 0.56,
-    );
-    this.physics.world.setBounds(
-      this.waterZone.x,
-      this.waterZone.y,
-      this.waterZone.width,
-      this.waterZone.height,
-    );
+    this.waterZone = {
+      cx: width * 0.546,
+      cy: height * 0.692,
+      rx: width * 0.254,
+      ry: height * 0.188,
+    };
 
-    this.bucket = this.physics.add.image(width * 0.1525, height * 0.81, "bucket")
-      .setScale(Math.min(width / 800, height / 600) * 0.35)
+    this.bucket = this.physics.add.image(width * 0.108, height * 0.86, "bucket")
+      .setScale(Math.min(width / 800, height / 600) * 0.52)
       .setImmovable(true)
       .setDepth(3);
     this.bucket.body.allowGravity = false;
@@ -93,14 +90,17 @@ export default class FishScoopingScene extends Phaser.Scene {
     this.createStartOverlay();
     this.createResultOverlay();
 
-    this.physics.add.overlap(this.spoon, this.fishes, this.catchFish, null, this);
+    this.input.on("pointerdown", () => {
+      if (this.phase !== "playing" || this.spoon?.holdingFish) return;
+      this.tryCatchFish();
+    });
 
     this.events.once("shutdown", () => this.cleanup());
     this.events.once("destroy", () => this.cleanup());
   }
 
   createHud() {
-    const { width, height } = this.scale;
+    const { width } = this.scale;
 
     const createPanel = (x, y, label, valueColor) => {
       const bg = this.add.rectangle(x, y, 178, 68, 0x2f1f0f, 0.76)
@@ -125,7 +125,7 @@ export default class FishScoopingScene extends Phaser.Scene {
 
     this.hud.score = createPanel(width * 0.13, 54, "คะแนน", "#fff7cc");
     this.hud.timer = createPanel(width * 0.87, 54, "เวลา", "#ffd86a");
-    this.hud.note = this.add.text(width / 2, 92, "ช้อนปลาให้ไว แล้วเอาไปลงอ่างน้ำด้านซ้าย", {
+    this.hud.note = this.add.text(width / 2, 92, "ลากช้อนให้ถึงตัวปลาแล้วคลิกตัก รีบเอาไปลงถังภายใน 1 วินาที", {
       fontFamily: "Kanit",
       fontSize: "18px",
       color: "#fffaf0",
@@ -141,7 +141,7 @@ export default class FishScoopingScene extends Phaser.Scene {
     this.startOverlay = this.add.container(0, 0).setDepth(30);
     const dim = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.55);
     const panel = this.add.image(width / 2, height / 2, "fish-start").setDisplaySize(700, 467);
-    const copy = this.add.text(width / 2, height / 2 + 72, "ลากกระชอนตักปลาแล้วรีบเอาไปใส่อ่างให้ทันเวลา", {
+    const copy = this.add.text(width / 2, height / 2 + 72, "คลิกเมื่อตาข่ายครอบตัวปลา แล้วรีบวิ่งมาปล่อยลงถัง ถ้าช้าเกิน 1 วินาทีปลาจะหลุด", {
       fontFamily: "Kanit",
       fontSize: "20px",
       align: "center",
@@ -212,15 +212,25 @@ export default class FishScoopingScene extends Phaser.Scene {
 
     for (let i = 0; i < 8; i += 1) {
       const isGold = i >= 6;
+      const point = this.randomPointInWater();
       const fish = new Fish(
         this,
-        Phaser.Math.Between(this.waterZone.x + 40, this.waterZone.right - 40),
-        Phaser.Math.Between(this.waterZone.y + 40, this.waterZone.bottom - 30),
+        point.x,
+        point.y,
         Phaser.Utils.Array.GetRandom(fishTextures),
         isGold ? "gold" : "normal",
       );
       this.fishes.add(fish);
     }
+  }
+
+  randomPointInWater() {
+    const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+    const radius = Math.sqrt(Math.random());
+    return {
+      x: this.waterZone.cx + Math.cos(angle) * this.waterZone.rx * radius,
+      y: this.waterZone.cy + Math.sin(angle) * this.waterZone.ry * radius,
+    };
   }
 
   startCountdown() {
@@ -275,12 +285,13 @@ export default class FishScoopingScene extends Phaser.Scene {
         if (this.phase !== "playing") return;
         if (this.fishes.countActive(true) >= MAX_FISH) return;
         const fishTextures = ["fish1", "fish2", "fish3", "fish4", "fish5"];
+        const point = this.randomPointInWater();
         const fish = new Fish(
           this,
-          Phaser.Math.Between(this.waterZone.x + 35, this.waterZone.right - 35),
-          Phaser.Math.Between(this.waterZone.y + 35, this.waterZone.bottom - 30),
+          point.x,
+          point.y,
           Phaser.Utils.Array.GetRandom(fishTextures),
-          Math.random() < 0.22 ? "gold" : "normal",
+          Math.random() < 0.28 ? "gold" : "normal",
         );
         this.fishes.add(fish);
       },
@@ -299,18 +310,41 @@ export default class FishScoopingScene extends Phaser.Scene {
     });
   }
 
-  catchFish(spoon, fish) {
+  tryCatchFish() {
+    let nearestFish = null;
+    let nearestDistance = 9999;
+
+    this.fishes.children.each((fish) => {
+      if (!fish?.active || fish.isCaught) return;
+      const distance = Phaser.Math.Distance.Between(this.spoon.x, this.spoon.y, fish.x, fish.y);
+      if (distance < 56 && distance < nearestDistance) {
+        nearestFish = fish;
+        nearestDistance = distance;
+      }
+    });
+
+    if (!nearestFish) {
+      this.showToast("ต้องเอาช้อนให้ถึงตัวปลาก่อนค่อยคลิกตัก", "#ffd2a0");
+      return;
+    }
+
+    this.catchFish(nearestFish);
+  }
+
+  catchFish(fish) {
     if (this.phase !== "playing") return;
-    if (spoon.holdingFish || fish.isCaught) return;
-    spoon.catchFish(fish);
+    if (this.spoon.holdingFish || fish.isCaught) return;
+
+    this.spoon.catchFish(fish);
     fish.setDepth(6);
     this.sound.play("fish-scoop", { volume: 0.5 });
 
-    this.time.delayedCall(2600, () => {
-      if (spoon.holdingFish !== fish || this.phase !== "playing") return;
-      spoon.releaseFish();
+    this.escapeTimer?.remove(false);
+    this.escapeTimer = this.time.delayedCall(HOLD_LIMIT_MS, () => {
+      if (this.spoon.holdingFish !== fish || this.phase !== "playing") return;
+      this.spoon.releaseFish();
       fish.releaseBackToWater(this.waterZone);
-      this.showToast("ปลาหลุดไปแล้ว!", "#ffd2a0");
+      this.showToast("ช้าเกินไป ปลาหลุดแล้ว!", "#ffd2a0");
     });
   }
 
@@ -333,7 +367,7 @@ export default class FishScoopingScene extends Phaser.Scene {
           this.bucket.y,
         );
 
-        if (dist < 74) {
+        if (dist < 116) {
           this.registerCatch(fish);
         }
       }
@@ -346,6 +380,8 @@ export default class FishScoopingScene extends Phaser.Scene {
     if (fish.type === "gold") this.goldCaught += 1;
     else this.normalCaught += 1;
 
+    this.escapeTimer?.remove(false);
+    this.escapeTimer = null;
     this.updateHud();
     this.showToast(points > 1 ? "+2 ปลาทอง!" : "+1 ได้ปลาแล้ว", points > 1 ? "#ffd95e" : "#d4ffd3");
 
@@ -393,6 +429,7 @@ export default class FishScoopingScene extends Phaser.Scene {
     this.spawnTimer?.remove(false);
     this.gameTimer?.remove(false);
     this.countdownTimer?.remove(false);
+    this.escapeTimer?.remove(false);
     this.physics.pause();
 
     this.resultScoreText.setText(String(this.score));
@@ -409,5 +446,6 @@ export default class FishScoopingScene extends Phaser.Scene {
     this.spawnTimer?.remove(false);
     this.gameTimer?.remove(false);
     this.countdownTimer?.remove(false);
+    this.escapeTimer?.remove(false);
   }
 }

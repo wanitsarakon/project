@@ -7,10 +7,10 @@ export default class Spoon extends Phaser.Physics.Arcade.Image {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    this.setScale(0.2);
-    this.setOrigin(0.24, 0.58);
+    this.setScale(0.255);
+    this.setOrigin(0.3, 0.64);
     this.setDepth(5);
-    this.body.setCircle(38, 2, 6);
+    this.body.setCircle(34, 10, 18);
     this.body.allowGravity = false;
 
     this.holdingFish = null;
@@ -19,16 +19,16 @@ export default class Spoon extends Phaser.Physics.Arcade.Image {
   update(pointer, enabled = true) {
     if (!pointer) return;
 
-    this.x = Phaser.Math.Clamp(pointer.worldX, 36, this.scene.scale.width - 36);
-    this.y = Phaser.Math.Clamp(pointer.worldY, 36, this.scene.scale.height - 36);
+    this.x = Phaser.Math.Clamp(pointer.x, 18, this.scene.scale.width - 18);
+    this.y = Phaser.Math.Clamp(pointer.y, 18, this.scene.scale.height - 18);
 
     if (!enabled && this.holdingFish) {
       this.releaseFish();
     }
 
     if (this.holdingFish) {
-      this.holdingFish.x = this.x;
-      this.holdingFish.y = this.y;
+      this.holdingFish.x = this.x - 12;
+      this.holdingFish.y = this.y + 6;
     }
   }
 

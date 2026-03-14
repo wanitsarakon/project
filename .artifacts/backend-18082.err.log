@@ -1,17 +1,9 @@
-2026/03/15 04:36:56 ✅ Connected to PostgreSQL
-2026/03/15 04:36:56 🧹 Stale state reset completed
-2026/03/15 04:36:56 ✅ WebSocket Hub running
-2026/03/15 04:36:56 🧹 AutoCleanup service running
-2026/03/15 04:36:56 🧹 AutoCleanup service started
-2026/03/15 04:36:56 🚀 Backend running on port 18082
-2026/03/15 04:39:41 ✅ WS register room=864612 player=638 clients=1
-2026/03/15 04:39:52 ✅ WS register room=global player=0 clients=2
-2026/03/15 04:39:55 ❌ WS unregister room=global player=0 clients=1
-2026/03/15 04:39:55 ✅ WS register room=864612 player=639 clients=2
-2026/03/15 04:40:00 ❌ WS unregister room=864612 player=638 clients=1
-2026/03/15 04:40:00 ✅ WS register room=864612 player=638 clients=2
-2026/03/15 04:40:00 ❌ WS unregister room=864612 player=639 clients=1
-2026/03/15 04:40:00 ✅ WS register room=864612 player=639 clients=2
-2026/03/15 04:48:25 🛑 Shutting down server...
-2026/03/15 04:48:25 🛑 AutoCleanup stopped
-2026/03/15 04:48:25 ✅ Server stopped cleanly
+2026/03/15 05:17:44 ✅ Connected to PostgreSQL
+2026/03/15 05:17:44 🧹 Stale state reset completed
+2026/03/15 05:17:44 ✅ WebSocket Hub running
+2026/03/15 05:17:44 🧹 AutoCleanup service running
+2026/03/15 05:17:44 🧹 AutoCleanup service started
+2026/03/15 05:17:44 🚀 Backend running on port 18082
+2026/03/15 05:21:52 🛑 Shutting down server...
+2026/03/15 05:21:52 🛑 AutoCleanup stopped
+2026/03/15 05:21:52 ✅ Server stopped cleanly
