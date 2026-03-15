@@ -73,58 +73,59 @@ function PlayerBottomHud({
       style={{
         position: "absolute",
         left: "50%",
-        bottom: 16,
+        bottom: 8,
         transform: "translateX(-50%)",
-        width: "min(1180px, calc(100vw - 24px))",
-        padding: 16,
-        borderRadius: 28,
-        border: "3px solid rgba(255,221,133,0.88)",
+        width: "min(1080px, calc(100vw - 28px))",
+        padding: 12,
+        borderRadius: 22,
+        border: "2px solid rgba(255,221,133,0.82)",
         background:
-          "linear-gradient(180deg, rgba(78,35,12,0.96) 0%, rgba(44,21,9,0.96) 55%, rgba(26,13,6,0.98) 100%)",
-        boxShadow: "0 18px 42px rgba(0,0,0,0.38), inset 0 2px 0 rgba(255,255,255,0.18)",
+          "linear-gradient(180deg, rgba(78,35,12,0.9) 0%, rgba(44,21,9,0.92) 55%, rgba(26,13,6,0.94) 100%)",
+        boxShadow: "0 10px 24px rgba(0,0,0,0.3), inset 0 2px 0 rgba(255,255,255,0.16)",
         zIndex: 20,
         color: "#fff4d6",
+        pointerEvents: "none",
       }}
     >
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-            gap: 14,
+            gridTemplateColumns: "1fr 0.9fr 1fr",
+            gap: 10,
             alignItems: "stretch",
           }}
       >
         <div
           style={{
-            borderRadius: 18,
-            padding: 14,
+            borderRadius: 16,
+            padding: 12,
             background: "rgba(255,223,146,0.08)",
             border: "1px solid rgba(255,224,140,0.24)",
           }}
         >
           <div style={{ fontSize: 13, color: "#ffd88c", marginBottom: 6 }}>ผู้เล่น</div>
-          <div style={{ fontSize: 24, fontWeight: 800, lineHeight: 1.1 }}>
+          <div style={{ fontSize: 21, fontWeight: 800, lineHeight: 1.05 }}>
             {player?.name || "ผู้เล่น"}
           </div>
-          <div style={{ color: "#ffe7b5", marginTop: 6 }}>
+          <div style={{ color: "#ffe7b5", marginTop: 4, fontSize: 15 }}>
             {roomMeta.mode === "team" ? fmtTeamName(meProgress?.team) : "โหมดเดี่ยว"}
           </div>
         </div>
 
         <div
           style={{
-            borderRadius: 18,
-            padding: 14,
+            borderRadius: 16,
+            padding: 12,
             background: "rgba(255,223,146,0.08)",
             border: "1px solid rgba(255,224,140,0.24)",
           }}
         >
           <div style={{ fontSize: 13, color: "#ffd88c", marginBottom: 6 }}>คะแนนปัจจุบัน</div>
-          <div style={{ fontSize: 32, fontWeight: 800, lineHeight: 1 }}>{currentScore}</div>
-          <div style={{ color: "#ffe7b5", marginTop: 8 }}>
+          <div style={{ fontSize: 25, fontWeight: 800, lineHeight: 1 }}>{currentScore}</div>
+          <div style={{ color: "#ffe7b5", marginTop: 6, fontSize: 15 }}>
             เล่นแล้ว {completedGames.length} / {TOTAL_GAMES} เกม
           </div>
-          <div style={{ color: "#ffd88c", marginTop: 4 }}>
+          <div style={{ color: "#ffd88c", marginTop: 2, fontSize: 14 }}>
             {meProgress?.done
               ? "เล่นครบทุกซุ้มแล้ว รอ Host สรุปผล"
               : `ซุ้มถัดไป: ${meProgress?.next_game_key || "-"}`}
@@ -133,8 +134,8 @@ function PlayerBottomHud({
 
         <div
           style={{
-            borderRadius: 18,
-            padding: 14,
+            borderRadius: 16,
+            padding: 12,
             background: "rgba(255,223,146,0.08)",
             border: "1px solid rgba(255,224,140,0.24)",
           }}
@@ -147,10 +148,10 @@ function PlayerBottomHud({
       {roomMeta.mode === "team" && teamMembers.length > 0 && (
         <div
           style={{
-            marginTop: 14,
+            marginTop: 10,
             display: "flex",
             flexWrap: "wrap",
-            gap: 10,
+            gap: 8,
             alignItems: "center",
           }}
         >
@@ -162,6 +163,7 @@ function PlayerBottomHud({
               border: "1px solid rgba(255,224,140,0.24)",
               color: "#fff0c0",
               fontWeight: 700,
+              fontSize: 14,
             }}
           >
             คะแนนรวมทีม {myTeamScore}
@@ -171,11 +173,12 @@ function PlayerBottomHud({
             <div
               key={entry.id}
               style={{
-                padding: "8px 12px",
+                padding: "7px 11px",
                 borderRadius: 999,
                 background: "rgba(255,255,255,0.08)",
                 border: "1px solid rgba(255,224,140,0.18)",
                 color: "#ffe9bb",
+                fontSize: 13,
               }}
             >
               {entry.name}
@@ -826,6 +829,7 @@ export default function FestivalMap({
               color: "#fff0c0",
               boxShadow: "0 12px 28px rgba(0,0,0,0.28)",
               backdropFilter: "blur(10px)",
+              pointerEvents: "none",
             }}
           >
             <div>

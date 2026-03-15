@@ -13,6 +13,7 @@ const ITEM_CANDY = "/assetsHorse/item_candy.png";
 const ITEM_COIN = "/assetsHorse/item_coin.png";
 const ITEM_GIFT = "/assetsHorse/item_gift.png";
 const ITEM_HAY = "/assetsHorse/item_hay.png";
+const RULE_SIGN = "/assetsHorse/sign.png";
 const START_SIGN = new URL("./assetsHorse/ขี่ม้าเริ่มเกม.png", import.meta.url).href;
 const RESULT_SIGN = new URL("./assetsHorse/ขี่ม้าคะเนน.png", import.meta.url).href;
 const COUNT_SOUND = new URL("./sounds/countdown.mp3", import.meta.url).href;
@@ -47,6 +48,7 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     this.load.image("item_coin", ITEM_COIN);
     this.load.image("item_gift", ITEM_GIFT);
     this.load.image("item_hay", ITEM_HAY);
+    this.load.image("horse-rule-sign", RULE_SIGN);
     this.load.image("horse-start-sign", START_SIGN);
     this.load.image("horse-result-sign", RESULT_SIGN);
     this.load.audio("horse-count", COUNT_SOUND);
@@ -62,7 +64,7 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     this.add.image(width / 2, height / 2, "horse-bg").setDisplaySize(width, height);
     this.add.rectangle(width / 2, height - 76, width, 160, 0x5f3517, 0.01);
 
-    this.groundY = height - 130;
+    this.groundY = height - 146;
     this.ground = this.physics.add.staticImage(width / 2, this.groundY + 30)
       .setDisplaySize(width, 90)
       .setVisible(false);
@@ -103,17 +105,18 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     const { width, height } = this.scale;
     this.startOverlay = this.add.container(0, 0).setDepth(40);
     const dim = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.58);
-    const banner = this.add.image(width / 2, height / 2, "horse-start-sign").setDisplaySize(720, 480);
-    const copy = this.add.text(width / 2, height / 2 + 70, "ขี่ม้าส่งของให้ไว เก็บของดี หลบของเสีย และอย่าชนสิ่งกีดขวาง", {
+    const banner = this.add.image(width / 2, height / 2 - 78, "horse-start-sign").setDisplaySize(660, 440);
+    const ruleSign = this.add.image(width / 2, height / 2 + 118, "horse-rule-sign").setDisplaySize(400, 296);
+    const copy = this.add.text(width / 2, height / 2 + 8, "ขี่ม้าส่งของให้ไว เก็บลูกอม เหรียญ และของขวัญได้ +1 แต่ชนถังหรือเก็บฟางจะ -1", {
       fontFamily: "Kanit",
-      fontSize: "20px",
+      fontSize: "19px",
       color: "#fff7db",
       stroke: "#3c1e00",
       strokeThickness: 5,
-      wordWrap: { width: 500 },
+      wordWrap: { width: 520 },
       align: "center",
     }).setOrigin(0.5);
-    const button = this.add.text(width / 2, height / 2 + 160, "เริ่มแข่ง", {
+    const button = this.add.text(width / 2, height / 2 + 250, "เริ่มแข่ง", {
       fontFamily: "Kanit",
       fontSize: "28px",
       color: "#fff7d9",
@@ -124,7 +127,7 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     button.on("pointerdown", () => this.startCountdown());
 
-    this.startOverlay.add([dim, banner, copy, button]);
+    this.startOverlay.add([dim, banner, ruleSign, copy, button]);
   }
 
   createResultOverlay() {
@@ -226,7 +229,7 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     this.timeText.setVisible(true);
     this.infoText.setVisible(true);
 
-    this.player = new Horse(this, 180, this.groundY);
+    this.player = new Horse(this, 190, this.groundY - 6);
     this.physics.add.collider(this.player, this.ground);
 
     this.obstacles = this.physics.add.group({ maxSize: 24 });
@@ -274,14 +277,14 @@ export default class HorseDeliveryScene extends Phaser.Scene {
 
   spawnObstacle() {
     if (this.ended) return;
-    const obstacle = new Obstacle(this, this.scale.width + 72, this.groundY + 2);
+    const obstacle = new Obstacle(this, this.scale.width + 72, this.groundY + 10);
     this.obstacles.add(obstacle);
     obstacle.setVelocityX(-(320 + (GAME_TIME - this.timeLeft) * 2.6));
   }
 
   spawnItem() {
     if (this.ended) return;
-    const item = new Items(this, this.scale.width + 72, this.groundY - Phaser.Math.Between(84, 168));
+    const item = new Items(this, this.scale.width + 72, this.groundY - Phaser.Math.Between(52, 132));
     this.items.add(item);
     item.setVelocityX(-(290 + (GAME_TIME - this.timeLeft) * 2.2));
   }
@@ -309,8 +312,8 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     obstacle.hitRegistered = true;
     obstacle.destroy();
     this.crashes += 1;
-    this.scoreManager.addScore(-2);
-    this.flashFeedback("-2 ชนสิ่งกีดขวาง", "#ffd7d7");
+    this.scoreManager.addScore(-1);
+    this.flashFeedback("-1 ชนถัง", "#ffd7d7");
     this.cameras.main.shake(180, 0.008);
   }
 
@@ -320,18 +323,27 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     const type = item.texture.key;
     item.destroy();
 
-    if (type === "item_gift") {
-      this.deliveries += 1;
-      this.scoreManager.addScore(3);
-      this.flashFeedback("+3 ของขวัญพิเศษ", "#ffefbe");
-      this.sound.play("horse-neigh", { volume: 0.28 });
-    } else if (type === "item_hay") {
+    if (type === "item_hay") {
       this.scoreManager.addScore(-1);
       this.flashFeedback("-1 เก็บฟางผิดจังหวะ", "#ffe0cf");
-    } else {
-      this.deliveries += 1;
+      return;
+    }
+
+    this.deliveries += 1;
+
+    if (type === "item_gift") {
       this.scoreManager.addScore(1);
-      this.flashFeedback("+1 ส่งของสำเร็จ", "#ddffd8");
+      this.flashFeedback("+1 ของขวัญ", "#ffefbe");
+      this.sound.play("horse-neigh", { volume: 0.28 });
+    } else if (type === "item_candy") {
+      this.scoreManager.addScore(1);
+      this.flashFeedback("+1 ลูกอม", "#ddffd8");
+    } else if (type === "item_coin") {
+      this.scoreManager.addScore(1);
+      this.flashFeedback("+1 เหรียญ", "#ddffd8");
+    } else {
+      this.scoreManager.addScore(1);
+      this.flashFeedback("+1 เก็บของสำเร็จ", "#ddffd8");
     }
   }
 
@@ -368,7 +380,7 @@ export default class HorseDeliveryScene extends Phaser.Scene {
 
     this.resultScoreText.setText(String(this.scoreManager.getScore()));
     this.resultHintText.setText(
-      `ส่งของสำเร็จ ${this.deliveries} ครั้ง  •  ชนสิ่งกีดขวาง ${this.crashes} ครั้ง  •  เวลาคงเหลือ ${Math.max(0, this.timeLeft)} วินาที`,
+      `เก็บของสำเร็จ ${this.deliveries} ครั้ง  •  ชนสิ่งกีดขวาง ${this.crashes} ครั้ง  •  เวลาคงเหลือ ${Math.max(0, this.timeLeft)} วินาที`,
     );
     this.resultOverlay.setVisible(true);
   }
