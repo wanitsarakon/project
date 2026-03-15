@@ -35,14 +35,18 @@ export default class Fish extends Phaser.Physics.Arcade.Sprite {
     this.setCollideWorldBounds(false);
 
     this.baseSpeed = type === "gold"
-      ? Phaser.Math.Between(122, 156)
-      : Phaser.Math.Between(72, 124);
+      ? Phaser.Math.Between(136, 176)
+      : Phaser.Math.Between(86, 136);
     this.score = type === "gold" ? 2 : 1;
     if (type === "gold") {
       this.setTint(0xffd66b);
     }
 
     this.moveTimer = 0;
+    this.turnEase = type === "gold" ? 0.12 : 0.09;
+    this.targetVelocity = new Phaser.Math.Vector2(0, 0);
+    this.swimPhase = Phaser.Math.FloatBetween(0, Math.PI * 2);
+    this.swimBobSpeed = Phaser.Math.FloatBetween(0.03, 0.055);
     this.body.setAllowGravity(false);
     this.releaseBackToWater();
   }
@@ -59,6 +63,7 @@ export default class Fish extends Phaser.Physics.Arcade.Sprite {
     }
 
     this.body.velocity.set(0, 0);
+    this.targetVelocity.set(0, 0);
   }
 
   update(bounds) {
@@ -66,27 +71,30 @@ export default class Fish extends Phaser.Physics.Arcade.Sprite {
 
     this.moveTimer -= 1;
     if (this.moveTimer <= 0) {
-      this.moveTimer = Phaser.Math.Between(16, 58);
-      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-      const speedBoost = Math.random() < 0.45 ? Phaser.Math.Between(18, 42) : 0;
-      this.scene.physics.velocityFromRotation(
-        angle,
-        this.baseSpeed + speedBoost,
-        this.body.velocity,
-      );
+      this.moveTimer = Phaser.Math.Between(52, 110);
+      const centerPull = Phaser.Math.Angle.Between(this.x, this.y, bounds.cx, bounds.cy);
+      const wander = Phaser.Math.FloatBetween(-1.05, 1.05);
+      const angle = centerPull + wander;
+      const speedBoost = Math.random() < 0.4 ? Phaser.Math.Between(12, 34) : 0;
+      this.targetVelocity.setToPolar(angle, this.baseSpeed + speedBoost);
     }
-
-    keepInsideEllipse(this, bounds);
 
     const dx = this.x - bounds.cx;
     const dy = this.y - bounds.cy;
     const norm = ((dx * dx) / (bounds.rx * bounds.rx)) + ((dy * dy) / (bounds.ry * bounds.ry));
-    if (norm >= 0.94) {
-      this.body.velocity.x *= -1;
-      this.body.velocity.y *= -1;
-      keepInsideEllipse(this, bounds);
+    if (norm >= 0.84) {
+      const turnHome = Phaser.Math.Angle.Between(this.x, this.y, bounds.cx, bounds.cy);
+      this.targetVelocity.setToPolar(turnHome, this.baseSpeed + 24);
     }
 
+    this.body.velocity.x = Phaser.Math.Linear(this.body.velocity.x, this.targetVelocity.x, this.turnEase);
+    this.body.velocity.y = Phaser.Math.Linear(this.body.velocity.y, this.targetVelocity.y, this.turnEase);
+
+    keepInsideEllipse(this, bounds);
+
+    this.swimPhase += this.swimBobSpeed;
+    this.y += Math.sin(this.swimPhase) * 0.28;
+    this.rotation = Phaser.Math.Clamp(this.body.velocity.y / 1200, -0.18, 0.18);
     this.setFlipX(this.body.velocity.x < 0);
   }
 }

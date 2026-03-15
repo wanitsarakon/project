@@ -1,4 +1,4 @@
-var v=Object.defineProperty;var w=(p,c,t)=>c in p?v(p,c,{enumerable:!0,configurable:!0,writable:!0,value:t}):p[c]=t;var g=(p,c,t)=>w(p,typeof c!="symbol"?c+"":c,t);import{P as y}from"./phaser-iZDVk5aZ.js";const n="/assets/dollgame",k=["big","small","small","gold","gold","blue","blue","red","red","stone","stone","smoke_bomb"],m={big:`${n}/images/doll_big.png`,small:`${n}/images/doll_small.png`,gold:`${n}/images/doll_gold.png`,blue:`${n}/images/doll_blue.png`,red:`${n}/images/doll_red.png`,stone:`${n}/images/stone.png`,smoke_bomb:`${n}/images/smoke_bomb.png`,gun:`${n}/images/gun.png`,bg:`${n}/images/bg.png`,scoreLegend:`${n}/images/scoredoll.png`,header:`${n}/images/your-header-logo.png`,hud:`${n}/images/your-hud-bg.png`,startFrame:`${n}/images/your-frame-bg.png`,endFrame:`${n}/images/your-frame-bg2.png`},E={shot:`${n}/sounds/shot.mp3`,reload:`${n}/sounds/reload.mp3`,tick:`${n}/sounds/tick.MP3`,start:`${n}/sounds/start.mp3`,bgm:`${n}/sounds/bg-music.mp3`};class z extends y.Scene{constructor(){super({key:"DollGameScene"});g(this,"resizeCanvas",()=>{if(!this.canvas||!this.root)return;const t=this.root.getBoundingClientRect();this.canvas.width=t.width,this.canvas.height=t.height});g(this,"handleMouseMove",t=>{if(!this.canvas)return;const e=this.canvas.getBoundingClientRect();this.state.mouseX=(t.clientX-e.left)*(this.canvas.width/e.width),this.state.mouseY=(t.clientY-e.top)*(this.canvas.height/e.height)});g(this,"handleMouseDown",t=>{const e=this.state;if(!(e!=null&&e.started)||e.over||e.ammo<=0)return;e.ammo-=1,e.shakeTimer=8,this.playSfx("shot",.5);const o=this.canvas.getBoundingClientRect(),i=(t.clientX-o.left)*(this.canvas.width/o.width),s=(t.clientY-o.top)*(this.canvas.height/o.height);let r=!1;for(let d=e.targets.length-1;d>=0;d-=1){const a=e.targets[d];if(Math.sqrt((i-a.x)**2+(s-a.y)**2)>=a.size*.6)continue;r=!0;const h=this.getTargetColor(a.type);this.createParticles(a.x,a.y,h),a.type==="smoke_bomb"?(this.createSmokeCloud(a.x,a.y),e.combo=0,e.scorePopups.push({x:a.x,y:a.y,text:"ควันระเบิด!",color:"#ff3e3e",life:1})):a.type==="stone"?(e.score=Math.max(0,e.score-5),e.combo=0,e.scorePopups.push({x:a.x,y:a.y,text:"-5",color:"#ffffff",life:1})):(e.score+=a.pts,e.combo+=1,this.showCombo(),e.scorePopups.push({x:a.x,y:a.y,text:`+${a.pts}`,color:"#f1c40f",life:1})),a.x=a.minX+Math.random()*(a.maxX-a.minX);break}r||(e.combo=0),this.updateHud()});g(this,"handleKeyDown",t=>{if(t.code!=="Space")return;const e=this.state;!e||e.over||(e.ammo=10,this.playSfx("reload",.5),this.updateHud())});g(this,"startCountdown",()=>{var o,i;if(!this.state||this.state.started)return;(o=this.startOverlay)==null||o.classList.add("dg-hidden"),(i=this.countdownEl)==null||i.classList.remove("dg-hidden");let t=3;const e=()=>{if(this.countdownEl){if(t>0){this.countdownEl.textContent=String(t),this.playSfx("tick",.7),t-=1,this.countdownTimer=window.setTimeout(e,1e3);return}if(t===0){this.countdownEl.textContent="เริ่ม!",this.playSfx("start",.8),t-=1,this.countdownTimer=window.setTimeout(e,900);return}this.countdownEl.classList.add("dg-hidden"),this.actualStart()}};e()});g(this,"finishGame",()=>{var e,o;const t=((e=this.state)==null?void 0:e.score)??0;(o=this.onGameEnd)==null||o.call(this,{score:t,game:"DollGame"})});this.onGameEnd=null,this.root=null,this.cleanupFns=[],this.state=null,this.animationFrame=0,this.countdownTimer=null,this.gameTimer=null,this.imageCache={},this.audio={},this._onResize=null}init(t={}){this.onGameEnd=(t==null?void 0:t.onGameEnd)??null}create(){this.state=this.createInitialState(),this.buildDom(),this.preloadAssets().then(()=>{this.root&&(this.resizeCanvas(),this.spawnStaticTargets(),this.startRenderLoop())}),this.events.once("shutdown",()=>this.teardown()),this.events.once("destroy",()=>this.teardown())}createInitialState(){return{started:!1,over:!1,score:0,ammo:10,timeLeft:60,combo:0,shakeTimer:0,mouseX:400,mouseY:520,targets:[],scorePopups:[],particles:[],smokes:[]}}async preloadAssets(){const t=Object.entries(m);await Promise.all(t.map(async([e,o])=>{this.imageCache[e]=await this.loadImage(o)})),Object.entries(E).forEach(([e,o])=>{this.audio[e]=new Audio(o)}),this.audio.bgm&&(this.audio.bgm.loop=!0,this.audio.bgm.volume=.15)}loadImage(t){return new Promise(e=>{const o=new Image;o.onload=()=>e(o),o.onerror=()=>e(null),o.src=t})}buildDom(){var e;const t=(e=this.game.canvas)==null?void 0:e.parentElement;t&&(this.root=document.createElement("div"),this.root.className="dg-root",this.root.innerHTML=`
+var v=Object.defineProperty;var w=(m,c,t)=>c in m?v(m,c,{enumerable:!0,configurable:!0,writable:!0,value:t}):m[c]=t;var p=(m,c,t)=>w(m,typeof c!="symbol"?c+"":c,t);import{P as y}from"./phaser-iZDVk5aZ.js";const n="/assets/dollgame",k=["big","small","small","gold","gold","blue","blue","red","red","stone","stone","smoke_bomb"],g={big:`${n}/images/doll_big.png`,small:`${n}/images/doll_small.png`,gold:`${n}/images/doll_gold.png`,blue:`${n}/images/doll_blue.png`,red:`${n}/images/doll_red.png`,stone:`${n}/images/stone.png`,smoke_bomb:`${n}/images/smoke_bomb.png`,gun:`${n}/images/gun.png`,bg:`${n}/images/bg.png`,scoreLegend:`${n}/images/scoredoll.png`,topSign:`${n}/images/top_sign.png`,header:`${n}/images/your-header-logo.png`,hud:`${n}/images/your-hud-bg.png`,startFrame:`${n}/images/your-frame-bg.png`,endFrame:`${n}/images/your-frame-bg2.png`},S={shot:`${n}/sounds/shot.mp3`,reload:`${n}/sounds/reload.mp3`,tick:`${n}/sounds/tick.MP3`,start:`${n}/sounds/start.mp3`,bgm:`${n}/sounds/bg-music.mp3`};class z extends y.Scene{constructor(){super({key:"DollGameScene"});p(this,"resizeCanvas",()=>{if(!this.canvas||!this.root)return;const t=this.root.getBoundingClientRect();this.canvas.width=t.width,this.canvas.height=t.height});p(this,"handleMouseMove",t=>{if(!this.canvas)return;const e=this.canvas.getBoundingClientRect();this.state.mouseX=(t.clientX-e.left)*(this.canvas.width/e.width),this.state.mouseY=(t.clientY-e.top)*(this.canvas.height/e.height)});p(this,"handleMouseDown",t=>{const e=this.state;if(!(e!=null&&e.started)||e.over||e.ammo<=0)return;e.ammo-=1,e.shakeTimer=8,this.playSfx("shot",.5);const o=this.canvas.getBoundingClientRect(),i=(t.clientX-o.left)*(this.canvas.width/o.width),s=(t.clientY-o.top)*(this.canvas.height/o.height);let r=!1;for(let d=e.targets.length-1;d>=0;d-=1){const a=e.targets[d];if(Math.sqrt((i-a.x)**2+(s-a.y)**2)>=a.size*.6)continue;r=!0;const h=this.getTargetColor(a.type);this.createParticles(a.x,a.y,h),a.type==="smoke_bomb"?(this.createSmokeCloud(a.x,a.y),e.combo=0,e.scorePopups.push({x:a.x,y:a.y,text:"ควันระเบิด!",color:"#ff3e3e",life:1})):a.type==="stone"?(e.score=Math.max(0,e.score-5),e.combo=0,e.scorePopups.push({x:a.x,y:a.y,text:"-5",color:"#ffffff",life:1})):(e.score+=a.pts,e.combo+=1,this.showCombo(),e.scorePopups.push({x:a.x,y:a.y,text:`+${a.pts}`,color:"#f1c40f",life:1})),a.x=a.minX+Math.random()*(a.maxX-a.minX);break}r||(e.combo=0),this.updateHud()});p(this,"handleKeyDown",t=>{if(t.code!=="Space")return;const e=this.state;!e||e.over||(e.ammo=10,this.playSfx("reload",.5),this.updateHud())});p(this,"startCountdown",()=>{var o,i;if(!this.state||this.state.started)return;(o=this.startOverlay)==null||o.classList.add("dg-hidden"),(i=this.countdownEl)==null||i.classList.remove("dg-hidden");let t=3;const e=()=>{if(this.countdownEl){if(t>0){this.countdownEl.textContent=String(t),this.playSfx("tick",.7),t-=1,this.countdownTimer=window.setTimeout(e,1e3);return}if(t===0){this.countdownEl.textContent="เริ่ม!",this.playSfx("start",.8),t-=1,this.countdownTimer=window.setTimeout(e,900);return}this.countdownEl.classList.add("dg-hidden"),this.actualStart()}};e()});p(this,"finishGame",()=>{var e,o;const t=((e=this.state)==null?void 0:e.score)??0;(o=this.onGameEnd)==null||o.call(this,{score:t,game:"DollGame"})});this.onGameEnd=null,this.root=null,this.cleanupFns=[],this.state=null,this.animationFrame=0,this.countdownTimer=null,this.gameTimer=null,this.imageCache={},this.audio={},this._onResize=null}init(t={}){this.onGameEnd=(t==null?void 0:t.onGameEnd)??null}create(){this.state=this.createInitialState(),this.buildDom(),this.preloadAssets().then(()=>{this.root&&(this.resizeCanvas(),this.spawnStaticTargets(),this.startRenderLoop())}),this.events.once("shutdown",()=>this.teardown()),this.events.once("destroy",()=>this.teardown())}createInitialState(){return{started:!1,over:!1,score:0,ammo:10,timeLeft:60,combo:0,shakeTimer:0,mouseX:400,mouseY:520,targets:[],scorePopups:[],particles:[],smokes:[]}}async preloadAssets(){const t=Object.entries(g);await Promise.all(t.map(async([e,o])=>{this.imageCache[e]=await this.loadImage(o)})),Object.entries(S).forEach(([e,o])=>{this.audio[e]=new Audio(o)}),this.audio.bgm&&(this.audio.bgm.loop=!0,this.audio.bgm.volume=.15)}loadImage(t){return new Promise(e=>{const o=new Image;o.onload=()=>e(o),o.onerror=()=>e(null),o.src=t})}buildDom(){var e;const t=(e=this.game.canvas)==null?void 0:e.parentElement;t&&(this.root=document.createElement("div"),this.root.className="dg-root",this.root.innerHTML=`
       <style>
         .dg-root {
           position: absolute;
@@ -11,7 +11,7 @@ var v=Object.defineProperty;var w=(p,c,t)=>c in p?v(p,c,{enumerable:!0,configura
         .dg-bg {
           position: absolute;
           inset: 0;
-          background-image: url('${m.bg}');
+          background-image: url('${g.bg}');
           background-size: cover;
           background-position: center;
           background-repeat: no-repeat;
@@ -64,7 +64,7 @@ var v=Object.defineProperty;var w=(p,c,t)=>c in p?v(p,c,{enumerable:!0,configura
           align-items: center;
           justify-content: center;
           gap: 6px;
-          background-image: url('${m.hud}');
+          background-image: url('${g.hud}');
           background-size: 100% 100%;
           color: #fff;
           font-size: 18px;
@@ -88,7 +88,7 @@ var v=Object.defineProperty;var w=(p,c,t)=>c in p?v(p,c,{enumerable:!0,configura
         .dg-card {
           width: min(78vw, 580px);
           height: min(58vw, 380px);
-          padding: 110px 40px 40px;
+          padding: 92px 40px 40px;
           box-sizing: border-box;
           text-align: center;
           background-size: 100% 100%;
@@ -99,8 +99,16 @@ var v=Object.defineProperty;var w=(p,c,t)=>c in p?v(p,c,{enumerable:!0,configura
           align-items: center;
           justify-content: flex-start;
         }
-        .dg-start-card { background-image: url('${m.startFrame}'); }
-        .dg-end-card { background-image: url('${m.endFrame}'); }
+        .dg-start-card { background-image: url('${g.startFrame}'); }
+        .dg-end-card { background-image: url('${g.endFrame}'); }
+        .dg-card-sign {
+          width: min(74%, 360px);
+          max-height: 104px;
+          object-fit: contain;
+          filter: drop-shadow(0 6px 16px rgba(0,0,0,0.4));
+          margin-bottom: 8px;
+          pointer-events: none;
+        }
         .dg-title {
           margin: 0 0 8px;
           color: #f1c40f;
@@ -114,6 +122,12 @@ var v=Object.defineProperty;var w=(p,c,t)=>c in p?v(p,c,{enumerable:!0,configura
           font-size: clamp(14px, 1.7vw, 18px);
           font-weight: 700;
           text-shadow: 1px 1px 2px rgba(0,0,0,1), 0 0 8px rgba(0,0,0,0.6);
+        }
+        .dg-sub.dg-start-copy {
+          margin-top: 6px;
+          max-width: 360px;
+          font-size: clamp(13px, 1.6vw, 17px);
+          line-height: 1.45;
         }
         .dg-button {
           margin-top: 28px;
@@ -194,8 +208,8 @@ var v=Object.defineProperty;var w=(p,c,t)=>c in p?v(p,c,{enumerable:!0,configura
       <div class="dg-bg"></div>
       <canvas class="dg-canvas"></canvas>
       <div class="dg-ui">
-        <img class="dg-header" src="${m.header}" alt="Doll header" />
-        <img class="dg-score-legend" src="${m.scoreLegend}" alt="Score legend" />
+        <img class="dg-header" src="${g.header}" alt="Doll header" />
+        <img class="dg-score-legend" src="${g.scoreLegend}" alt="Score legend" />
         <div class="dg-stats-left">
           <div class="dg-stat">คะแนน <span id="dg-score">0</span></div>
         </div>
@@ -207,8 +221,8 @@ var v=Object.defineProperty;var w=(p,c,t)=>c in p?v(p,c,{enumerable:!0,configura
         <div id="dg-countdown" class="dg-countdown dg-hidden"></div>
         <div id="dg-start" class="dg-overlay">
           <div class="dg-card dg-start-card">
-            <h2 class="dg-title">ยิงตุ๊กตา</h2>
-            <div class="dg-sub">ยิงเป้าตุ๊กตาให้แม่นที่สุดใน 60 วินาที<br/>กด Space เพื่อเติมกระสุนใหม่</div>
+            <img class="dg-card-sign" src="${g.topSign}" alt="ป้ายเกมยิงตุ๊กตา" />
+            <div class="dg-sub dg-start-copy">ยิงเป้าตุ๊กตาให้แม่นที่สุดใน 60 วินาที<br/>กด Space เพื่อเติมกระสุนใหม่</div>
             <button id="dg-start-btn" class="dg-button">เริ่มเกม</button>
           </div>
         </div>

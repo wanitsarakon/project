@@ -93,6 +93,11 @@ export default class CookingGameScene extends Phaser.Scene {
     overlay.appendChild(npcArea);
 
     // ─── Table Area ───
+    const tableDecor = this._el("img", { id: "ck-table-decor", class: "ck-table-decor" });
+    tableDecor.src = `${I}table.png`;
+    tableDecor.onerror = () => { tableDecor.style.display = "none"; };
+    overlay.appendChild(tableDecor);
+
     const tableArea = this._el("div", { class: "ck-table-area", id: "ck-table-area" });
     overlay.appendChild(tableArea);
 
@@ -670,7 +675,18 @@ export default class CookingGameScene extends Phaser.Scene {
       .ck-table-area {
         position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
         display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
-        max-width: 700px; z-index: 3; padding: 0 20px;
+        max-width: 700px; z-index: 4; padding: 0 20px;
+      }
+      .ck-table-decor {
+        position: absolute;
+        bottom: 24px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(76vw, 760px);
+        height: auto;
+        z-index: 2;
+        pointer-events: none;
+        filter: drop-shadow(0 10px 20px rgba(0,0,0,0.35));
       }
       .ck-ingredient {
         width: 70px; height: 70px; object-fit: contain; cursor: grab;
@@ -814,6 +830,23 @@ export default class CookingGameScene extends Phaser.Scene {
         0%   { transform: scale(0); opacity: 0; }
         80%  { transform: scale(1.1); }
         100% { transform: scale(1); opacity: 1; }
+      }
+
+      @media (max-width: 900px) {
+        .ck-table-decor {
+          width: min(88vw, 700px);
+          bottom: 36px;
+        }
+        .ck-table-area {
+          bottom: 88px;
+          max-width: 90vw;
+          gap: 6px;
+        }
+        .ck-ingredient,
+        .ck-placeholder {
+          width: 58px;
+          height: 58px;
+        }
       }
     `;
   }

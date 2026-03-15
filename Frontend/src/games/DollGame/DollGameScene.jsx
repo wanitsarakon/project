@@ -28,6 +28,7 @@ const IMAGE_PATHS = {
   gun: `${ASSET_BASE}/images/gun.png`,
   bg: `${ASSET_BASE}/images/bg.png`,
   scoreLegend: `${ASSET_BASE}/images/scoredoll.png`,
+  topSign: `${ASSET_BASE}/images/top_sign.png`,
   header: `${ASSET_BASE}/images/your-header-logo.png`,
   hud: `${ASSET_BASE}/images/your-hud-bg.png`,
   startFrame: `${ASSET_BASE}/images/your-frame-bg.png`,
@@ -216,7 +217,7 @@ export default class DollGameScene extends Phaser.Scene {
         .dg-card {
           width: min(78vw, 580px);
           height: min(58vw, 380px);
-          padding: 110px 40px 40px;
+          padding: 92px 40px 40px;
           box-sizing: border-box;
           text-align: center;
           background-size: 100% 100%;
@@ -229,6 +230,14 @@ export default class DollGameScene extends Phaser.Scene {
         }
         .dg-start-card { background-image: url('${IMAGE_PATHS.startFrame}'); }
         .dg-end-card { background-image: url('${IMAGE_PATHS.endFrame}'); }
+        .dg-card-sign {
+          width: min(74%, 360px);
+          max-height: 104px;
+          object-fit: contain;
+          filter: drop-shadow(0 6px 16px rgba(0,0,0,0.4));
+          margin-bottom: 8px;
+          pointer-events: none;
+        }
         .dg-title {
           margin: 0 0 8px;
           color: #f1c40f;
@@ -242,6 +251,12 @@ export default class DollGameScene extends Phaser.Scene {
           font-size: clamp(14px, 1.7vw, 18px);
           font-weight: 700;
           text-shadow: 1px 1px 2px rgba(0,0,0,1), 0 0 8px rgba(0,0,0,0.6);
+        }
+        .dg-sub.dg-start-copy {
+          margin-top: 6px;
+          max-width: 360px;
+          font-size: clamp(13px, 1.6vw, 17px);
+          line-height: 1.45;
         }
         .dg-button {
           margin-top: 28px;
@@ -335,8 +350,8 @@ export default class DollGameScene extends Phaser.Scene {
         <div id="dg-countdown" class="dg-countdown dg-hidden"></div>
         <div id="dg-start" class="dg-overlay">
           <div class="dg-card dg-start-card">
-            <h2 class="dg-title">ยิงตุ๊กตา</h2>
-            <div class="dg-sub">ยิงเป้าตุ๊กตาให้แม่นที่สุดใน 60 วินาที<br/>กด Space เพื่อเติมกระสุนใหม่</div>
+            <img class="dg-card-sign" src="${IMAGE_PATHS.topSign}" alt="ป้ายเกมยิงตุ๊กตา" />
+            <div class="dg-sub dg-start-copy">ยิงเป้าตุ๊กตาให้แม่นที่สุดใน 60 วินาที<br/>กด Space เพื่อเติมกระสุนใหม่</div>
             <button id="dg-start-btn" class="dg-button">เริ่มเกม</button>
           </div>
         </div>
