@@ -126,16 +126,21 @@ export default class FlowerGameScene extends Phaser.Scene {
         .fl-action:disabled{opacity:.45;cursor:default}
         .fl-topnote{position:absolute;left:50%;top:86px;transform:translateX(-50%);padding:10px 16px;border-radius:999px;background:rgba(255,247,230,.9);color:#703700;font-weight:700;z-index:4}
         .fl-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(7,2,2,.58);z-index:10}
-        .fl-panel{width:min(92vw,760px);padding:28px;border-radius:28px;background:url('${ASSET_BASE}/image/frame.png') center/100% 100% no-repeat;min-height:340px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
-        .fl-panel h2{margin:0;color:#7b2800;font-size:42px}
+        .fl-panel{position:relative;width:min(92vw,760px);padding:36px 34px 34px;border-radius:28px;background:url('${ASSET_BASE}/image/frame.png') center/100% 100% no-repeat;min-height:360px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+        .fl-panel::before{content:"ร้านดอกไม้ไทย";position:absolute;top:22px;left:50%;transform:translateX(-50%);padding:8px 20px;border-radius:999px;background:rgba(120,40,0,.82);color:#ffe7bb;font-size:14px;font-weight:800;letter-spacing:.04em;box-shadow:0 10px 18px rgba(0,0,0,.18)}
+        .fl-panel h2{margin:20px 0 8px;color:#7b2800;font-size:42px;line-height:1.05;text-shadow:0 2px 0 rgba(255,244,216,.55)}
         .fl-panel p{max-width:560px;color:#fff7ed;font-size:19px;line-height:1.6;text-shadow:0 2px 5px rgba(0,0,0,.35)}
+        .fl-panel-copy{max-width:580px}
+        .fl-start-chips{margin-top:14px;display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+        .fl-chip-soft{padding:8px 14px;border-radius:999px;background:rgba(255,247,228,.88);color:#7a3700;font-size:14px;font-weight:800;box-shadow:0 8px 16px rgba(0,0,0,.12)}
         .fl-mainbtn{border:none;border-radius:999px;padding:14px 28px;background:linear-gradient(180deg,#b33e08,#7c2200);color:#fff7e8;font:inherit;font-weight:800;cursor:pointer;box-shadow:0 14px 24px rgba(0,0,0,.24)}
         .fl-subbtn{margin-top:10px;border:none;border-radius:999px;padding:10px 22px;background:rgba(82,29,5,.82);color:#fff4dc;font:inherit;font-weight:700;cursor:pointer}
         .fl-count{font-size:120px;font-weight:900;color:#fff8df;text-shadow:0 0 28px rgba(255,201,88,.4)}
         .fl-result{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(7,2,2,.76);z-index:12}
         .fl-resultcard{position:relative;width:min(96vw,980px);aspect-ratio:16/9;background:url('${ASSET_BASE}/image/result_summary_banner.png') center/contain no-repeat;display:flex;align-items:center;justify-content:center;flex-direction:column}
-        .fl-resultscore{margin-top:26px;font-size:clamp(54px,8vw,96px);font-weight:900;color:#b71d00}
-        .fl-resultmeta{margin-top:8px;font-size:clamp(16px,2vw,22px);color:#5f2b00;font-weight:700}
+        .fl-resulttitle{margin-top:-10px;font-size:clamp(28px,4vw,48px);font-weight:900;color:#8c2700;text-shadow:0 2px 0 rgba(255,244,216,.65)}
+        .fl-resultscore{margin-top:18px;font-size:clamp(54px,8vw,96px);font-weight:900;color:#b71d00}
+        .fl-resultmeta{margin-top:8px;font-size:clamp(16px,2vw,22px);color:#5f2b00;font-weight:700;max-width:min(70vw,560px);text-align:center}
         .fl-tutorial{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(7,2,2,.74);z-index:11}
         .fl-tutorialcard{width:min(94vw,860px);padding:30px;border-radius:30px;background:url('${ASSET_BASE}/image/frame-gold.png') center/100% 100% no-repeat;text-align:center}
         .fl-tutorialcard h3{margin:0;color:#6e2800;font-size:36px}
@@ -173,10 +178,10 @@ export default class FlowerGameScene extends Phaser.Scene {
           </div>
           <div id="controls" class="fl-controls"></div>
         </div>
-        <div id="startOverlay" class="fl-overlay"><div class="fl-panel"><h2>ร้านร้อยพวงมาลัย</h2><p>รับลูกค้าหลายคิวพร้อมกัน เลือกคนที่ต้องการบริการ แล้วร้อยพวงมาลัยตามแบบให้ถูกต้องก่อนความอดทนของลูกค้าหมดลง</p><button id="startBtn" class="fl-mainbtn">เริ่มเกม</button><button id="tutorialBtn" class="fl-subbtn">ดูวิธีเล่น</button></div></div>
+        <div id="startOverlay" class="fl-overlay"><div class="fl-panel"><h2>ร้านร้อยพวงมาลัย</h2><p class="fl-panel-copy">รับลูกค้าหลายคิวพร้อมกัน เลือกคนที่ต้องการบริการ แล้วร้อยพวงมาลัยตามแบบให้ถูกต้องก่อนความอดทนของลูกค้าหมดลง</p><div class="fl-start-chips"><div class="fl-chip-soft">น้ำอบ 3 ครั้ง</div><div class="fl-chip-soft">ธูปช่วยร้อย 1 ครั้ง</div><div class="fl-chip-soft">คอมโบเพิ่มคะแนน</div></div><button id="startBtn" class="fl-mainbtn">เริ่มเกม</button><button id="tutorialBtn" class="fl-subbtn">ดูวิธีเล่น</button></div></div>
         <div id="tutorialOverlay" class="fl-tutorial" style="display:none"><div class="fl-tutorialcard"><h3>วิธีเล่น</h3><div class="fl-tutorialgrid"><div class="fl-tip"><strong>1. เลือกลูกค้า</strong>กดที่ลูกค้าเพื่อดูแบบพวงมาลัยในฟองคำพูด จากนั้นค่อยเริ่มร้อย</div><div class="fl-tip"><strong>2. ร้อยตามลำดับ</strong>กดดอกไม้ให้ตรงกับแบบ ถ้ากดผิดลูกค้าจะโกรธและเดินออกทันที</div><div class="fl-tip"><strong>3. จัดการเวลา</strong>น้ำอบช่วยหยุดความอดทน 5 วินาที ส่วนธูปช่วยร้อยให้เสร็จทันที</div><div class="fl-tip"><strong>4. ทำคอมโบ</strong>ร้อยสำเร็จต่อเนื่องจะได้คอมโบและเข้า fever mode ทำคะแนนได้แรงขึ้น</div></div><button id="closeTutorialBtn" class="fl-mainbtn" style="margin-top:18px">เข้าใจแล้ว</button></div></div>
         <div id="countdownOverlay" class="fl-overlay" style="display:none"><div id="countdown" class="fl-count">3</div></div>
-        <div id="resultOverlay" class="fl-result" style="display:none"><div class="fl-resultcard"><div id="finalScore" class="fl-resultscore">0</div><div id="finalMeta" class="fl-resultmeta"></div><button id="finishBtn" class="fl-mainbtn" style="margin-top:22px">กลับไปแผนที่</button></div></div>
+        <div id="resultOverlay" class="fl-result" style="display:none"><div class="fl-resultcard"><div class="fl-resulttitle">สรุปผลงานร้านมาลัย</div><div id="finalScore" class="fl-resultscore">0</div><div id="finalMeta" class="fl-resultmeta"></div><button id="finishBtn" class="fl-mainbtn" style="margin-top:22px">กลับไปแผนที่</button></div></div>
       </div>
     `;
 
@@ -503,12 +508,15 @@ export default class FlowerGameScene extends Phaser.Scene {
   }
 
   renderHud() {
+    if (!this.root) return;
     this.timeEl.textContent = `${this.state.timeLeft}`;
     this.scoreEl.textContent = `${this.state.score}`;
     this.waterEl.textContent = `${this.state.itemWaterCount}`;
     this.powderEl.textContent = `${this.state.itemPowderCount}`;
-    this.root.querySelector("#waterBtn").disabled = this.state.itemWaterCount <= 0 || this.state.ended;
-    this.root.querySelector("#powderBtn").disabled = this.state.itemPowderCount <= 0 || this.state.ended || !this.state.selectedCustomerId;
+    const waterBtn = this.root.querySelector("#waterBtn");
+    const powderBtn = this.root.querySelector("#powderBtn");
+    if (waterBtn) waterBtn.disabled = this.state.itemWaterCount <= 0 || this.state.ended;
+    if (powderBtn) powderBtn.disabled = this.state.itemPowderCount <= 0 || this.state.ended || !this.state.selectedCustomerId;
   }
 
   endGame() {

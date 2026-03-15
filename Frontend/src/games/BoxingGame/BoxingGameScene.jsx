@@ -205,6 +205,16 @@ export default class BoxingGameScene extends Phaser.Scene {
     speech.textContent = "";
     board.appendChild(speech);
 
+    const helper = this._el("div");
+    helper.style.cssText = `
+      position: absolute; top: 120px; left: 50%; transform: translateX(-50%);
+      width: min(74%, 420px); text-align: center; color: #fff5da;
+      font-size: 1.05rem; font-weight: 700; line-height: 1.55;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.8); z-index: 6;
+    `;
+    helper.innerHTML = "จดจำท่ามวยและชื่อให้แม่น จากนั้นลากป้ายชื่อไปวางบนเงาที่ถูกต้องให้ครบก่อนหมดเวลา";
+    board.appendChild(helper);
+
     const btn = this._el("button");
     btn.style.cssText = `
       padding: 15px 40px; font-size: 1.6rem; font-family: 'Sarabun', sans-serif;
@@ -237,16 +247,34 @@ export default class BoxingGameScene extends Phaser.Scene {
       background-image: url('/assets/boxing/images/start2.png');
       background-size: 100% 100%; background-repeat: no-repeat;
       width: 700px; height: 450px; max-width: 90vw;
-      display: flex; justify-content: center; align-items: center;
+      display: flex; justify-content: center; align-items: center; flex-direction: column;
       filter: drop-shadow(0 15px 40px rgba(0,0,0,0.7)); position: relative;
     `;
+    const scoreFrame = this._el("img");
+    scoreFrame.src = "/assets/boxing/images/score_frame.png";
+    scoreFrame.style.cssText = `
+      position: absolute; top: 118px; left: 50%; transform: translateX(-50%);
+      width: min(44vw, 280px); height: auto; pointer-events:none;
+      filter: drop-shadow(0 8px 18px rgba(0,0,0,0.35));
+    `;
+    board.appendChild(scoreFrame);
+
+    const summary = this._el("div");
+    summary.style.cssText = `
+      position: absolute; top: 92px; left: 50%; transform: translateX(-50%);
+      color: #fff0d2; font-size: 1.2rem; font-weight: 700;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.8);
+    `;
+    summary.textContent = "คะแนนรวมจากท่าที่วางถูกต้อง";
+    board.appendChild(summary);
+
     const scoreEl = this._el("div", { id: "bg-final-score" });
     scoreEl.style.cssText = `
+      position: absolute; top: 158px; left: 50%; transform: translateX(-50%);
       font-size: 7rem; font-family: 'Sarabun', sans-serif; font-weight: 900;
       background: linear-gradient(180deg,#fff 30%,#ffd700 60%,#ff8c00 100%);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       filter: drop-shadow(6px 6px 0 #632b00);
-      transform: translateY(40px);
       animation: bg-score-pop 0.6s cubic-bezier(0.175,0.885,0.32,1.275) forwards;
     `;
     scoreEl.textContent = "0";

@@ -169,18 +169,35 @@ export default class BalloonShootScene extends Phaser.Scene {
     `;
 
     const inner = this._el("div");
-    inner.style.cssText = "text-align:center;";
+    inner.style.cssText = "position:relative;width:min(92vw,760px);text-align:center;";
 
-    const title = this._el("div");
-    title.style.cssText = `
-      font-size:3rem; font-weight:900; color:#f1c40f;
-      text-shadow:4px 4px 0 #c0392b,6px 6px 0 #333;
-      -webkit-text-stroke:2px #333; margin-bottom:24px;
+    const board = this._el("img");
+    board.src = "/assets/balloonshoot/image/start_sign.png";
+    board.style.cssText = `
+      width:min(92vw,760px); height:auto;
+      filter:drop-shadow(0 14px 28px rgba(0,0,0,0.55));
+      pointer-events:none;
     `;
-    title.textContent = "🎈 ยิงลูกโป่ง";
+
+    const title = this._el("img");
+    title.src = "/assets/balloonshoot/image/top_sign.png";
+    title.style.cssText = `
+      position:absolute; top:22px; left:50%; transform:translateX(-50%);
+      width:min(48vw,300px); height:auto; pointer-events:none;
+      filter:drop-shadow(0 8px 18px rgba(0,0,0,0.35));
+    `;
+
+    const sub = this._el("div");
+    sub.style.cssText = `
+      position:absolute; top:132px; left:50%; transform:translateX(-50%);
+      width:min(70vw,480px); color:#fff7de; font-size:1.2rem; font-weight:700;
+      line-height:1.5; text-shadow:0 2px 8px rgba(0,0,0,0.8);
+    `;
+    sub.innerHTML = "ยิงลูกโป่งให้ได้คะแนนสูงที่สุดในเวลาที่กำหนด<br/>ชาร์จพลังด้วยปุ่ม <strong>Space</strong> เพื่อยิงให้แรงขึ้น";
 
     const btn = this._el("button");
     btn.style.cssText = `
+      position:absolute; left:50%; bottom:66px; transform:translateX(-50%);
       padding:15px 40px; font-size:1.6rem; font-family:'Kanit',sans-serif; font-weight:bold;
       color:#fff; background:linear-gradient(180deg,#ffcc00,#ff8800 50%,#ff4400);
       border:4px solid #fff; border-radius:50px; cursor:pointer;
@@ -190,8 +207,10 @@ export default class BalloonShootScene extends Phaser.Scene {
     btn.textContent = "เริ่มเกม";
     btn.onclick = () => this._startGame();
 
-    inner.appendChild(title);
+    inner.appendChild(board);
     inner.appendChild(btn);
+    inner.appendChild(title);
+    inner.appendChild(sub);
     screen.appendChild(inner);
     return screen;
   }
@@ -204,16 +223,27 @@ export default class BalloonShootScene extends Phaser.Scene {
       flex-direction:column; z-index:110;
     `;
 
-    const trophy = this._el("div");
-    trophy.style.cssText = "font-size:5rem; margin-bottom:8px;";
-    trophy.textContent = "🎈";
+    const card = this._el("div");
+    card.style.cssText = `
+      position:relative; width:min(92vw,760px); text-align:center;
+      display:flex; justify-content:center; align-items:center; flex-direction:column;
+    `;
+
+    const board = this._el("img");
+    board.src = "/assets/balloonshoot/image/result_sign.png";
+    board.style.cssText = `
+      width:min(92vw,760px); height:auto;
+      filter:drop-shadow(0 14px 28px rgba(0,0,0,0.55));
+      pointer-events:none;
+    `;
 
     const label = this._el("div");
-    label.style.cssText = "font-size:1.5rem; color:#ffd700; margin-bottom:8px;";
+    label.style.cssText = "position:absolute; top:112px; left:50%; transform:translateX(-50%); font-size:1.5rem; color:#ffd700; margin-bottom:8px; text-shadow:0 2px 8px rgba(0,0,0,0.85);";
     label.textContent = "คะแนนของคุณ";
 
     const score = this._el("div", { id: "bs-total-score" });
     score.style.cssText = `
+      position:absolute; top:150px; left:50%; transform:translateX(-50%);
       font-size:5rem; font-weight:900;
       background:linear-gradient(180deg,#fff 30%,#ffd700 60%,#ff8c00);
       -webkit-background-clip:text; -webkit-text-fill-color:transparent;
@@ -224,7 +254,8 @@ export default class BalloonShootScene extends Phaser.Scene {
 
     const backBtn = this._el("button");
     backBtn.style.cssText = `
-      margin-top:32px; padding:12px 32px; font-size:1.2rem;
+      position:absolute; left:50%; bottom:64px; transform:translateX(-50%);
+      padding:12px 32px; font-size:1.2rem;
       font-family:'Kanit',sans-serif; font-weight:bold; color:#fff;
       background:linear-gradient(180deg,#ffcc00,#ff8800); border:3px solid #fff;
       border-radius:40px; cursor:pointer; outline:none;
@@ -237,10 +268,11 @@ export default class BalloonShootScene extends Phaser.Scene {
       this.onGameEnd?.({ score: finalScore });
     };
 
-    screen.appendChild(trophy);
-    screen.appendChild(label);
-    screen.appendChild(score);
-    screen.appendChild(backBtn);
+    card.appendChild(board);
+    card.appendChild(label);
+    card.appendChild(score);
+    card.appendChild(backBtn);
+    screen.appendChild(card);
     return screen;
   }
 

@@ -28,6 +28,8 @@ const IMAGE_PATHS = {
   gun: `${ASSET_BASE}/images/gun.png`,
   bg: `${ASSET_BASE}/images/bg.png`,
   scoreLegend: `${ASSET_BASE}/images/scoredoll.png`,
+  ammoBoard: `${ASSET_BASE}/images/board_ammo.png`,
+  timeBoard: `${ASSET_BASE}/images/board_time.png`,
   topSign: `${ASSET_BASE}/images/top_sign.png`,
   header: `${ASSET_BASE}/images/your-header-logo.png`,
   hud: `${ASSET_BASE}/images/your-hud-bg.png`,
@@ -205,6 +207,16 @@ export default class DollGameScene extends Phaser.Scene {
           min-width: 30px;
           text-align: center;
         }
+        .dg-stat-ornate {
+          width: 160px;
+          height: 68px;
+          background-size: 100% 100%;
+          background-position: center;
+          background-repeat: no-repeat;
+          padding: 0 12px;
+        }
+        .dg-stat-ornate.dg-time-board { background-image: url('${IMAGE_PATHS.timeBoard}'); }
+        .dg-stat-ornate.dg-ammo-board { background-image: url('${IMAGE_PATHS.ammoBoard}'); }
         .dg-overlay {
           position: absolute;
           inset: 0;
@@ -343,8 +355,8 @@ export default class DollGameScene extends Phaser.Scene {
           <div class="dg-stat">คะแนน <span id="dg-score">0</span></div>
         </div>
         <div class="dg-stats-right">
-          <div class="dg-stat">เวลา <span id="dg-time">60</span></div>
-          <div class="dg-stat">กระสุน <span id="dg-ammo">10</span></div>
+          <div class="dg-stat dg-stat-ornate dg-time-board">เวลา <span id="dg-time">60</span></div>
+          <div class="dg-stat dg-stat-ornate dg-ammo-board">กระสุน <span id="dg-ammo">10</span></div>
         </div>
         <div id="dg-combo" class="dg-combo"></div>
         <div id="dg-countdown" class="dg-countdown dg-hidden"></div>

@@ -1,0 +1,51 @@
+{
+  "ok": true,
+  "errors": [],
+  "requests": [],
+  "notes": [
+    {
+      "cookingMetrics": {
+        "bowl": {
+          "x": 778,
+          "y": 318,
+          "width": 300,
+          "height": 300,
+          "top": 318,
+          "right": 1078,
+          "bottom": 618,
+          "left": 778
+        },
+        "table": {
+          "x": 400,
+          "y": 669.15625,
+          "width": 800,
+          "height": 208.84375,
+          "top": 669.15625,
+          "right": 1200,
+          "bottom": 878,
+          "left": 400
+        },
+        "area": {
+          "x": 466,
+          "y": 670,
+          "width": 700,
+          "height": 148,
+          "top": 670,
+          "right": 1166,
+          "bottom": 818,
+          "left": 466
+        },
+        "npc": {
+          "x": 20,
+          "y": 561.09375,
+          "width": 430,
+          "height": 338.90625,
+          "top": 561.09375,
+          "right": 450,
+          "bottom": 900,
+          "left": 20
+        }
+      }
+    }
+  ]
+}

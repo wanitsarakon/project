@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 import Home from "./pages/Home";
 import Host from "./pages/Host";
@@ -12,12 +12,54 @@ export default function App() {
   const [view, setView] = useState("home");
   const [session, setSession] = useState(null);
   const [summary, setSummary] = useState(null);
+  const [miniGameActive, setMiniGameActive] = useState(false);
+  const bgmRef = useRef(null);
+
+  useEffect(() => {
+    if (!bgmRef.current) {
+      const audio = new Audio("/assets/03. งานวัด - เพื่อน.mp3");
+      audio.loop = true;
+      audio.volume = 0.32;
+      bgmRef.current = audio;
+    }
+
+    const audio = bgmRef.current;
+    const shouldPlay = !miniGameActive;
+
+    const tryPlay = () => {
+      if (!shouldPlay) return;
+      const promise = audio.play();
+      if (promise?.catch) promise.catch(() => {});
+    };
+
+    if (shouldPlay) {
+      tryPlay();
+    } else {
+      audio.pause();
+    }
+
+    window.addEventListener("pointerdown", tryPlay, { passive: true });
+    window.addEventListener("keydown", tryPlay);
+
+    return () => {
+      window.removeEventListener("pointerdown", tryPlay);
+      window.removeEventListener("keydown", tryPlay);
+    };
+  }, [miniGameActive]);
+
+  useEffect(() => () => {
+    if (bgmRef.current) {
+      bgmRef.current.pause();
+      bgmRef.current.currentTime = 0;
+    }
+  }, []);
 
   /* =========================
      NAV HELPERS
   ========================= */
 
   const goHome = () => {
+    setMiniGameActive(false);
     setSession(null);
     setSummary(null);
     setView("home");
@@ -32,6 +74,7 @@ export default function App() {
 
     setSession({ roomCode, player });
     setSummary(null);
+    setMiniGameActive(false);
     setView("lobby");
 
   };
@@ -46,6 +89,7 @@ export default function App() {
     const { player } = session;
 
     setSession({ player: { name: player.name } });
+    setMiniGameActive(false);
     setView(player.isHost ? "host" : "roomlist");
 
   };
@@ -155,9 +199,11 @@ export default function App() {
         player={session.player}
         onLeave={leaveRoom}
         onShowSummary={(data) => {
+          setMiniGameActive(false);
           setSummary(data);
           setView("summary");
         }}
+        onMiniGameChange={setMiniGameActive}
       />
     );
 

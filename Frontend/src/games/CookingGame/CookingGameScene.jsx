@@ -123,7 +123,7 @@ export default class CookingGameScene extends Phaser.Scene {
 
     // bowl back
     const bowlBack = this._el("img");
-    bowlBack.src = `${I}ถ้วย.png`; bowlBack.className = "ck-bowl-back";
+    bowlBack.src = `${I}ถ้วย copy.png`; bowlBack.className = "ck-bowl-back";
     bowlBack.onerror = () => { bowlBack.style.display = "none"; };
     bowl.appendChild(bowlBack);
 
@@ -149,9 +149,12 @@ export default class CookingGameScene extends Phaser.Scene {
 
     // spatula
     const spatula = this._el("img");
-    spatula.src = `${I}spatula.png`; spatula.id = "ck-spatula";
+    spatula.src = `${I}ช้อน.png`; spatula.id = "ck-spatula";
     spatula.className = "ck-spatula ck-hidden";
-    spatula.onerror = () => { spatula.style.display = "none"; };
+    spatula.onerror = () => {
+      spatula.src = `${I}spatula.png`;
+      spatula.onerror = () => { spatula.style.display = "none"; };
+    };
     bowl.appendChild(spatula);
 
     // bowl front
@@ -673,16 +676,16 @@ export default class CookingGameScene extends Phaser.Scene {
 
       /* ─── Table Area ─── */
       .ck-table-area {
-        position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%);
+        position: absolute; bottom: 82px; left: 51%; transform: translateX(-50%);
         display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
         max-width: 700px; z-index: 4; padding: 0 20px;
       }
       .ck-table-decor {
         position: absolute;
-        bottom: 24px;
+        bottom: 22px;
         left: 50%;
         transform: translateX(-50%);
-        width: min(76vw, 760px);
+        width: min(78vw, 800px);
         height: auto;
         z-index: 2;
         pointer-events: none;
@@ -704,7 +707,7 @@ export default class CookingGameScene extends Phaser.Scene {
 
       /* ─── Bowl ─── */
       .ck-bowl-container {
-        position: absolute; top: 50%; left: 60%; transform: translate(-50%, -50%);
+        position: absolute; top: 52%; left: 58%; transform: translate(-50%, -50%);
         width: 300px; height: 300px; z-index: 4;
       }
       .ck-bowl-back, .ck-bowl-front {
@@ -834,11 +837,11 @@ export default class CookingGameScene extends Phaser.Scene {
 
       @media (max-width: 900px) {
         .ck-table-decor {
-          width: min(88vw, 700px);
-          bottom: 36px;
+          width: min(90vw, 740px);
+          bottom: 34px;
         }
         .ck-table-area {
-          bottom: 88px;
+          bottom: 94px;
           max-width: 90vw;
           gap: 6px;
         }

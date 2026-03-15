@@ -6,7 +6,6 @@ import { createRoomSocket } from "../websocket/wsClient";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:18082";
 const TOTAL_GAMES = FESTIVAL_BOOTHS.length;
-const MAP_BGM_PATH = "/assets/boxing/sounds/bg_music.mp3";
 
 function fmtTeamName(team) {
   if (!team) return "ยังไม่จัดทีม";
@@ -411,6 +410,7 @@ export default function FestivalMap({
   mode = "solo",
   onLeave,
   onShowSummary,
+  onMiniGameChange,
 }) {
   const isHost = player?.isHost === true;
 
@@ -435,56 +435,18 @@ export default function FestivalMap({
   const wsRef = useRef(null);
   const mountedRef = useRef(false);
   const summaryShownRef = useRef(false);
-  const bgmRef = useRef(null);
 
   const safeSet = useCallback((fn) => {
     if (mountedRef.current) fn();
   }, []);
 
-  const ensureMapMusic = useCallback(() => {
-    if (isHost || activeMiniGame) return;
-    if (!bgmRef.current) {
-      const audio = new Audio(MAP_BGM_PATH);
-      audio.loop = true;
-      audio.volume = 0.32;
-      bgmRef.current = audio;
-    }
-
-    const playPromise = bgmRef.current.play();
-    if (playPromise?.catch) {
-      playPromise.catch(() => {});
-    }
-  }, [activeMiniGame, isHost]);
-
   useEffect(() => {
-    if (isHost) return undefined;
+    onMiniGameChange?.(Boolean(activeMiniGame));
+  }, [activeMiniGame, onMiniGameChange]);
 
-    const handleInteraction = () => {
-      ensureMapMusic();
-    };
-
-    window.addEventListener("pointerdown", handleInteraction, { passive: true });
-    window.addEventListener("keydown", handleInteraction);
-    ensureMapMusic();
-
-    return () => {
-      window.removeEventListener("pointerdown", handleInteraction);
-      window.removeEventListener("keydown", handleInteraction);
-      if (bgmRef.current) {
-        bgmRef.current.pause();
-        bgmRef.current.currentTime = 0;
-      }
-    };
-  }, [ensureMapMusic, isHost]);
-
-  useEffect(() => {
-    if (!bgmRef.current) return;
-    if (activeMiniGame) {
-      bgmRef.current.pause();
-    } else if (!isHost) {
-      ensureMapMusic();
-    }
-  }, [activeMiniGame, ensureMapMusic, isHost]);
+  useEffect(() => () => {
+    onMiniGameChange?.(false);
+  }, [onMiniGameChange]);
 
   const loadSummary = useCallback(async () => {
     if (!roomCode || summaryShownRef.current) return;
