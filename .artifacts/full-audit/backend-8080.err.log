@@ -5,3 +5,6 @@
 2026/03/14 02:23:51 🧹 AutoCleanup service started
 2026/03/14 02:23:51 🚀 Backend running on port 8080
 2026/03/14 02:23:51 ❌ Server error: listen tcp :8080: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted.
+2026/03/16 11:30:14 🛑 Shutting down server...
+2026/03/16 11:30:14 🛑 AutoCleanup stopped
+2026/03/16 11:30:14 ✅ Server stopped cleanly

@@ -584,7 +584,7 @@ export default class TugOfWarScene extends Phaser.Scene {
       setTimeout(() => {
         if (!isLive()) return;
         if (pChoice === aiChoice) {
-          if (rpsResult) rpsResult.innerText = "????! ????????...";
+          if (rpsResult) rpsResult.innerText = "เสมอ! ลองใหม่อีกครั้ง...";
           setTimeout(() => {
             if (!isLive()) return;
             pHandImg?.classList.remove("show");
@@ -595,7 +595,7 @@ export default class TugOfWarScene extends Phaser.Scene {
         isMyTurn = win[pChoice] === aiChoice;
         canPick = true;
         if (rpsResult) {
-          rpsResult.innerText = isMyTurn ? "??????! ???????????????" : "??????! ???????????????????";
+          rpsResult.innerText = isMyTurn ? "ชนะแล้ว! คุณได้เลือกก่อน" : "แพ้แล้ว! คู่แข่งได้เลือกก่อน";
         }
         if (choicesUI) choicesUI.style.display = "none";
         handleTurn();
@@ -611,18 +611,18 @@ export default class TugOfWarScene extends Phaser.Scene {
         if (charList) charList.style.display = "none";
         if (itemSelectionArea) itemSelectionArea.style.display = "block";
         if (!isMyTurn) {
-          if (turnDisplay) turnDisplay.innerText = "?????????????????...";
+          if (turnDisplay) turnDisplay.innerText = "คู่แข่งกำลังเลือกไอเท็ม...";
           setTimeout(() => { if (isLive()) aiPickItem(); }, 1000);
         } else {
-          if (turnDisplay) turnDisplay.innerText = "?????????????...";
+          if (turnDisplay) turnDisplay.innerText = "เลือกไอเท็มของคุณ...";
         }
         return;
       }
       if (!isMyTurn) {
-        if (turnDisplay) turnDisplay.innerText = "?????????????????...";
+        if (turnDisplay) turnDisplay.innerText = "คู่แข่งกำลังเลือกสมาชิก...";
         setTimeout(() => { if (isLive()) aiPickFn(); }, 1000);
       } else {
-        if (turnDisplay) turnDisplay.innerText = "?????????????...";
+        if (turnDisplay) turnDisplay.innerText = "เลือกสมาชิกทีมของคุณ...";
       }
     }
 
@@ -670,14 +670,14 @@ export default class TugOfWarScene extends Phaser.Scene {
       if (!isLive()) return;
       const turnDisplay = $("turn-display");
       if (myItem && aiItem) {
-        if (turnDisplay) turnDisplay.innerText = "????????????????????!";
+        if (turnDisplay) turnDisplay.innerText = "ได้สมาชิกและไอเท็มครบแล้ว!";
         setTimeout(() => { if (isLive()) prepareArena(); }, 1500);
       } else {
         if (!isMyTurn) {
-          if (turnDisplay) turnDisplay.innerText = "?????????????????...";
+          if (turnDisplay) turnDisplay.innerText = "คู่แข่งกำลังเลือกไอเท็ม...";
           setTimeout(() => { if (isLive()) aiPickItem(); }, 1000);
         } else {
-          if (turnDisplay) turnDisplay.innerText = "?????????????...";
+          if (turnDisplay) turnDisplay.innerText = "เลือกไอเท็มของคุณ...";
         }
       }
     }
@@ -805,7 +805,7 @@ export default class TugOfWarScene extends Phaser.Scene {
         } else {
           clearInterval(timer);
           startGoSound.currentTime = 0; startGoSound.play().catch(() => {});
-          overlay.innerText = "?????!";
+          overlay.innerText = "เริ่ม!";
           overlay.style.transform = "translate(-50%,-50%) scale(1.8)";
           overlay.style.opacity = "1";
           setTimeout(() => {

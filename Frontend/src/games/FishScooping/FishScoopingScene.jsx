@@ -31,6 +31,7 @@ export default class FishScoopingScene extends Phaser.Scene {
     this.countdownTimer = null;
     this.hud = {};
     this.escapeTimer = null;
+    this.toastTween = null;
   }
 
   init(data = {}) {
@@ -272,7 +273,7 @@ export default class FishScoopingScene extends Phaser.Scene {
     this.phase = "playing";
     this.fairBgm = this.sound.add("fish-fair-bgm", {
       loop: true,
-      volume: 0.2,
+      volume: 0.16,
     });
     if (!this.fairBgm.isPlaying) {
       this.fairBgm.play();
@@ -344,6 +345,7 @@ export default class FishScoopingScene extends Phaser.Scene {
       if (this.spoon.holdingFish !== fish || this.phase !== "playing") return;
       this.spoon.releaseFish();
       fish.releaseBackToWater(this.waterZone);
+      this.cameras.main.shake(120, 0.0022);
       this.showToast("ช้าเกินไป ปลาหลุดแล้ว!", "#ffd2a0");
     });
   }
@@ -387,6 +389,15 @@ export default class FishScoopingScene extends Phaser.Scene {
 
     fish.destroy();
     this.spoon.releaseFish();
+    this.cameras.main.flash(90, 255, 247, 210, false);
+    this.tweens.add({
+      targets: this.bucket,
+      scaleX: this.bucket.scaleX * 1.08,
+      scaleY: this.bucket.scaleY * 1.08,
+      duration: 120,
+      yoyo: true,
+      ease: "Sine.easeOut",
+    });
 
     const burst = this.add.circle(this.bucket.x, this.bucket.y - 30, 16, 0xffef9c, 0.9).setDepth(7);
     this.tweens.add({
@@ -410,14 +421,24 @@ export default class FishScoopingScene extends Phaser.Scene {
       color: "#381600",
       backgroundColor: color,
       padding: { left: 14, right: 14, top: 8, bottom: 8 },
-    }).setOrigin(0.5).setDepth(20);
+    }).setOrigin(0.5).setDepth(20).setAlpha(0);
 
-    this.tweens.add({
+    this.toastTween?.stop();
+    this.toastTween = this.tweens.add({
       targets: toast,
+      alpha: 1,
       y: 112,
-      alpha: 0,
       duration: 700,
-      onComplete: () => toast.destroy(),
+      ease: "Cubic.easeOut",
+      onComplete: () => {
+        this.tweens.add({
+          targets: toast,
+          alpha: 0,
+          y: 100,
+          duration: 220,
+          onComplete: () => toast.destroy(),
+        });
+      },
     });
   }
 

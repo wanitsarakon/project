@@ -215,11 +215,11 @@ export default class HorseDeliveryScene extends Phaser.Scene {
 
     this.gallopBgm = this.sound.add("horse-gallop", {
       loop: true,
-      volume: 0.28,
+      volume: 0.24,
     });
     this.fairBgm = this.sound.add("horse-fair-bgm", {
       loop: true,
-      volume: 0.15,
+      volume: 0.11,
     });
     if (!this.gallopBgm.isPlaying) this.gallopBgm.play();
     if (!this.fairBgm.isPlaying) this.fairBgm.play();
@@ -228,6 +228,13 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     this.scoreManager.show();
     this.timeText.setVisible(true);
     this.infoText.setVisible(true);
+    this.tweens.add({
+      targets: this.infoText,
+      alpha: 0.82,
+      duration: 1800,
+      yoyo: true,
+      repeat: 1,
+    });
 
     this.player = new Horse(this, 190, this.groundY - 6);
     this.physics.add.collider(this.player, this.ground);
@@ -313,6 +320,13 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     obstacle.destroy();
     this.crashes += 1;
     this.scoreManager.addScore(-1);
+    this.tweens.add({
+      targets: this.player,
+      angle: -10,
+      duration: 90,
+      yoyo: true,
+      repeat: 1,
+    });
     this.flashFeedback("-1 ชนถัง", "#ffd7d7");
     this.cameras.main.shake(180, 0.008);
   }
@@ -325,6 +339,7 @@ export default class HorseDeliveryScene extends Phaser.Scene {
 
     if (type === "item_hay") {
       this.scoreManager.addScore(-1);
+      this.cameras.main.shake(120, 0.004);
       this.flashFeedback("-1 เก็บฟางผิดจังหวะ", "#ffe0cf");
       return;
     }
@@ -345,6 +360,15 @@ export default class HorseDeliveryScene extends Phaser.Scene {
       this.scoreManager.addScore(1);
       this.flashFeedback("+1 เก็บของสำเร็จ", "#ddffd8");
     }
+
+    this.tweens.add({
+      targets: this.player,
+      scaleX: this.player.scaleX * 1.04,
+      scaleY: this.player.scaleY * 1.04,
+      duration: 110,
+      yoyo: true,
+      ease: "Sine.easeOut",
+    });
   }
 
   flashFeedback(message, color) {
@@ -354,14 +378,23 @@ export default class HorseDeliveryScene extends Phaser.Scene {
       color: "#3b1800",
       backgroundColor: color,
       padding: { left: 14, right: 14, top: 8, bottom: 8 },
-    }).setOrigin(0.5).setDepth(30);
+    }).setOrigin(0.5).setDepth(30).setAlpha(0);
 
     this.tweens.add({
       targets: toast,
+      alpha: 1,
       y: 90,
-      alpha: 0,
-      duration: 650,
-      onComplete: () => toast.destroy(),
+      duration: 520,
+      ease: "Cubic.easeOut",
+      onComplete: () => {
+        this.tweens.add({
+          targets: toast,
+          alpha: 0,
+          y: 76,
+          duration: 180,
+          onComplete: () => toast.destroy(),
+        });
+      },
     });
   }
 

@@ -232,7 +232,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
         if (this.cache.audio?.exists("worship-calm")) {
           this.calmBgm = this.sound.add("worship-calm", {
             loop: true,
-            volume: 0.18,
+            volume: 0.14,
           });
           if (!this.calmBgm.isPlaying) {
             this.calmBgm.play();
@@ -283,7 +283,17 @@ export default class WorshipBoothScene extends Phaser.Scene {
 
     this.state.stepIndex += 1;
     if (this.cache.audio?.exists("worship-bell")) {
-      this.sound.play("worship-bell", { volume: 0.18 });
+      this.sound.play("worship-bell", { volume: 0.22 });
+    }
+    if (button?.animate) {
+      button.animate(
+        [
+          { transform: "scale(1)", boxShadow: "0 12px 24px rgba(0,0,0,.10)" },
+          { transform: "scale(1.06)", boxShadow: "0 0 0 8px rgba(255,215,130,.18)" },
+          { transform: "scale(1)", boxShadow: "0 12px 24px rgba(0,0,0,.10)" },
+        ],
+        { duration: 240, easing: "ease-out" },
+      );
     }
 
     if (this.state.stepIndex >= this.state.roundSequence.length) {
@@ -330,6 +340,15 @@ export default class WorshipBoothScene extends Phaser.Scene {
       ? `หมดเวลาก่อนจบพิธี ทำสำเร็จ ${this.state.completedRounds}/${TOTAL_ROUNDS} รอบ พลาด ${this.state.mistakes} ครั้ง`
       : `ทำพิธีครบ ${this.state.completedRounds}/${TOTAL_ROUNDS} รอบ พลาด ${this.state.mistakes} ครั้ง เหลือเวลา ${this.state.timeLeft} วินาที`;
     this.resultEl.style.display = "flex";
+    if (this.resultEl?.animate) {
+      this.resultEl.animate(
+        [
+          { opacity: 0, transform: "scale(0.96)" },
+          { opacity: 1, transform: "scale(1)" },
+        ],
+        { duration: 220, easing: "ease-out", fill: "both" },
+      );
+    }
     this.renderState();
   }
 
