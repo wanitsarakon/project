@@ -38,6 +38,7 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     this.timeLeft = GAME_TIME;
     this.ended = false;
     this.started = false;
+    this.midgameRampApplied = false;
   }
 
   preload() {
@@ -64,7 +65,7 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     this.add.image(width / 2, height / 2, "horse-bg").setDisplaySize(width, height);
     this.add.rectangle(width / 2, height - 76, width, 160, 0x5f3517, 0.01);
 
-    this.groundY = height - 146;
+    this.groundY = height - 164;
     this.ground = this.physics.add.staticImage(width / 2, this.groundY + 30)
       .setDisplaySize(width, 90)
       .setVisible(false);
@@ -236,20 +237,20 @@ export default class HorseDeliveryScene extends Phaser.Scene {
       repeat: 1,
     });
 
-    this.player = new Horse(this, 190, this.groundY - 6);
+    this.player = new Horse(this, 190, this.groundY - 2);
     this.physics.add.collider(this.player, this.ground);
 
     this.obstacles = this.physics.add.group({ maxSize: 24 });
     this.items = this.physics.add.group({ maxSize: 24 });
 
     this.spawnClock = this.time.addEvent({
-      delay: 1450,
+      delay: 1780,
       loop: true,
       callback: () => this.spawnObstacle(),
     });
 
     this.itemClock = this.time.addEvent({
-      delay: 1750,
+      delay: 2380,
       loop: true,
       callback: () => this.spawnItem(),
     });
@@ -287,13 +288,31 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     const obstacle = new Obstacle(this, this.scale.width + 72, this.groundY + 10);
     this.obstacles.add(obstacle);
     obstacle.setVelocityX(-(320 + (GAME_TIME - this.timeLeft) * 2.6));
+
+    if (this.timeLeft <= 24 && !this.midgameRampApplied) {
+      this.midgameRampApplied = true;
+      this.spawnClock?.reset({
+        delay: 1540,
+        loop: true,
+        callback: () => this.spawnObstacle(),
+      });
+      this.itemClock?.reset({
+        delay: 2050,
+        loop: true,
+        callback: () => this.spawnItem(),
+      });
+    }
   }
 
   spawnItem() {
     if (this.ended) return;
-    const item = new Items(this, this.scale.width + 72, this.groundY - Phaser.Math.Between(52, 132));
+    const item = new Items(
+      this,
+      this.scale.width + 72,
+      this.groundY - Phaser.Math.Between(78, 118),
+    );
     this.items.add(item);
-    item.setVelocityX(-(290 + (GAME_TIME - this.timeLeft) * 2.2));
+    item.setVelocityX(-(270 + (GAME_TIME - this.timeLeft) * 1.9));
   }
 
   update() {

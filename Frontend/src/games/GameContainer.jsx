@@ -38,6 +38,41 @@ export default function GameContainer({
   const startedRef = useRef(false);
   const mapDataRef = useRef(mapData);
 
+  const installDebugHook = () => {
+    if (typeof window === "undefined") return;
+    if (!gameRef.current) return;
+
+    window.__festivalDebug = {
+      game: gameRef.current,
+      startMiniGame,
+      resetToMap: () => {
+        if (!gameRef.current) return;
+        gameRef.current.scene.scenes.forEach((scene) => {
+          if (scene.scene.key !== "FestivalMapScene") {
+            try {
+              if (typeof scene._removeOverlay === "function") {
+                scene._removeOverlay();
+              }
+              if (typeof scene.shutdown === "function") {
+                scene.shutdown();
+              }
+            } catch (err) {
+              console.warn("QA reset cleanup failed:", scene.scene.key, err);
+            }
+            gameRef.current.scene.stop(scene.scene.key);
+          }
+        });
+        gameRef.current.scene.start("FestivalMapScene", {
+          roomCode,
+          player,
+          currentRound: currentRoundIdRef.current,
+          onEnterGame: startMiniGame,
+          boothStates: mapDataRef.current?.boothStates ?? {},
+        });
+      },
+    };
+  };
+
   /* =========================
      KEEP CALLBACK UPDATED
   ========================= */
@@ -56,7 +91,20 @@ export default function GameContainer({
     if (mapScene && typeof mapScene.applyMapData === "function") {
       mapScene.applyMapData(mapData);
     }
+    installDebugHook();
   }, [mapData]);
+
+  useEffect(() => {
+    const retryTimer = window.setInterval(() => {
+      installDebugHook();
+    }, 250);
+
+    installDebugHook();
+
+    return () => {
+      window.clearInterval(retryTimer);
+    };
+  });
 
   /* =========================
      START MINI GAME
@@ -274,37 +322,7 @@ export default function GameContainer({
     };
     window.addEventListener("resize", handleResize);
 
-    if (typeof window !== "undefined") {
-      window.__festivalDebug = {
-        game,
-        startMiniGame,
-        resetToMap: () => {
-          if (!gameRef.current) return;
-          gameRef.current.scene.scenes.forEach((scene) => {
-            if (scene.scene.key !== "FestivalMapScene") {
-              try {
-                if (typeof scene._removeOverlay === "function") {
-                  scene._removeOverlay();
-                }
-                if (typeof scene.shutdown === "function") {
-                  scene.shutdown();
-                }
-              } catch (err) {
-                console.warn("QA reset cleanup failed:", scene.scene.key, err);
-              }
-              gameRef.current.scene.stop(scene.scene.key);
-            }
-          });
-          gameRef.current.scene.start("FestivalMapScene", {
-            roomCode,
-            player,
-            currentRound: currentRoundIdRef.current,
-            onEnterGame: startMiniGame,
-            boothStates: mapDataRef.current?.boothStates ?? {},
-          });
-        },
-      };
-    }
+    installDebugHook();
 
     /* START MAP */
 

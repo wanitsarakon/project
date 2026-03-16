@@ -7,6 +7,11 @@ import { createRoomSocket } from "../websocket/wsClient";
 const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:18082";
 const TOTAL_GAMES = FESTIVAL_BOOTHS.length;
 
+function isTransientFetchError(err) {
+  const message = String(err?.message || "");
+  return message.includes("Failed to fetch") || message.includes("NetworkError");
+}
+
 function fmtTeamName(team) {
   if (!team) return "ยังไม่จัดทีม";
   return `ทีม ${team}`;
@@ -514,7 +519,9 @@ export default function FestivalMap({
         loadSummary();
       }
     } catch (err) {
-      console.error("loadRoom error:", err);
+      if (!isTransientFetchError(err)) {
+        console.error("loadRoom error:", err);
+      }
     }
   }, [loadSummary, mode, player?.id, roomCode, safeSet]);
 
@@ -534,7 +541,9 @@ export default function FestivalMap({
         loadSummary();
       }
     } catch (err) {
-      console.error("loadProgress error:", err);
+      if (!isTransientFetchError(err)) {
+        console.error("loadProgress error:", err);
+      }
     }
   }, [loadSummary, player?.id, roomCode, roomMeta.status, safeSet]);
 

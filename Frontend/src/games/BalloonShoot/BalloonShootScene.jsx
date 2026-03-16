@@ -84,7 +84,7 @@ export default class BalloonShootScene extends Phaser.Scene {
       class: "bs-ui-hidden",
       style: "position:absolute;bottom:30px;width:100%;text-align:center;color:rgba(255,255,255,0.9);font-weight:300;text-shadow:0 2px 10px rgba(0,0,0,0.5);pointer-events:none;"
     });
-    inst.innerHTML = "กด <strong>Spacebar</strong> ค้างเพื่อชาร์จ | ปล่อยเพื่อยิง";
+    inst.innerHTML = "กด <strong>Spacebar</strong> ค้างเพื่อชาร์จแรงยิง แล้วปล่อยเพื่อยิงลูกโป่ง";
     overlay.appendChild(inst);
 
     // Countdown Overlay
@@ -164,7 +164,7 @@ export default class BalloonShootScene extends Phaser.Scene {
   _buildStartScreen() {
     const screen = this._el("div", { id: "bs-start-screen" });
     screen.style.cssText = `
-      position:absolute; inset:0; background:rgba(0,0,0,0.85);
+      position:absolute; inset:0; background:rgba(0,0,0,0.78);
       display:flex; justify-content:center; align-items:center; z-index:100;
     `;
 
@@ -193,7 +193,7 @@ export default class BalloonShootScene extends Phaser.Scene {
       width:min(70vw,480px); color:#fff7de; font-size:1.2rem; font-weight:700;
       line-height:1.5; text-shadow:0 2px 8px rgba(0,0,0,0.8);
     `;
-    sub.innerHTML = "ยิงลูกโป่งให้ได้คะแนนสูงที่สุดในเวลาที่กำหนด<br/>ชาร์จพลังด้วยปุ่ม <strong>Space</strong> เพื่อยิงให้แรงขึ้น";
+    sub.innerHTML = "ยิงลูกโป่งให้ได้คะแนนสูงที่สุดภายในเวลาที่กำหนด<br/>ชาร์จแรงยิงด้วยปุ่ม <strong>Space</strong> แล้วปล่อยให้จังหวะแม่นที่สุด";
 
     const btn = this._el("button");
     btn.style.cssText = `
@@ -239,7 +239,7 @@ export default class BalloonShootScene extends Phaser.Scene {
 
     const label = this._el("div");
     label.style.cssText = "position:absolute; top:112px; left:50%; transform:translateX(-50%); font-size:1.5rem; color:#ffd700; margin-bottom:8px; text-shadow:0 2px 8px rgba(0,0,0,0.85);";
-    label.textContent = "คะแนนของคุณ";
+    label.textContent = "คะแนนรวมของคุณ";
 
     const score = this._el("div", { id: "bs-total-score" });
     score.style.cssText = `
@@ -261,7 +261,7 @@ export default class BalloonShootScene extends Phaser.Scene {
       border-radius:40px; cursor:pointer; outline:none;
       box-shadow:0 6px 0 #992200;
     `;
-    backBtn.textContent = "กลับแผนที่";
+    backBtn.textContent = "กลับไปแผนที่";
     backBtn.onclick = () => {
       const finalScore = this._gameState?.totalScore ?? 0;
       this._destroyUI();

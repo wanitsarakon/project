@@ -120,6 +120,11 @@ export default class WorshipBoothScene extends Phaser.Scene {
         .wb-result{width:min(92vw,760px);padding:32px;border-radius:30px;background:rgba(255,247,225,.96);text-align:center;color:#6a3000;box-shadow:0 20px 48px rgba(0,0,0,.24)}
         .wb-scorebig{font-size:54px;font-weight:900}
         .wb-note{margin-top:10px;font-size:20px}
+        .wb-wish{margin-top:18px;text-align:left}
+        .wb-wish label{display:block;margin-bottom:8px;font-size:16px;font-weight:700;color:#8a5318}
+        .wb-wish textarea{width:100%;min-height:110px;border-radius:18px;border:2px solid rgba(176,106,39,.22);padding:14px 16px;box-sizing:border-box;font:inherit;font-size:16px;background:#fffdf7;color:#5e2f05;resize:none}
+        .wb-wish textarea:focus{outline:none;border-color:#cb7a27;box-shadow:0 0 0 4px rgba(203,122,39,.12)}
+        .wb-wishhint{margin-top:8px;font-size:14px;color:#9a652f}
         @media (max-width:760px){.wb-hud{grid-template-columns:repeat(2,minmax(120px,1fr))}.wb-grid{grid-template-columns:1fr}.wb-pill{min-width:92px}}
       </style>
       <div class="wb-root">
@@ -159,6 +164,11 @@ export default class WorshipBoothScene extends Phaser.Scene {
             <div id="wb-final-score" class="wb-scorebig">ขอพรสำเร็จ</div>
             <div id="wb-final-stick" class="wb-note"></div>
             <div id="wb-final-meta" class="wb-note"></div>
+            <div class="wb-wish">
+              <label for="wb-wish-text">เขียนคำอธิษฐานหรือพรที่อยากขอไว้เป็นสิริมงคล</label>
+              <textarea id="wb-wish-text" placeholder="เช่น ขอให้สุขภาพแข็งแรง การเรียนการงานราบรื่น และมีแต่เรื่องดีๆ เข้ามา"></textarea>
+              <div class="wb-wishhint">ด่านนี้ไม่คิดคะแนน ใช้เป็นช่วงปิดท้ายให้ผู้เล่นได้ขอพรและรับเซียมซีอย่างสบายใจ</div>
+            </div>
             <button id="wb-finish-btn" class="wb-mainbtn" style="margin-top:20px">กลับแผนที่</button>
           </div>
         </div>
@@ -182,6 +192,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
     this.finalScoreEl = this.root.querySelector("#wb-final-score");
     this.finalStickEl = this.root.querySelector("#wb-final-stick");
     this.finalMetaEl = this.root.querySelector("#wb-final-meta");
+    this.wishInputEl = this.root.querySelector("#wb-wish-text");
 
     STEPS.forEach((step) => {
       const btn = document.createElement("button");
@@ -206,6 +217,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
           completedRounds: this.state.completedRounds,
           timeLeft: this.state.timeLeft,
           stick: this.state.stick,
+          wishText: this.wishInputEl?.value?.trim() ?? "",
         },
       });
     });
@@ -235,7 +247,9 @@ export default class WorshipBoothScene extends Phaser.Scene {
             volume: 0.14,
           });
           if (!this.calmBgm.isPlaying) {
-            this.calmBgm.play();
+            try {
+              this.calmBgm.play();
+            } catch {}
           }
         }
         this.startRoundTimer();

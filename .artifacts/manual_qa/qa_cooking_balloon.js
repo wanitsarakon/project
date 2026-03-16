@@ -1,8 +1,11 @@
 const { chromium } = require("../../Frontend/node_modules/playwright");
+const { ensureFrontendServer } = require("./server_helper");
 
-async function createHostAndEnterMap(hostPage, playerPage) {
-  await hostPage.goto("http://127.0.0.1:4174/qa.html", { waitUntil: "networkidle" });
-  await hostPage.waitForFunction(() => Boolean(window.__festivalDebug), null, {
+const QA_BASE_URL = process.env.QA_BASE_URL || "http://127.0.0.1:4173/qa.html";
+
+async function openQa(page) {
+  await page.goto(QA_BASE_URL, { waitUntil: "networkidle" });
+  await page.waitForFunction(() => Boolean(window.__festivalDebug), null, {
     timeout: 15000,
   });
 }
@@ -22,9 +25,9 @@ async function resetToMap(page) {
 }
 
 async function run() {
+  await ensureFrontendServer();
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-  const playerPage = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   const errors = [];
   const requests = [];
 
@@ -43,10 +46,10 @@ async function run() {
   });
 
   try {
-    await createHostAndEnterMap(page, playerPage);
+    await openQa(page);
 
     await startScene(page, "CookingGameScene");
-    await page.getByRole("button", { name: /เริ่มทำขนม|start/i }).click();
+    await page.locator("#ck-btn-start").click({ force: true });
     await page.waitForTimeout(10000);
     const ingredient = page.locator(".ck-ingredient").first();
     await ingredient.waitFor({ state: "visible", timeout: 20000 });
@@ -56,7 +59,7 @@ async function run() {
     await resetToMap(page);
 
     await startScene(page, "BalloonShootScene");
-    await page.getByRole("button", { name: /เริ่มเกม|start/i }).click();
+    await page.getByRole("button", { name: "เริ่มเกม" }).click();
     await page.waitForTimeout(5000);
     await page.keyboard.down("Space");
     await page.waitForTimeout(1200);
@@ -74,7 +77,6 @@ async function run() {
     );
     process.exitCode = 1;
   } finally {
-    await playerPage.close();
     await browser.close();
   }
 }

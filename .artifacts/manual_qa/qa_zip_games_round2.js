@@ -1,7 +1,10 @@
 const { chromium } = require("../../Frontend/node_modules/playwright");
+const { ensureFrontendServer } = require("./server_helper");
+
+const QA_BASE_URL = process.env.QA_BASE_URL || "http://127.0.0.1:4173/qa.html";
 
 async function openQa(page) {
-  await page.goto("http://127.0.0.1:4174/qa.html", { waitUntil: "networkidle" });
+  await page.goto(QA_BASE_URL, { waitUntil: "networkidle" });
   await page.waitForFunction(() => Boolean(window.__festivalDebug), null, {
     timeout: 15000,
   });
@@ -28,6 +31,7 @@ async function ensureDir(path) {
 
 async function run() {
   const fs = require("fs");
+  await ensureFrontendServer();
   const shotsDir = "c:/Users/ppang/OneDrive/เอกสาร/project/.artifacts/manual_qa/shots";
   ensureDir(shotsDir);
 

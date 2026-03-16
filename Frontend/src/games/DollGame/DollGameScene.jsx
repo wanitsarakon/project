@@ -93,6 +93,7 @@ export default class DollGameScene extends Phaser.Scene {
       scorePopups: [],
       particles: [],
       smokes: [],
+      screenSmoke: 0,
     };
   }
 
@@ -161,9 +162,9 @@ export default class DollGameScene extends Phaser.Scene {
         }
         .dg-header {
           position: absolute;
-          top: -80px;
+          top: -42px;
           left: 50%;
-          width: min(48vw, 380px);
+          width: min(42vw, 360px);
           transform: translateX(-50%) rotate(-3deg);
           transform-origin: top center;
           animation: dg-sway 3.5s ease-in-out infinite;
@@ -171,9 +172,9 @@ export default class DollGameScene extends Phaser.Scene {
         }
         .dg-score-legend {
           position: absolute;
-          top: 150px;
-          left: 12px;
-          width: min(20vw, 170px);
+          top: 120px;
+          left: 18px;
+          width: min(18vw, 155px);
           max-height: 50%;
           object-fit: contain;
           filter: drop-shadow(4px 4px 8px rgba(0,0,0,0.5));
@@ -181,13 +182,13 @@ export default class DollGameScene extends Phaser.Scene {
         .dg-stats-left,
         .dg-stats-right {
           position: absolute;
-          top: 14px;
+          top: 16px;
           display: flex;
           flex-direction: column;
           gap: 6px;
         }
-        .dg-stats-left { left: 16px; }
-        .dg-stats-right { right: 16px; }
+        .dg-stats-left { left: 24px; }
+        .dg-stats-right { right: 24px; }
         .dg-stat {
           width: 150px;
           height: 58px;
@@ -227,9 +228,9 @@ export default class DollGameScene extends Phaser.Scene {
           z-index: 20;
         }
         .dg-card {
-          width: min(78vw, 580px);
-          height: min(58vw, 380px);
-          padding: 92px 40px 40px;
+          width: min(72vw, 540px);
+          height: min(54vw, 356px);
+          padding: 84px 34px 34px;
           box-sizing: border-box;
           text-align: center;
           background-size: 100% 100%;
@@ -243,11 +244,11 @@ export default class DollGameScene extends Phaser.Scene {
         .dg-start-card { background-image: url('${IMAGE_PATHS.startFrame}'); }
         .dg-end-card { background-image: url('${IMAGE_PATHS.endFrame}'); }
         .dg-card-sign {
-          width: min(74%, 360px);
-          max-height: 104px;
+          width: min(72%, 332px);
+          max-height: 94px;
           object-fit: contain;
           filter: drop-shadow(0 6px 16px rgba(0,0,0,0.4));
-          margin-bottom: 8px;
+          margin-bottom: 6px;
           pointer-events: none;
         }
         .dg-title {
@@ -265,10 +266,10 @@ export default class DollGameScene extends Phaser.Scene {
           text-shadow: 1px 1px 2px rgba(0,0,0,1), 0 0 8px rgba(0,0,0,0.6);
         }
         .dg-sub.dg-start-copy {
-          margin-top: 6px;
-          max-width: 360px;
-          font-size: clamp(13px, 1.6vw, 17px);
-          line-height: 1.45;
+          margin-top: 12px;
+          max-width: 340px;
+          font-size: clamp(13px, 1.55vw, 16px);
+          line-height: 1.55;
         }
         .dg-button {
           margin-top: 28px;
@@ -312,11 +313,26 @@ export default class DollGameScene extends Phaser.Scene {
           position: absolute;
           left: 0;
           right: 0;
-          bottom: 16px;
+          bottom: 18px;
           text-align: center;
           color: #fff;
           font-weight: 700;
           text-shadow: 2px 2px 4px #000;
+        }
+        .dg-screen-smoke {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          z-index: 10;
+          opacity: 0;
+          background:
+            radial-gradient(circle at 22% 42%, rgba(255,255,255,0.3), transparent 18%),
+            radial-gradient(circle at 74% 34%, rgba(255,255,255,0.28), transparent 16%),
+            radial-gradient(circle at 58% 68%, rgba(255,255,255,0.24), transparent 20%),
+            radial-gradient(circle at 44% 22%, rgba(255,255,255,0.18), transparent 18%),
+            rgba(210, 215, 220, 0.32);
+          transition: opacity 180ms ease-out;
+          mix-blend-mode: screen;
         }
         .dg-final-score {
           margin-top: 18px;
@@ -340,8 +356,8 @@ export default class DollGameScene extends Phaser.Scene {
           100% { transform: scale(1); opacity: 1; }
         }
         @media (max-width: 700px) {
-          .dg-header { top: -36px; width: min(62vw, 300px); }
-          .dg-score-legend { top: 108px; width: 120px; }
+          .dg-header { top: -18px; width: min(62vw, 300px); }
+          .dg-score-legend { top: 92px; width: 112px; }
           .dg-stat { width: 126px; height: 50px; font-size: 15px; }
           .dg-card { padding-top: 90px; }
         }
@@ -351,6 +367,7 @@ export default class DollGameScene extends Phaser.Scene {
       <div class="dg-ui">
         <img class="dg-header" src="${IMAGE_PATHS.header}" alt="Doll header" />
         <img class="dg-score-legend" src="${IMAGE_PATHS.scoreLegend}" alt="Score legend" />
+        <div id="dg-screen-smoke" class="dg-screen-smoke"></div>
         <div class="dg-stats-left">
           <div class="dg-stat">คะแนน <span id="dg-score">0</span></div>
         </div>
@@ -369,7 +386,7 @@ export default class DollGameScene extends Phaser.Scene {
         </div>
         <div id="dg-end" class="dg-overlay dg-hidden">
           <div class="dg-card dg-end-card">
-            <h2 class="dg-title">จบเกม</h2>
+            <img class="dg-card-sign" src="${IMAGE_PATHS.topSign}" alt="ป้ายสรุปคะแนน" />
             <div class="dg-sub">คะแนนรวมของคุณ</div>
             <div id="dg-final-score" class="dg-final-score">0</div>
             <button id="dg-finish-btn" class="dg-button">กลับแผนที่</button>
@@ -388,6 +405,7 @@ export default class DollGameScene extends Phaser.Scene {
     this.ammoEl = this.root.querySelector("#dg-ammo");
     this.comboEl = this.root.querySelector("#dg-combo");
     this.countdownEl = this.root.querySelector("#dg-countdown");
+    this.screenSmokeEl = this.root.querySelector("#dg-screen-smoke");
     this.startOverlay = this.root.querySelector("#dg-start");
     this.endOverlay = this.root.querySelector("#dg-end");
     this.finalScoreEl = this.root.querySelector("#dg-final-score");
@@ -464,6 +482,7 @@ export default class DollGameScene extends Phaser.Scene {
 
       if (target.type === "smoke_bomb") {
         this.createSmokeCloud(target.x, target.y);
+        gs.screenSmoke = 0.82;
         gs.combo = 0;
         gs.scorePopups.push({
           x: target.x,
@@ -552,8 +571,10 @@ export default class DollGameScene extends Phaser.Scene {
     gs.scorePopups = [];
     gs.particles = [];
     gs.smokes = [];
+    gs.screenSmoke = 0;
     this.spawnStaticTargets();
     this.updateHud();
+    this.updateScreenSmoke();
 
     if (this.audio.bgm) {
       this.audio.bgm.currentTime = 0;
@@ -576,10 +597,10 @@ export default class DollGameScene extends Phaser.Scene {
     if (!gs || !this.canvas) return;
 
     gs.targets = [];
-    const shelfY = [this.canvas.height * 0.35, this.canvas.height * 0.58];
+    const shelfY = [this.canvas.height * 0.37, this.canvas.height * 0.61];
     shelfY.forEach((baseY) => {
-      const startX = this.canvas.width * 0.25;
-      const spacing = this.canvas.width * 0.045;
+      const startX = this.canvas.width * 0.26;
+      const spacing = this.canvas.width * 0.042;
       const shuffledTypes = [...TARGET_TYPES].sort(() => Math.random() - 0.5);
       const directionMap = {
         big: 1,
@@ -603,30 +624,30 @@ export default class DollGameScene extends Phaser.Scene {
             pts = 50;
             size = this.canvas.height * 0.05;
             yOffset = this.canvas.height * 0.029;
-            speedMult = 2;
+            speedMult = 2.15;
             break;
           case "stone":
             pts = -5;
             size = this.canvas.height * 0.14;
-            speedMult = 1.5;
+            speedMult = 1.4;
             break;
           case "blue":
             pts = 25;
             size = this.canvas.height * 0.08;
             yOffset = this.canvas.height * 0.025;
-            speedMult = 1.5;
+            speedMult = 1.6;
             break;
           case "red":
             pts = 10;
             size = this.canvas.height * 0.1;
             yOffset = this.canvas.height * 0.015;
-            speedMult = 1.1;
+            speedMult = 1.18;
             break;
           case "small":
             pts = 15;
             size = this.canvas.height * 0.07;
             yOffset = this.canvas.height * 0.025;
-            speedMult = 1.3;
+            speedMult = 1.42;
             break;
           case "big":
             pts = 5;
@@ -649,9 +670,9 @@ export default class DollGameScene extends Phaser.Scene {
           size,
           x: startX + i * spacing,
           y: baseY + yOffset,
-          speed: 6 * direction * speedMult,
+          speed: 5.2 * direction * speedMult,
           minX: this.canvas.width * 0.24,
-          maxX: this.canvas.width * 0.76,
+          maxX: this.canvas.width * 0.78,
         });
       }
     });
@@ -698,6 +719,11 @@ export default class DollGameScene extends Phaser.Scene {
     this.comboClearTimer = window.setTimeout(() => {
       if (this.comboEl) this.comboEl.textContent = "";
     }, 700);
+  }
+
+  updateScreenSmoke() {
+    if (!this.screenSmokeEl || !this.state) return;
+    this.screenSmokeEl.style.opacity = String(Math.max(0, this.state.screenSmoke));
   }
 
   updateHud() {
@@ -788,6 +814,11 @@ export default class DollGameScene extends Phaser.Scene {
       if (p.life <= 0) gs.particles.splice(i, 1);
     }
 
+    if (gs.screenSmoke > 0) {
+      gs.screenSmoke = Math.max(0, gs.screenSmoke - 0.012);
+      this.updateScreenSmoke();
+    }
+
     ctx.globalAlpha = 1;
     const gun = this.imageCache.gun;
     if (gun) {
@@ -820,6 +851,8 @@ export default class DollGameScene extends Phaser.Scene {
       this.audio.bgm.currentTime = 0;
     }
     if (this.finalScoreEl) this.finalScoreEl.textContent = String(this.state.score);
+    this.state.screenSmoke = 0;
+    this.updateScreenSmoke();
     this.endOverlay?.classList.remove("dg-hidden");
   }
 

@@ -1,9 +1,14 @@
+import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 
 export default defineConfig({
   build: {
     chunkSizeWarningLimit: 1600,
     rollupOptions: {
+      input: {
+        main: fileURLToPath(new URL("./index.html", import.meta.url)),
+        qa: fileURLToPath(new URL("./qa.html", import.meta.url)),
+      },
       output: {
         manualChunks(id) {
           if (id.includes("node_modules/phaser")) {

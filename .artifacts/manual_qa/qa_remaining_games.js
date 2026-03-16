@@ -1,7 +1,10 @@
 const { chromium } = require("../../Frontend/node_modules/playwright");
+const { ensureFrontendServer } = require("./server_helper");
+
+const QA_BASE_URL = process.env.QA_BASE_URL || "http://127.0.0.1:4173/qa.html";
 
 async function openQa(page) {
-  await page.goto("http://127.0.0.1:4174/qa.html", { waitUntil: "networkidle" });
+  await page.goto(QA_BASE_URL, { waitUntil: "networkidle" });
   await page.waitForFunction(() => Boolean(window.__festivalDebug), null, {
     timeout: 15000,
   });
@@ -34,7 +37,38 @@ async function clickCanvas(page, selector, points) {
   }
 }
 
+async function completeWorshipRound(page) {
+  await page.evaluate(async () => {
+    const wait = (ms) => new Promise((resolve) => window.setTimeout(resolve, ms));
+    const normalize = (value) => (value || "").replace(/\s+/g, "").trim();
+    const pills = Array.from(document.querySelectorAll("#wb-sequence .wb-pill"));
+    const buttons = Array.from(document.querySelectorAll("#wb-grid .wb-btn"));
+
+    for (const pill of pills) {
+      const label = normalize(pill.textContent);
+      const match = buttons.find((btn) => normalize(btn.textContent).includes(label));
+      if (match) {
+        match.click();
+        await wait(250);
+      }
+    }
+  });
+}
+
+async function completeWorshipUntilReady(page) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const isReady = await page.evaluate(() => {
+      const prayBtn = document.querySelector("#wb-pray");
+      return Boolean(prayBtn && !prayBtn.disabled);
+    });
+    if (isReady) return;
+    await completeWorshipRound(page);
+    await page.waitForTimeout(500);
+  }
+}
+
 async function run() {
+  await ensureFrontendServer();
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   const errors = [];
@@ -72,17 +106,12 @@ async function run() {
     await startScene(page, "WorshipBoothScene");
     await page.locator("#wb-start-btn").click({ force: true });
     await page.waitForTimeout(5200);
-    const sequence = await page.locator("#wb-sequence .wb-pill").allTextContents();
-    for (const item of sequence) {
-      if (item.includes("???")) await page.locator('[data-step-id="incense"]').click({ force: true });
-      if (item.includes("?????")) await page.locator('[data-step-id="candle"]').click({ force: true });
-      if (item.includes("??????")) await page.locator('[data-step-id="lotus"]').click({ force: true });
-      await page.waitForTimeout(250);
-    }
+    await completeWorshipUntilReady(page);
     await page.waitForTimeout(1000);
+    await resetToMap(page);
 
     await startScene(page, "BoxingGameScene");
-    await page.getByRole("button", { name: /เริ่ม/i }).click();
+    await page.getByRole("button", { name: "เริ่มเกม" }).click();
     await page.waitForTimeout(31000);
     const card = page.locator("#bg-deck .bg-name-card").first();
     const zone = page.locator(".bg-drop-zone").first();
@@ -100,8 +129,7 @@ async function run() {
     await resetToMap(page);
 
     await startScene(page, "FlowerGameScene");
-    await page.locator("#tutorialBtn").click();
-    await page.locator("#closeTutorialBtn").click();
+    await page.locator("#startBtn").click({ force: true });
     await page.waitForTimeout(5500);
     await page.evaluate(() => {
       document.querySelector(".fl-customer")?.click();

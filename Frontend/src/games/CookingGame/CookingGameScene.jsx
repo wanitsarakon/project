@@ -183,6 +183,8 @@ export default class CookingGameScene extends Phaser.Scene {
     screen.style.cssText = `
       position: absolute; inset: 0; display: flex;
       justify-content: center; align-items: center; z-index: 300;
+      background: linear-gradient(180deg, rgba(13,8,6,0.18), rgba(13,8,6,0.52));
+      backdrop-filter: blur(4px);
     `;
     const wrapper = this._el("div", { class: "ck-banner-wrapper" });
     const bannerImg = this._el("img");
@@ -205,6 +207,8 @@ export default class CookingGameScene extends Phaser.Scene {
     screen.style.cssText = `
       position: absolute; inset: 0; display: none;
       justify-content: center; align-items: center; z-index: 400;
+      background: linear-gradient(180deg, rgba(13,8,6,0.34), rgba(13,8,6,0.66));
+      backdrop-filter: blur(4px);
     `;
     const wrapper = this._el("div", { class: "ck-banner-wrapper" });
     const bannerImg = this._el("img");
@@ -216,6 +220,11 @@ export default class CookingGameScene extends Phaser.Scene {
     const scoreEl = this._el("span", { id: "ck-total-score" });
     scoreEl.textContent = "0";
     inner.appendChild(scoreEl);
+
+    const noteEl = this._el("div", { id: "ck-result-note" });
+    noteEl.textContent = "คุณยายจะชิมแล้วบอกผลให้นะ";
+    noteEl.style.cssText = "margin-top:10px; max-width:320px; text-align:center; color:#5f2b00; font-weight:700; line-height:1.5;";
+    inner.appendChild(noteEl);
 
     const backBtn = this._el("button", { id: "ck-back-btn" });
     backBtn.textContent = "กลับแผนที่";
@@ -549,7 +558,7 @@ export default class CookingGameScene extends Phaser.Scene {
           } else {
             clearInterval(iv);
             if (ov) ov.style.display = "none";
-            try { bgm.play(); } catch(_){}
+            try { bgm.play().catch(() => {}); } catch(_){}
             resolve();
           }
         }, 1000);
@@ -611,14 +620,17 @@ export default class CookingGameScene extends Phaser.Scene {
         grade = "ต้องพยายามอีกนิด";
       }
 
-      typeEffect(npcText, text, 40).then(() => setTimeout(() => showResult(score), 1500));
+      typeEffect(npcText, text, 40).then(() => setTimeout(() => showResult(score, grade, text), 1500));
     }
 
-    function showResult(score) {
+    function showResult(score, grade, text) {
       bgm.pause(); bgm.currentTime = 0;
       const rs = document.getElementById("ck-result-screen");
       const sc = document.getElementById("ck-total-score");
+      const rn = document.getElementById("ck-result-note");
+      if (npcBubble) npcBubble.classList.remove("ck-hidden");
       if (sc)  sc.textContent = score;
+      if (rn) rn.textContent = grade ? `${grade} • ${text}` : "คุณยายบอกผลการทำขนมให้แล้ว";
       if (rs)  { rs.classList.remove("ck-hidden"); rs.style.display = "flex"; }
     }
   }

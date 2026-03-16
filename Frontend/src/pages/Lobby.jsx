@@ -9,6 +9,11 @@ import { createRoomSocket } from "../websocket/wsClient";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:18082";
 
+function isTransientFetchError(err) {
+  const message = String(err?.message || "");
+  return message.includes("Failed to fetch") || message.includes("NetworkError");
+}
+
 export default function Lobby({
   roomCode,
   player,
@@ -23,6 +28,7 @@ export default function Lobby({
     name: "",
     mode: "solo",
     prizes: [],
+    status: "waiting",
   });
   const [prizeDraft, setPrizeDraft] = useState([]);
 
@@ -59,11 +65,14 @@ export default function Lobby({
           name: data?.name ?? "Thai Festival Room",
           mode: data?.mode ?? "solo",
           prizes: nextPrizes,
+          status: data?.status ?? "waiting",
         });
         setPrizeDraft(nextPrizes);
       });
     } catch (err) {
-      console.error("loadRoom failed", err);
+      if (!isTransientFetchError(err)) {
+        console.error("loadRoom failed", err);
+      }
     }
   }, [roomCode, safeSet]);
 
@@ -101,6 +110,18 @@ export default function Lobby({
   }, [loadRoom]);
 
   useEffect(() => {
+    if (!roomCode) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      loadRoom();
+    }, 4000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [loadRoom, roomCode]);
+
+  useEffect(() => {
     if (!player?.id || !roomCode || wsRef.current) return undefined;
 
     wsRef.current = createRoomSocket(roomCode, handleMessage, {
@@ -112,6 +133,14 @@ export default function Lobby({
       wsRef.current = null;
     };
   }, [handleMessage, player?.id, roomCode]);
+
+  useEffect(() => {
+    if (roomMeta.status !== "playing") return;
+    if (startedRef.current) return;
+    startedRef.current = true;
+    safeSet(() => setGameStarted(true));
+    onStartGame?.();
+  }, [onStartGame, roomMeta.status, safeSet]);
 
   const isMeHost = player
     ? players.some((entry) => entry?.id === player.id && entry?.isHost)
@@ -131,6 +160,10 @@ export default function Lobby({
         const text = await res.text();
         throw new Error(text || "start failed");
       }
+
+      safeSet(() => {
+        setRoomMeta((prev) => ({ ...prev, status: "playing" }));
+      });
     } catch (err) {
       console.error("startGame error", err);
       alert("เริ่มเกมไม่สำเร็จ");

@@ -224,7 +224,7 @@ export default class BoxingGameScene extends Phaser.Scene {
       box-shadow: 0 8px 0 #992200, 0 15px 20px rgba(0,0,0,0.5);
       text-shadow: 2px 2px 4px rgba(0,0,0,0.5); outline: none; z-index: 7; position: relative;
     `;
-    btn.textContent = "เริ่มเล่นเกม";
+    btn.textContent = "เริ่มเกม";
     btn.onclick = () => this._startGame();
 
     const wrapper = this._el("div");
@@ -265,7 +265,7 @@ export default class BoxingGameScene extends Phaser.Scene {
       color: #fff0d2; font-size: 1.2rem; font-weight: 700;
       text-shadow: 0 2px 8px rgba(0,0,0,0.8);
     `;
-    summary.textContent = "คะแนนรวมจากท่าที่วางถูกต้อง";
+    summary.textContent = "คะแนนรวมจากท่าที่วางถูกต้องทั้งหมด";
     board.appendChild(summary);
 
     const scoreEl = this._el("div", { id: "bg-final-score" });
@@ -289,7 +289,7 @@ export default class BoxingGameScene extends Phaser.Scene {
       border-radius: 40px; cursor: pointer; outline: none;
       box-shadow: 0 6px 0 #992200;
     `;
-    backBtn.textContent = "กลับแผนที่";
+    backBtn.textContent = "กลับไปแผนที่";
     backBtn.onclick = () => {
       const score = this._gs?.score ?? 0;
       this._destroyUI();
@@ -329,12 +329,12 @@ export default class BoxingGameScene extends Phaser.Scene {
     bgMusic.loop = true; bgMusic.volume = 0.4;
     this._bgMusic = bgMusic;
 
-    const playBGM  = () => { try { bgMusic.currentTime=0; bgMusic.play(); } catch(_){} };
+    const playBGM  = () => { try { bgMusic.currentTime=0; bgMusic.play().catch(() => {}); } catch(_){} };
     const stopBGM  = () => { try { bgMusic.pause(); bgMusic.currentTime=0; } catch(_){} };
-    const playClean = (a) => { if (!a) return; try { a.pause(); a.currentTime=0; a.play(); } catch(_){} };
+    const playClean = (a) => { if (!a) return; try { a.pause(); a.currentTime=0; a.play().catch(() => {}); } catch(_){} };
 
     // ─── Typewriter ───
-    const introText = "สวัสดีขอรับ! จำท่ามวยและชื่อให้แม่นภายใน 20 วินาที แล้วลากชื่อวางที่เงาให้ถูกนะ!";
+    const introText = "สวัสดีขอรับ! จำท่ามวยและชื่อท่าให้แม่นภายใน 20 วินาที แล้วลากป้ายชื่อไปวางบนเงาให้ถูกต้องนะ!";
     function typeWriter(text, el, speed, playSound = false) {
       if (!el) return;
       el.textContent = "";
@@ -560,7 +560,7 @@ export default class BoxingGameScene extends Phaser.Scene {
       gs.isPlaying = true;
       gs.playTime  = 15;
       const inst = getInst();
-      if (inst) { inst.textContent = "ระวังป้ายหลอก! ลากป้ายที่ถูกต้องวางที่รูปเงา!"; inst.style.color = ""; }
+      if (inst) { inst.textContent = "ระวังป้ายหลอก ลากป้ายที่ถูกต้องไปวางบนรูปเงาให้ครบ"; inst.style.color = ""; }
       const deck = getDeck();
       if (!deck) return;
       deck.style.display = "flex"; deck.innerHTML = "";

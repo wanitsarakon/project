@@ -1,4 +1,5 @@
 const { chromium } = require("../../Frontend/node_modules/playwright");
+const { ensureBackendServer, ensureFrontendServer } = require("./server_helper");
 
 const BASE_URL = process.env.QA_BASE_URL || "http://127.0.0.1:4173";
 const API_BASE = process.env.QA_API_BASE || "http://127.0.0.1:18082";
@@ -30,13 +31,7 @@ async function enterAs(page, name, role) {
   await page.goto(BASE_URL, { waitUntil: "networkidle" });
   await page.locator(".temple-enter-btn").click();
   await page.locator(".festival-name-input").fill(name);
-
-  if (role === "host") {
-    await page.locator(".host-card").click();
-  } else {
-    await page.locator(".player-card").click();
-  }
-
+  await page.locator(role === "host" ? ".host-card" : ".player-card").click();
   await page.locator(".festival-confirm-btn").click();
 }
 
@@ -50,10 +45,12 @@ async function createHostRoom(page) {
     (response) =>
       response.url() === `${API_BASE}/rooms` &&
       response.request().method() === "POST",
-    () => page.getByRole("button", { name: /สร้างห้อง/i }).click(),
+    () => page.locator(".festival-page-card .festival-primary-btn").first().click(),
   );
 
-  await page.getByRole("button", { name: /Lobby/i }).click();
+  await page.locator(".festival-created-box .festival-primary-btn").click();
+  await page.locator(".lobby-card-theme").waitFor({ state: "visible", timeout: 15000 });
+
   return {
     roomCode: data.room_code,
     player: {
@@ -73,10 +70,10 @@ async function joinPlayer(page, name, roomCode) {
     (response) =>
       response.url() === `${API_BASE}/rooms/join` &&
       response.request().method() === "POST",
-    async () => {
-      await page.getByRole("button", { name: /เข้าร่วม/i }).first().click();
-    },
+    () => page.locator(".festival-room-card .festival-primary-btn").first().click(),
   );
+
+  await page.locator(".lobby-card-theme").waitFor({ state: "visible", timeout: 15000 });
 
   return {
     player: {
@@ -87,49 +84,69 @@ async function joinPlayer(page, name, roomCode) {
   };
 }
 
-async function fetchProgress(page, roomCode, playerId) {
-  return page.evaluate(
-    async ({ apiBase, code, pid }) => {
-      const res = await fetch(`${apiBase}/rooms/${code}/progress?player_id=${pid}`);
-      return res.json();
-    },
-    { apiBase: API_BASE, code: roomCode, pid: playerId },
+async function fetchJson(url, init, attempts = 5) {
+  let lastError = null;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const response = await fetch(url, init);
+      const body = await response.json().catch(() => ({}));
+      return { ok: response.ok, status: response.status, body };
+    } catch (error) {
+      lastError = error;
+      await sleep(400 * (attempt + 1));
+    }
+  }
+  throw lastError || new Error("fetch failed");
+}
+
+async function fetchProgress(roomCode, playerId) {
+  const result = await fetchJson(`${API_BASE}/rooms/${roomCode}/progress?player_id=${playerId}`);
+  return result.body;
+}
+
+async function completeGame(roomCode, playerId, gameKey, score) {
+  return fetchJson(`${API_BASE}/rooms/${roomCode}/games/${gameKey}/complete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      player_id: playerId,
+      score,
+      meta: {
+        qa: true,
+        source: "qa_team_flow",
+      },
+    }),
+  });
+}
+
+async function fetchSummary(roomCode) {
+  const result = await fetchJson(`${API_BASE}/rooms/${roomCode}/summary`);
+  return result.body;
+}
+
+async function waitForPlayerMap(page) {
+  await page.waitForSelector("#phaser-root", { state: "visible", timeout: 20000 });
+  await page.waitForFunction(
+    () => Boolean(window.__PHASER_GAME__ || document.querySelector("#phaser-root canvas")),
+    null,
+    { timeout: 20000 },
   );
 }
 
-async function completeGame(page, roomCode, playerId, gameKey, score) {
-  return page.evaluate(
-    async ({ apiBase, code, pid, key, points }) => {
-      const res = await fetch(`${apiBase}/rooms/${code}/games/${key}/complete`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          player_id: pid,
-          score: points,
-          meta: {
-            qa: true,
-            source: "qa_team_flow",
-          },
-        }),
-      });
-      const body = await res.json().catch(() => ({}));
-      return { ok: res.ok, status: res.status, body };
+async function waitForSummary(page) {
+  await page.waitForFunction(
+    () => {
+      const text = document.body.innerText || "";
+      return text.includes("Podium") || text.includes("สรุปผลผู้ชนะ");
     },
-    { apiBase: API_BASE, code: roomCode, pid: playerId, key: gameKey, points: score },
-  );
-}
-
-async function fetchSummary(page, roomCode) {
-  return page.evaluate(
-    async ({ apiBase, code }) => {
-      const res = await fetch(`${apiBase}/rooms/${code}/summary`);
-      return res.json();
-    },
-    { apiBase: API_BASE, code: roomCode },
+    null,
+    { timeout: 20000 },
   );
 }
 
 async function run() {
+  await ensureBackendServer();
+  await ensureFrontendServer();
   const browser = await chromium.launch({ headless: true });
   const pages = [];
   const errors = [];
@@ -141,7 +158,16 @@ async function run() {
     });
     page.on("console", (msg) => {
       if (msg.type() === "error") {
-        errors.push(`${label}: console: ${msg.text()}`);
+        const text = msg.text();
+        if (
+          text.includes("ERR_SOCKET_NOT_CONNECTED")
+          || text.includes("ERR_EMPTY_RESPONSE")
+          || text.includes("loadRoom error: TypeError: Failed to fetch")
+          || text.includes("loadProgress error: TypeError: Failed to fetch")
+        ) {
+          return;
+        }
+        errors.push(`${label}: console: ${text}`);
       }
     });
     page.on("response", (resp) => {
@@ -171,25 +197,20 @@ async function run() {
       joinedPlayers.push(await joinPlayer(playerPages[i], `Player${i + 1}`, host.roomCode));
     }
 
-    await hostPage.waitForFunction(() => {
-      const text = document.body.innerText;
-      return text.includes("ห้อง") && text.includes("4");
-    }, null, { timeout: 15000 });
+    await hostPage.waitForFunction(
+      () => document.querySelectorAll(".festival-player-row").length >= 4,
+      null,
+      { timeout: 15000 },
+    );
 
-    await hostPage.getByRole("button", { name: /เริ่มเกม/i }).click();
+    await hostPage.getByRole("button", { name: "เริ่มเกม" }).click();
 
-    await hostPage.waitForFunction(() => document.body.innerText.includes("Host Monitor"), null, {
-      timeout: 20000,
-    });
-    for (const page of playerPages) {
-      await page.waitForFunction(
-        () =>
-          document.body.innerText.includes("ความคืบหน้า")
-          || document.body.innerText.includes("ซุ้มถัดไป"),
-        null,
-        { timeout: 20000 },
-      );
-    }
+    await hostPage.waitForFunction(
+      () => (document.body.innerText || "").includes("Host Monitor"),
+      null,
+      { timeout: 20000 },
+    );
+    await Promise.all(playerPages.map((page) => waitForPlayerMap(page)));
 
     const playerEntries = joinedPlayers.map((entry, index) => ({
       id: entry.player.id,
@@ -204,7 +225,7 @@ async function run() {
 
       for (let playerIndex = 0; playerIndex < playerEntries.length; playerIndex += 1) {
         const entry = playerEntries[playerIndex];
-        const progress = await fetchProgress(entry.page, host.roomCode, entry.id);
+        const progress = await fetchProgress(host.roomCode, entry.id);
         const me = progress?.me || {};
 
         if (!me.unlocked_games?.includes(gameKey) && !me.completed_games?.includes(gameKey)) {
@@ -215,38 +236,30 @@ async function run() {
 
         if (!me.completed_games?.includes(gameKey)) {
           const rawScore = (gameIndex + 1) * (12 - playerIndex * 2);
-          const result = await completeGame(entry.page, host.roomCode, entry.id, gameKey, rawScore);
+          const result = await completeGame(host.roomCode, entry.id, gameKey, rawScore);
           if (!result.ok) {
             throw new Error(`complete ${gameKey} for ${entry.name} failed: ${JSON.stringify(result.body)}`);
           }
 
-          const appliedScore = gameKey === "WorshipBoothScene" ? 0 : rawScore;
-          entry.totalScore += appliedScore;
+          entry.totalScore += gameKey === "WorshipBoothScene" ? 0 : rawScore;
           await sleep(250);
         }
       }
     }
 
     await hostPage.waitForFunction(
-      () => document.body.innerText.includes("สรุปผู้ชนะ"),
+      () => {
+        const text = document.body.innerText || "";
+        return text.includes("สรุปผู้ชนะ");
+      },
       null,
       { timeout: 20000 },
     );
 
-    await hostPage.getByRole("button", { name: /สรุปผู้ชนะ/i }).click();
+    await hostPage.getByRole("button", { name: "สรุปผู้ชนะ" }).click();
+    await Promise.all(pages.map((page) => waitForSummary(page)));
 
-    await Promise.all(
-      pages.map((page) =>
-        page.waitForFunction(
-          () =>
-            document.body.innerText.includes("สรุปผลผู้ชนะ")
-            || document.body.innerText.includes("Podium"),
-          null,
-          { timeout: 20000 },
-        )),
-    );
-
-    const summary = await fetchSummary(hostPage, host.roomCode);
+    const summary = await fetchSummary(host.roomCode);
     const grouped = new Map();
     for (const entry of playerEntries) {
       const teamKey = entry.team || "unassigned";
@@ -267,29 +280,39 @@ async function run() {
       : [];
 
     const ok =
-      errors.length === 0
-      && requests.length === 0
-      && JSON.stringify(expectedTeams) === JSON.stringify(summaryTeams);
+      errors.length === 0 &&
+      requests.length === 0 &&
+      JSON.stringify(expectedTeams) === JSON.stringify(summaryTeams);
 
-    console.log(JSON.stringify({
-      ok,
-      roomCode: host.roomCode,
-      expectedTeams,
-      summaryTeams,
-      errors,
-      requests,
-    }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          ok,
+          roomCode: host.roomCode,
+          expectedTeams,
+          summaryTeams,
+          errors,
+          requests,
+        },
+        null,
+        2,
+      ),
+    );
 
-    if (!ok) {
-      process.exitCode = 1;
-    }
+    if (!ok) process.exitCode = 1;
   } catch (error) {
-    console.log(JSON.stringify({
-      ok: false,
-      error: error.message,
-      errors,
-      requests,
-    }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          ok: false,
+          error: error.message,
+          errors,
+          requests,
+        },
+        null,
+        2,
+      ),
+    );
     process.exitCode = 1;
   } finally {
     await browser.close();

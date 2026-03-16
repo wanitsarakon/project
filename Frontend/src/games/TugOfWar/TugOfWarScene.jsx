@@ -126,17 +126,17 @@ export default class TugOfWarScene extends Phaser.Scene {
         align-items:center; background:rgba(0,0,0,0.6);">
         <div style="text-align:center;">
           <h1 style="color:#ffd700; font-size:3rem; margin-bottom:20px; text-shadow:3px 3px 0 #000;">
-            🎪 ชักกะเย่อ
+            ชักกะเย่อ
           </h1>
           <p style="color:#fff; font-size:1.2rem; margin-bottom:30px;">
-            เลือกทีมแล้วดึงเชือกให้ชนะ!
+            เป่ายิ้งฉุบหาใครเริ่มก่อน เลือกตัวละครและไอเท็มให้พร้อม แล้วดึงเชือกเอาชัยให้ได้
           </p>
           <button id="enter-game-btn" style="
             padding:15px 40px; font-size:24px; font-family:'Kanit',sans-serif;
             background:linear-gradient(180deg,#ffcc00,#ff8800); color:#fff;
             border:4px solid #fff; border-radius:50px; cursor:pointer;
             box-shadow:0 8px 0 #992200;">
-            ▶ เข้าสู่เกม
+            เข้าสู่เกม
           </button>
           <br><br>
           <button id="tug-back-btn" style="
@@ -157,7 +157,7 @@ export default class TugOfWarScene extends Phaser.Scene {
             <div class="top-header">
               <div style="color:#ffd700;font-size:2.5rem;font-weight:bold;
                 text-shadow:3px 3px 0 #000;margin-top:20px;">
-                🏆 ชักกะเย่อ
+                ชักกะเย่อ
               </div>
             </div>
 
@@ -370,7 +370,7 @@ export default class TugOfWarScene extends Phaser.Scene {
                   margin-top:20px; padding:12px 32px; font-size:20px;
                   font-family:'Kanit',sans-serif; background:#e74c3c;
                   color:#fff; border:none; border-radius:20px; cursor:pointer;">
-                  🗺️ กลับแผนที่
+                  กลับแผนที่
                 </button>
               </div>
             </div>
@@ -941,7 +941,7 @@ export default class TugOfWarScene extends Phaser.Scene {
         resultScreen.style.display = "flex";
         const statusEl = $("result-status");
         const scoreEl  = $("total-score");
-        if (statusEl) statusEl.innerText = won ? "🏆 ยินดีด้วย คุณชนะ!" : "😢 น่าเสียดาย คุณแพ้!";
+        if (statusEl) statusEl.innerText = won ? "ยินดีด้วย คุณชนะ!" : "น่าเสียดาย คุณแพ้!";
         if (scoreEl) {
           scoreEl.innerText = score;
           scoreEl.style.color = won ? "#ffeb3b" : "#ff5252";
@@ -956,7 +956,10 @@ export default class TugOfWarScene extends Phaser.Scene {
           scene.onGameEnd({ score, won, game: "TugOfWar" });
         }, 3000);
       } else {
-        setTimeout(() => location.reload(), 5000);
+        setTimeout(() => {
+          if (!isLive()) return;
+          if (scene.scene) scene.scene.start("FestivalMapScene");
+        }, 5000);
       }
     }
 
@@ -1011,7 +1014,7 @@ export default class TugOfWarScene extends Phaser.Scene {
       myItemUsed = true;
       const slot = $("my-item-slot-arena");
       if (slot) slot.classList.add("item-used");
-      if (pickSound) { pickSound.currentTime = 0; pickSound.play(); }
+      if (pickSound) { pickSound.currentTime = 0; pickSound.play().catch(() => {}); }
       switch (myItem) {
         case "amulet": showSkillMessage("พระคุ้มครอง! ป้องกันการหยุดชะงัก", "#ffffff"); break;
         case "drink":
