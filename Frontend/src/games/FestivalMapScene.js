@@ -7,14 +7,14 @@ const STALL_WIDTH = 380;
 const STALL_HEIGHT = 380;
 
 export const FESTIVAL_BOOTHS = [
-  { key: "fish", label: "ชั้นตักปลา", subtitle: "ช้อนปลาไวให้ได้มากที่สุด", scene: "FishScoopingScene", texture: "/assets/fish_booth.png", accent: 0x57d2ff, trim: 0x0e778b, awningAlt: 0xfff4d8 },
-  { key: "horse", label: "ขี่ม้าส่งของ", subtitle: "ควบม้าฝ่าด่านเก็บของให้ไว", scene: "HorseDeliveryScene", texture: "/assetsHorse/horse.png", accent: 0xffc75c, trim: 0x9e5a12, awningAlt: 0xfff2d2 },
+  { key: "fish", label: "ซุ้มตักปลาพาเพลิน", subtitle: "ช้อนปลาไวให้ได้มากที่สุด", scene: "FishScoopingScene", texture: "/assets/fish_booth.png", accent: 0x57d2ff, trim: 0x0e778b, awningAlt: 0xfff4d8 },
+  { key: "horse", label: "ซุ้มขี่ม้าส่งเมือง", subtitle: "ควบม้าฝ่าด่านเก็บของให้ไว", scene: "HorseDeliveryScene", texture: "/assetsHorse/horse.png", accent: 0xffc75c, trim: 0x9e5a12, awningAlt: 0xfff2d2 },
   { key: "boxing", label: "ซุ้มมวยไทย", subtitle: "จับจังหวะแล้วตอบให้ถูก", scene: "BoxingGameScene", texture: "/assets/boxing_booth.png", accent: 0xff8f84, trim: 0xc24736, awningAlt: 0xffece9 },
-  { key: "cooking", label: "ซุ้มทำขนม", subtitle: "ทำตามสูตรให้ครบทุกขั้นตอน", scene: "CookingGameScene", texture: "/assets/cooking_booth.png", accent: 0xffc772, trim: 0xd06f1c, awningAlt: 0xfff1d8 },
-  { key: "balloon", label: "ซุ้มยิงลูกโป่ง", subtitle: "เล็งดี ยิงไว ทำคอมโบให้ต่อเนื่อง", scene: "BalloonShootScene", texture: "/assets/balloon_booth.png", accent: 0xff78cf, trim: 0xc33479, awningAlt: 0xffedf9 },
+  { key: "cooking", label: "ซุ้มทำขนมไทย", subtitle: "ทำตามสูตรให้ครบทุกขั้นตอน", scene: "CookingGameScene", texture: "/assets/cooking_booth.png", accent: 0xffc772, trim: 0xd06f1c, awningAlt: 0xfff1d8 },
+  { key: "balloon", label: "ซุ้มปาลูกโป่ง", subtitle: "เล็งดี ยิงไว ทำคอมโบให้ต่อเนื่อง", scene: "BalloonShootScene", texture: "/assets/balloon_booth.png", accent: 0xff78cf, trim: 0xc33479, awningAlt: 0xffedf9 },
   { key: "doll", label: "ซุ้มยิงตุ๊กตา", subtitle: "เล็งเป้าให้แม่น คว้ารางวัลกลับบ้าน", scene: "DollGameScene", texture: "/assets/doll_booth.png", accent: 0x9fc6ff, trim: 0x4167c4, awningAlt: 0xedf4ff },
   { key: "flower", label: "ซุ้มร้อยมาลัย", subtitle: "ร้อยพวงมาลัยตามใจลูกค้า", scene: "FlowerGameScene", texture: "/assets/flower_booth.png", accent: 0xffa9c6, trim: 0xc4507d, awningAlt: 0xffeef4 },
-  { key: "haunted", label: "บ้านผี", subtitle: "ช่วยวิญญาณให้พบของที่ตามหา", scene: "HauntedHouseScene", texture: "/assets/haunted_booth.png", accent: 0xbda7ff, trim: 0x6241bd, awningAlt: 0xf2eeff },
+  { key: "haunted", label: "ซุ้มบ้านผีสิง", subtitle: "ช่วยวิญญาณให้พบของที่ตามหา", scene: "HauntedHouseScene", texture: "/assets/haunted_booth.png", accent: 0xbda7ff, trim: 0x6241bd, awningAlt: 0xf2eeff },
   { key: "tug", label: "ซุ้มชักเย่อ", subtitle: "ดวลแรงใจให้ทีมเป็นผู้ชนะ", scene: "TugOfWarScene", texture: "/assets/tug_booth.png", accent: 0x8cf2b0, trim: 0x199653, awningAlt: 0xeaffef },
   { key: "worship", label: "ซุ้มไหว้พระขอพร", subtitle: "พิธีปิดท้าย เสี่ยงเซียมซีรับพรกลับบ้าน", scene: "WorshipBoothScene", texture: "/assets/worship_booth.png", accent: 0xffec9e, trim: 0xb78019, awningAlt: 0xfff8e1 },
 ];
@@ -322,19 +322,36 @@ export default class FestivalMapScene extends Phaser.Scene {
   createBoothCard(booth, x, y) {
     const container = this.add.container(x, y);
 
-    const baseGlow = this.add.ellipse(0, 108, 390, 84, booth.accent, 0.18);
+    const baseGlow = this.add.ellipse(0, 112, 420, 96, booth.accent, 0.18);
+    const stageShadow = this.add.ellipse(0, 168, 332, 42, 0x120905, 0.38);
     const stageBase = this.add.rectangle(0, 152, 352, 46, 0x6d3a17, 1);
     stageBase.setStrokeStyle(4, 0xffdf9c, 0.45);
+    const stageTrim = this.add.rectangle(0, 132, 332, 16, 0xf0ca76, 0.95);
+    const stageFront = this.add.rectangle(0, 176, 364, 18, 0x4b250f, 1);
+    const skirt = this.add.graphics();
+    for (let i = 0; i < 9; i += 1) {
+      skirt.fillStyle(i % 2 === 0 ? booth.accent : 0xffd58f, 0.95);
+      skirt.fillTriangle(-164 + i * 40, 154, -124 + i * 40, 154, -144 + i * 40, 176);
+    }
     const bunting = this.add.graphics();
     for (let i = 0; i < 10; i += 1) {
       bunting.fillStyle(i % 2 === 0 ? booth.accent : 0xffd387, 1);
       bunting.fillTriangle(-158 + i * 32, 122, -126 + i * 32, 122, -142 + i * 32, 148);
     }
 
-    const postLeft = this.add.rectangle(-138, 40, 16, 208, 0x5a2d12, 1);
-    const postRight = this.add.rectangle(138, 40, 16, 208, 0x5a2d12, 1);
+    const postLeft = this.add.rectangle(-138, 40, 18, 214, 0x5a2d12, 1);
+    const postRight = this.add.rectangle(138, 40, 18, 214, 0x5a2d12, 1);
+    const postLeftTrim = this.add.rectangle(-138, 40, 8, 214, 0xd8a14c, 0.95);
+    const postRightTrim = this.add.rectangle(138, 40, 8, 214, 0xd8a14c, 0.95);
     const counter = this.add.rectangle(0, 104, 316, 122, 0x7e4721, 1);
     counter.setStrokeStyle(4, 0xffdf9c, 0.82);
+    const counterTop = this.add.rectangle(0, 48, 316, 10, 0xffe3ae, 0.9);
+    const sideTableLeft = this.add.rectangle(-186, 140, 64, 14, 0xffedbd, 0.92);
+    const sideTableRight = this.add.rectangle(186, 140, 64, 14, 0xffedbd, 0.92);
+    const sideLegLeftA = this.add.rectangle(-206, 154, 8, 22, 0x6a3516, 0.96);
+    const sideLegLeftB = this.add.rectangle(-166, 154, 8, 22, 0x6a3516, 0.96);
+    const sideLegRightA = this.add.rectangle(166, 154, 8, 22, 0x6a3516, 0.96);
+    const sideLegRightB = this.add.rectangle(206, 154, 8, 22, 0x6a3516, 0.96);
 
     const canopyTop = this.add.graphics();
     canopyTop.fillStyle(booth.trim, 1);
@@ -345,6 +362,12 @@ export default class FestivalMapScene extends Phaser.Scene {
       canopyTop.fillStyle(i % 2 === 0 ? booth.accent : booth.awningAlt, 1);
       canopyTop.fillTriangle(-168 + i * 44, -96, -124 + i * 44, -96, -146 + i * 44, -22);
     }
+    const roofCrest = this.add.graphics();
+    roofCrest.fillStyle(0x5d230b, 1);
+    roofCrest.fillTriangle(-26, -134, 0, -154, 26, -134);
+    roofCrest.fillStyle(0xf5d06c, 0.95);
+    roofCrest.fillCircle(0, -142, 8);
+    roofCrest.fillTriangle(-12, -140, 0, -154, 12, -140);
 
     const sign = this.add.rectangle(0, -126, 248, 56, 0x431d0b, 0.96);
     sign.setStrokeStyle(4, booth.accent, 1);
@@ -379,6 +402,16 @@ export default class FestivalMapScene extends Phaser.Scene {
       this.add.circle(92, -74, 6, booth.accent, 0.95),
     ];
     lights.forEach((lamp) => this.add.circle(lamp.x, lamp.y, lamp.radius + 12, lamp.fillColor, 0.12));
+    const lampLeft = this.add.container(-184, -18, [
+      this.add.rectangle(0, 26, 4, 54, 0x4e2710, 0.96),
+      this.add.circle(0, 2, 12, 0xffd068, 0.96),
+      this.add.circle(0, 2, 26, 0xffd068, 0.12),
+    ]);
+    const lampRight = this.add.container(184, -18, [
+      this.add.rectangle(0, 26, 4, 54, 0x4e2710, 0.96),
+      this.add.circle(0, 2, 12, 0xffd068, 0.96),
+      this.add.circle(0, 2, 26, 0xffd068, 0.12),
+    ]);
 
     const decor = this.createBoothDecorations(booth);
 
@@ -418,18 +451,34 @@ export default class FestivalMapScene extends Phaser.Scene {
 
     container.add([
       baseGlow,
+      stageShadow,
       stageBase,
+      stageTrim,
+      stageFront,
+      skirt,
       bunting,
       postLeft,
       postRight,
+      postLeftTrim,
+      postRightTrim,
       counter,
+      counterTop,
+      sideTableLeft,
+      sideTableRight,
+      sideLegLeftA,
+      sideLegLeftB,
+      sideLegRightA,
+      sideLegRightB,
       canopyTop,
+      roofCrest,
       sign,
       signText,
       subLabel,
       frame,
       thumbnail,
       ...decor,
+      lampLeft,
+      lampRight,
       ...lights,
       statePill,
       actionButton,

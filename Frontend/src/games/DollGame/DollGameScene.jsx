@@ -162,19 +162,19 @@ export default class DollGameScene extends Phaser.Scene {
         }
         .dg-header {
           position: absolute;
-          top: -42px;
+          top: -24px;
           left: 50%;
-          width: min(42vw, 360px);
-          transform: translateX(-50%) rotate(-3deg);
+          width: min(46vw, 398px);
+          transform: translateX(-50%) rotate(-1.8deg);
           transform-origin: top center;
           animation: dg-sway 3.5s ease-in-out infinite;
           filter: drop-shadow(0 8px 15px rgba(0,0,0,0.4));
         }
         .dg-score-legend {
           position: absolute;
-          top: 120px;
+          top: 98px;
           left: 18px;
-          width: min(18vw, 155px);
+          width: min(18vw, 148px);
           max-height: 50%;
           object-fit: contain;
           filter: drop-shadow(4px 4px 8px rgba(0,0,0,0.5));
@@ -182,13 +182,13 @@ export default class DollGameScene extends Phaser.Scene {
         .dg-stats-left,
         .dg-stats-right {
           position: absolute;
-          top: 16px;
+          top: 14px;
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 8px;
         }
-        .dg-stats-left { left: 24px; }
-        .dg-stats-right { right: 24px; }
+        .dg-stats-left { left: 18px; }
+        .dg-stats-right { right: 18px; }
         .dg-stat {
           width: 150px;
           height: 58px;
@@ -209,12 +209,12 @@ export default class DollGameScene extends Phaser.Scene {
           text-align: center;
         }
         .dg-stat-ornate {
-          width: 160px;
-          height: 68px;
+          width: 152px;
+          height: 64px;
           background-size: 100% 100%;
           background-position: center;
           background-repeat: no-repeat;
-          padding: 0 12px;
+          padding: 0 10px;
         }
         .dg-stat-ornate.dg-time-board { background-image: url('${IMAGE_PATHS.timeBoard}'); }
         .dg-stat-ornate.dg-ammo-board { background-image: url('${IMAGE_PATHS.ammoBoard}'); }
@@ -224,13 +224,14 @@ export default class DollGameScene extends Phaser.Scene {
           display: flex;
           align-items: center;
           justify-content: center;
-          background: rgba(0,0,0,0.75);
+          background: radial-gradient(circle at center, rgba(0,0,0,0.24), rgba(0,0,0,0.78));
           z-index: 20;
+          pointer-events: auto;
         }
         .dg-card {
-          width: min(72vw, 540px);
-          height: min(54vw, 356px);
-          padding: 84px 34px 34px;
+          width: min(66vw, 500px);
+          height: min(50vw, 328px);
+          padding: 78px 30px 28px;
           box-sizing: border-box;
           text-align: center;
           background-size: 100% 100%;
@@ -240,15 +241,16 @@ export default class DollGameScene extends Phaser.Scene {
           flex-direction: column;
           align-items: center;
           justify-content: flex-start;
+          pointer-events: auto;
         }
         .dg-start-card { background-image: url('${IMAGE_PATHS.startFrame}'); }
         .dg-end-card { background-image: url('${IMAGE_PATHS.endFrame}'); }
         .dg-card-sign {
-          width: min(72%, 332px);
-          max-height: 94px;
+          width: min(76%, 320px);
+          max-height: 86px;
           object-fit: contain;
           filter: drop-shadow(0 6px 16px rgba(0,0,0,0.4));
-          margin-bottom: 6px;
+          margin-bottom: 4px;
           pointer-events: none;
         }
         .dg-title {
@@ -266,15 +268,15 @@ export default class DollGameScene extends Phaser.Scene {
           text-shadow: 1px 1px 2px rgba(0,0,0,1), 0 0 8px rgba(0,0,0,0.6);
         }
         .dg-sub.dg-start-copy {
-          margin-top: 12px;
-          max-width: 340px;
-          font-size: clamp(13px, 1.55vw, 16px);
-          line-height: 1.55;
+          margin-top: 10px;
+          max-width: 320px;
+          font-size: clamp(12px, 1.35vw, 15px);
+          line-height: 1.48;
         }
         .dg-button {
-          margin-top: 28px;
-          padding: 14px 36px;
-          font-size: clamp(20px, 2.5vw, 28px);
+          margin-top: 22px;
+          padding: 13px 34px;
+          font-size: clamp(19px, 2.3vw, 26px);
           font-family: "Kanit", sans-serif;
           font-weight: 700;
           color: #fff;
@@ -284,6 +286,7 @@ export default class DollGameScene extends Phaser.Scene {
           cursor: pointer;
           box-shadow: 0 8px 0 #992200, 0 15px 20px rgba(0,0,0,0.5);
           text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+          pointer-events: auto;
         }
         .dg-button:hover { transform: translateY(-2px) scale(1.03); }
         .dg-button:active { transform: translateY(4px); box-shadow: 0 2px 0 #992200, 0 5px 10px rgba(0,0,0,0.5); }
@@ -356,10 +359,10 @@ export default class DollGameScene extends Phaser.Scene {
           100% { transform: scale(1); opacity: 1; }
         }
         @media (max-width: 700px) {
-          .dg-header { top: -18px; width: min(62vw, 300px); }
-          .dg-score-legend { top: 92px; width: 112px; }
+          .dg-header { top: -10px; width: min(62vw, 312px); }
+          .dg-score-legend { top: 82px; width: 104px; }
           .dg-stat { width: 126px; height: 50px; font-size: 15px; }
-          .dg-card { padding-top: 90px; }
+          .dg-card { width: min(82vw, 470px); height: min(58vw, 312px); padding: 70px 24px 24px; }
         }
       </style>
       <div class="dg-bg"></div>
@@ -369,30 +372,28 @@ export default class DollGameScene extends Phaser.Scene {
         <img class="dg-score-legend" src="${IMAGE_PATHS.scoreLegend}" alt="Score legend" />
         <div id="dg-screen-smoke" class="dg-screen-smoke"></div>
         <div class="dg-stats-left">
-          <div class="dg-stat">คะแนน <span id="dg-score">0</span></div>
+          <div class="dg-stat">\u0e04\u0e30\u0e41\u0e19\u0e19 <span id="dg-score">0</span></div>
         </div>
         <div class="dg-stats-right">
-          <div class="dg-stat dg-stat-ornate dg-time-board">เวลา <span id="dg-time">60</span></div>
-          <div class="dg-stat dg-stat-ornate dg-ammo-board">กระสุน <span id="dg-ammo">10</span></div>
+          <div class="dg-stat dg-stat-ornate dg-time-board">\u0e40\u0e27\u0e25\u0e32 <span id="dg-time">60</span></div>
+          <div class="dg-stat dg-stat-ornate dg-ammo-board">\u0e01\u0e23\u0e30\u0e2a\u0e38\u0e19 <span id="dg-ammo">10</span></div>
         </div>
         <div id="dg-combo" class="dg-combo"></div>
         <div id="dg-countdown" class="dg-countdown dg-hidden"></div>
         <div id="dg-start" class="dg-overlay">
           <div class="dg-card dg-start-card">
-            <img class="dg-card-sign" src="${IMAGE_PATHS.topSign}" alt="ป้ายเกมยิงตุ๊กตา" />
-            <div class="dg-sub dg-start-copy">ยิงเป้าตุ๊กตาให้แม่นที่สุดใน 60 วินาที<br/>กด Space เพื่อเติมกระสุนใหม่</div>
-            <button id="dg-start-btn" class="dg-button">เริ่มเกม</button>
+            <div class="dg-sub dg-start-copy">\u0e22\u0e34\u0e07\u0e40\u0e1b\u0e49\u0e32\u0e15\u0e38\u0e4a\u0e01\u0e15\u0e32\u0e43\u0e2b\u0e49\u0e41\u0e21\u0e48\u0e19\u0e17\u0e35\u0e48\u0e2a\u0e38\u0e14\u0e43\u0e19 60 \u0e27\u0e34\u0e19\u0e32\u0e17\u0e35<br/>\u0e01\u0e14 Space \u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e40\u0e15\u0e34\u0e21\u0e01\u0e23\u0e30\u0e2a\u0e38\u0e19\u0e43\u0e2b\u0e21\u0e48</div>
+            <button id="dg-start-btn" class="dg-button">\u0e40\u0e23\u0e34\u0e48\u0e21\u0e40\u0e01\u0e21</button>
           </div>
         </div>
         <div id="dg-end" class="dg-overlay dg-hidden">
           <div class="dg-card dg-end-card">
-            <img class="dg-card-sign" src="${IMAGE_PATHS.topSign}" alt="ป้ายสรุปคะแนน" />
-            <div class="dg-sub">คะแนนรวมของคุณ</div>
+            <div class="dg-sub">\u0e04\u0e30\u0e41\u0e19\u0e19\u0e23\u0e27\u0e21\u0e02\u0e2d\u0e07\u0e04\u0e38\u0e13</div>
             <div id="dg-final-score" class="dg-final-score">0</div>
-            <button id="dg-finish-btn" class="dg-button">กลับแผนที่</button>
+            <button id="dg-finish-btn" class="dg-button">\u0e01\u0e25\u0e31\u0e1a\u0e41\u0e1c\u0e19\u0e17\u0e35\u0e48</button>
           </div>
         </div>
-        <div class="dg-instructions">คลิกเพื่อยิงเป้า และกด Space เพื่อรีโหลดกระสุน</div>
+        <div class="dg-instructions">\u0e04\u0e25\u0e34\u0e01\u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e22\u0e34\u0e07\u0e40\u0e1b\u0e49\u0e32 \u0e41\u0e25\u0e30\u0e01\u0e14 Space \u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e23\u0e35\u0e42\u0e2b\u0e25\u0e14\u0e01\u0e23\u0e30\u0e2a\u0e38\u0e19</div>
       </div>
     `;
 
@@ -547,7 +548,7 @@ export default class DollGameScene extends Phaser.Scene {
         return;
       }
       if (count === 0) {
-        this.countdownEl.textContent = "เริ่ม!";
+        this.countdownEl.textContent = "\u0e40\u0e23\u0e34\u0e48\u0e21!";
         this.playSfx("start", 0.8);
         count -= 1;
         this.countdownTimer = window.setTimeout(runTick, 900);

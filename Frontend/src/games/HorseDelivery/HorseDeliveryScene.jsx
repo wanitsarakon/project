@@ -63,9 +63,9 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     const { width, height } = this.scale;
 
     this.add.image(width / 2, height / 2, "horse-bg").setDisplaySize(width, height);
-    this.add.rectangle(width / 2, height - 76, width, 160, 0x5f3517, 0.01);
+    this.add.rectangle(width / 2, height - 74, width, 160, 0x5f3517, 0.01);
 
-    this.groundY = height - 164;
+    this.groundY = height - 132;
     this.ground = this.physics.add.staticImage(width / 2, this.groundY + 30)
       .setDisplaySize(width, 90)
       .setVisible(false);
@@ -80,44 +80,79 @@ export default class HorseDeliveryScene extends Phaser.Scene {
   }
 
   createHud() {
-    const { width } = this.scale;
+    const { width, height } = this.scale;
 
     this.scoreManager = new ScoreManager(this);
     this.scoreManager.hide();
 
-    this.timeText = this.add.text(width - 28, 32, `เวลา ${GAME_TIME}`, {
+    this.timeFrame = this.add.rectangle(170, 44, 292, 62, 0x5a2811, 0.82)
+      .setStrokeStyle(4, 0xa35c24)
+      .setDepth(19)
+      .setVisible(false);
+
+    this.timeText = this.add.text(170, 44, `TIME: ${GAME_TIME}s`, {
       fontFamily: "Kanit",
-      fontSize: "30px",
+      fontSize: "28px",
       color: "#fff4bf",
       stroke: "#4f1e00",
       strokeThickness: 5,
-    }).setOrigin(1, 0).setDepth(20).setVisible(false);
+    }).setOrigin(0.5).setDepth(20).setVisible(false);
 
-    this.infoText = this.add.text(width / 2, 32, "แตะหน้าจอหรือกด Space เพื่อกระโดดข้ามสิ่งกีดขวาง", {
+    this.infoText = this.add.text(width / 2, 28, "แตะหน้าจอหรือกด Space เพื่อกระโดดข้ามสิ่งกีดขวาง", {
       fontFamily: "Kanit",
       fontSize: "18px",
       color: "#fffbe6",
       backgroundColor: "rgba(51,26,4,0.5)",
       padding: { left: 14, right: 14, top: 6, bottom: 6 },
     }).setOrigin(0.5, 0).setDepth(20).setVisible(false);
+
+    this.rulePanel = this.add.container(width - 210, 170).setDepth(18).setVisible(false);
+    const ruleBoard = this.add.rectangle(0, 0, 290, 192, 0x673116, 0.88).setStrokeStyle(5, 0xd8a04f);
+    const ruleSign = this.add.image(0, 0, "horse-rule-sign").setDisplaySize(250, 176);
+    this.rulePanel.add([ruleBoard, ruleSign]);
+
+    this.boostShell = this.add.rectangle(width / 2, height - 38, 432, 38, 0x5e250f, 0.92)
+      .setStrokeStyle(4, 0xd2872d)
+      .setDepth(19)
+      .setVisible(false);
+    this.boostTrack = this.add.rectangle(width / 2 - 36, height - 38, 286, 18, 0x2a1306, 0.9)
+      .setDepth(20)
+      .setVisible(false);
+    this.boostFill = this.add.rectangle(width / 2 - 179, height - 38, 0, 18, 0x2d9cff, 1)
+      .setOrigin(0, 0.5)
+      .setDepth(21)
+      .setVisible(false);
+    this.boostLabel = this.add.text(width / 2 + 164, height - 38, "BOOST", {
+      fontFamily: "Kanit",
+      fontSize: "26px",
+      fontStyle: "bold",
+      color: "#fff0bf",
+      stroke: "#5a2200",
+      strokeThickness: 5,
+    }).setOrigin(0.5).setDepth(22).setVisible(false);
   }
 
   createStartOverlay() {
     const { width, height } = this.scale;
     this.startOverlay = this.add.container(0, 0).setDepth(40);
     const dim = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.58);
-    const banner = this.add.image(width / 2, height / 2 - 78, "horse-start-sign").setDisplaySize(660, 440);
-    const ruleSign = this.add.image(width / 2, height / 2 + 118, "horse-rule-sign").setDisplaySize(400, 296);
-    const copy = this.add.text(width / 2, height / 2 + 8, "ขี่ม้าส่งของให้ไว เก็บลูกอม เหรียญ และของขวัญได้ +1 แต่ชนถังหรือเก็บฟางจะ -1", {
-      fontFamily: "Kanit",
-      fontSize: "19px",
-      color: "#fff7db",
-      stroke: "#3c1e00",
-      strokeThickness: 5,
-      wordWrap: { width: 520 },
-      align: "center",
-    }).setOrigin(0.5);
-    const button = this.add.text(width / 2, height / 2 + 250, "เริ่มแข่ง", {
+    const banner = this.add.image(width / 2, height / 2 - 96, "horse-start-sign").setDisplaySize(700, 468);
+    const ruleSign = this.add.image(width / 2 + 4, height / 2 + 118, "horse-rule-sign").setDisplaySize(430, 318);
+    const copy = this.add.text(
+      width / 2,
+      height / 2 + 4,
+      "เก็บลูกอม เหรียญ และของขวัญได้ +1 แต่ถ้าชนถังหรือเก็บฟางจะโดน -1 กระโดดให้แม่นเพื่อเก็บของส่งเมืองให้มากที่สุดก่อนหมดเวลา",
+      {
+        fontFamily: "Kanit",
+        fontSize: "18px",
+        color: "#fff7db",
+        stroke: "#3c1e00",
+        strokeThickness: 5,
+        wordWrap: { width: 540 },
+        align: "center",
+      },
+    ).setOrigin(0.5);
+    const button = this.add.text(width / 2, height / 2 + 256, "เริ่มแข่ง", {
       fontFamily: "Kanit",
       fontSize: "28px",
       color: "#fff7d9",
@@ -214,21 +249,22 @@ export default class HorseDeliveryScene extends Phaser.Scene {
   startGame() {
     const { width, height } = this.scale;
 
-    this.gallopBgm = this.sound.add("horse-gallop", {
-      loop: true,
-      volume: 0.24,
-    });
-    this.fairBgm = this.sound.add("horse-fair-bgm", {
-      loop: true,
-      volume: 0.11,
-    });
+    this.gallopBgm = this.sound.add("horse-gallop", { loop: true, volume: 0.24 });
+    this.fairBgm = this.sound.add("horse-fair-bgm", { loop: true, volume: 0.11 });
     if (!this.gallopBgm.isPlaying) this.gallopBgm.play();
     if (!this.fairBgm.isPlaying) this.fairBgm.play();
     this.sound.play("horse-neigh", { volume: 0.35 });
 
     this.scoreManager.show();
+    this.timeFrame.setVisible(true);
     this.timeText.setVisible(true);
     this.infoText.setVisible(true);
+    this.rulePanel.setVisible(true);
+    this.boostShell.setVisible(true);
+    this.boostTrack.setVisible(true);
+    this.boostFill.setVisible(true);
+    this.boostLabel.setVisible(true);
+
     this.tweens.add({
       targets: this.infoText,
       alpha: 0.82,
@@ -237,20 +273,20 @@ export default class HorseDeliveryScene extends Phaser.Scene {
       repeat: 1,
     });
 
-    this.player = new Horse(this, 190, this.groundY - 2);
+    this.player = new Horse(this, 280, this.groundY - 18);
     this.physics.add.collider(this.player, this.ground);
 
     this.obstacles = this.physics.add.group({ maxSize: 24 });
     this.items = this.physics.add.group({ maxSize: 24 });
 
     this.spawnClock = this.time.addEvent({
-      delay: 1780,
+      delay: 2240,
       loop: true,
       callback: () => this.spawnObstacle(),
     });
 
     this.itemClock = this.time.addEvent({
-      delay: 2380,
+      delay: 3260,
       loop: true,
       callback: () => this.spawnItem(),
     });
@@ -260,7 +296,6 @@ export default class HorseDeliveryScene extends Phaser.Scene {
 
     this.jumpHandler = () => this.player?.jump();
     this.input.on("pointerdown", this.jumpHandler);
-
     this.keyJump = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     this.keyJump?.on("down", this.jumpHandler);
 
@@ -270,13 +305,11 @@ export default class HorseDeliveryScene extends Phaser.Scene {
       callback: () => {
         if (this.ended) return;
         this.timeLeft -= 1;
-        this.timeText.setText(`เวลา ${Math.max(0, this.timeLeft)}`);
+        this.timeText.setText(`TIME: ${Math.max(0, this.timeLeft)}s`);
         if (this.timeLeft === 25) {
-          this.infoText.setText("ช่วงท้ายแล้ว ของจะมาไวขึ้นอีก ระวังให้ดี!");
+          this.infoText.setText("ช่วงท้ายแล้ว ของจะมาไวขึ้นอีก ระวังจังหวะเก็บกับจังหวะกระโดดให้ดี!");
         }
-        if (this.timeLeft <= 0) {
-          this.endGame();
-        }
+        if (this.timeLeft <= 0) this.endGame();
       },
     });
 
@@ -292,12 +325,12 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     if (this.timeLeft <= 24 && !this.midgameRampApplied) {
       this.midgameRampApplied = true;
       this.spawnClock?.reset({
-        delay: 1540,
+        delay: 1980,
         loop: true,
         callback: () => this.spawnObstacle(),
       });
       this.itemClock?.reset({
-        delay: 2050,
+        delay: 2860,
         loop: true,
         callback: () => this.spawnItem(),
       });
@@ -309,7 +342,7 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     const item = new Items(
       this,
       this.scale.width + 72,
-      this.groundY - Phaser.Math.Between(78, 118),
+      this.groundY - Phaser.Math.Between(74, 108),
     );
     this.items.add(item);
     item.setVelocityX(-(270 + (GAME_TIME - this.timeLeft) * 1.9));
@@ -319,17 +352,16 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     if (this.ended || !this.player) return;
 
     this.player.update();
+    const boostRatio = this.player.getBoostRatio();
+    this.boostFill.width = 286 * boostRatio;
+    this.boostFill.fillColor = boostRatio > 0.7 ? 0x2d9cff : 0xffb323;
 
     this.obstacles?.children?.each((obs) => {
-      if (obs?.active && obs.x < -100) {
-        obs.destroy();
-      }
+      if (obs?.active && obs.x < -100) obs.destroy();
     });
 
     this.items?.children?.each((item) => {
-      if (item?.active && item.x < -100) {
-        item.destroy();
-      }
+      if (item?.active && item.x < -100) item.destroy();
     });
   }
 
@@ -346,7 +378,7 @@ export default class HorseDeliveryScene extends Phaser.Scene {
       yoyo: true,
       repeat: 1,
     });
-    this.flashFeedback("-1 ชนถัง", "#ffd7d7");
+    this.flashFeedback("-1", "#ffd7d7");
     this.cameras.main.shake(180, 0.008);
   }
 
@@ -359,7 +391,7 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     if (type === "item_hay") {
       this.scoreManager.addScore(-1);
       this.cameras.main.shake(120, 0.004);
-      this.flashFeedback("-1 เก็บฟางผิดจังหวะ", "#ffe0cf");
+      this.flashFeedback("-1", "#ffe0cf");
       return;
     }
 
@@ -367,17 +399,14 @@ export default class HorseDeliveryScene extends Phaser.Scene {
 
     if (type === "item_gift") {
       this.scoreManager.addScore(1);
-      this.flashFeedback("+1 ของขวัญ", "#ffefbe");
+      this.flashFeedback("+1", "#ffefbe");
       this.sound.play("horse-neigh", { volume: 0.28 });
-    } else if (type === "item_candy") {
+    } else if (type === "item_candy" || type === "item_coin") {
       this.scoreManager.addScore(1);
-      this.flashFeedback("+1 ลูกอม", "#ddffd8");
-    } else if (type === "item_coin") {
-      this.scoreManager.addScore(1);
-      this.flashFeedback("+1 เหรียญ", "#ddffd8");
+      this.flashFeedback("+1", "#ddffd8");
     } else {
       this.scoreManager.addScore(1);
-      this.flashFeedback("+1 เก็บของสำเร็จ", "#ddffd8");
+      this.flashFeedback("+1", "#ddffd8");
     }
 
     this.tweens.add({
@@ -390,27 +419,28 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     });
   }
 
-  flashFeedback(message, color) {
-    const toast = this.add.text(this.scale.width / 2, 112, message, {
+  flashFeedback(message) {
+    const toast = this.add.text(this.scale.width / 2 + 20, 250, message, {
       fontFamily: "Kanit",
-      fontSize: "22px",
+      fontSize: "42px",
+      fontStyle: "bold",
       color: "#3b1800",
-      backgroundColor: color,
-      padding: { left: 14, right: 14, top: 8, bottom: 8 },
+      stroke: "#fff4d1",
+      strokeThickness: 8,
     }).setOrigin(0.5).setDepth(30).setAlpha(0);
 
     this.tweens.add({
       targets: toast,
       alpha: 1,
-      y: 90,
-      duration: 520,
+      y: 214,
+      duration: 380,
       ease: "Cubic.easeOut",
       onComplete: () => {
         this.tweens.add({
           targets: toast,
           alpha: 0,
-          y: 76,
-          duration: 180,
+          y: 186,
+          duration: 220,
           onComplete: () => toast.destroy(),
         });
       },
@@ -429,6 +459,12 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     this.timerEvent?.remove(false);
     this.countdownEvent?.remove(false);
     this.infoText.setVisible(false);
+    this.timeFrame.setVisible(false);
+    this.rulePanel.setVisible(false);
+    this.boostShell.setVisible(false);
+    this.boostTrack.setVisible(false);
+    this.boostFill.setVisible(false);
+    this.boostLabel.setVisible(false);
 
     this.resultScoreText.setText(String(this.scoreManager.getScore()));
     this.resultHintText.setText(

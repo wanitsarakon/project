@@ -43,6 +43,7 @@ export default class FlowerGameScene extends Phaser.Scene {
     this.gameTimer = null;
     this.customerTimers = new Map();
     this.audio = {};
+    this.audioContext = null;
   }
 
   init(data = {}) {
@@ -88,7 +89,7 @@ export default class FlowerGameScene extends Phaser.Scene {
         .fl-bg{position:absolute;inset:0;background:url('${ASSET_BASE}/image/bg-temple.png') center/cover no-repeat;filter:saturate(1.08)}
         .fl-dim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,6,8,.35),rgba(20,6,8,.62))}
         .fl-ui{position:absolute;inset:0;display:flex;flex-direction:column}
-        .fl-header{display:flex;justify-content:space-between;align-items:flex-start;padding:16px 18px;gap:12px;z-index:3}
+        .fl-header{display:flex;justify-content:space-between;align-items:flex-start;padding:14px 16px;gap:12px;z-index:3}
         .fl-sign{min-width:140px;padding:10px 18px;border-radius:22px;background:rgba(52,17,8,.84);border:1px solid rgba(255,213,139,.25);text-align:center;box-shadow:0 10px 22px rgba(0,0,0,.24)}
         .fl-sign .label{font-size:14px;color:#ffdfad}
         .fl-sign .value{font-size:32px;font-weight:800;color:#fff9e8;line-height:1.05}
@@ -97,36 +98,36 @@ export default class FlowerGameScene extends Phaser.Scene {
         .fl-item strong{display:block;font-size:15px}
         .fl-item span{font-size:26px;font-weight:800}
         .fl-area{position:relative;flex:1}
-        .fl-customers{position:absolute;inset:82px 0 180px;pointer-events:none}
-        .fl-customer{position:absolute;bottom:0;width:min(22vw,190px);pointer-events:auto;transition:left .6s ease,right .6s ease,opacity .5s ease,transform .2s ease,filter .2s ease}
+        .fl-customers{position:absolute;inset:64px 0 150px;pointer-events:none}
+        .fl-customer{position:absolute;bottom:0;width:min(24vw,210px);pointer-events:auto;transition:left .6s ease,right .6s ease,opacity .5s ease,transform .2s ease,filter .2s ease}
         .fl-customer.selected{transform:translateY(-8px) scale(1.03)}
         .fl-customer.worried{filter:drop-shadow(0 0 18px rgba(255,221,89,.28))}
         .fl-customer.angry{filter:drop-shadow(0 0 22px rgba(255,59,48,.34))}
         .fl-customer.timeout{filter:grayscale(1) brightness(.62)}
-        .fl-patience{position:absolute;left:-14px;bottom:18px;width:10px;height:150px;border-radius:999px;background:rgba(255,255,255,.16);overflow:hidden;box-shadow:0 0 10px rgba(0,0,0,.22)}
+        .fl-patience{position:absolute;left:-12px;bottom:24px;width:10px;height:164px;border-radius:999px;background:rgba(255,255,255,.16);overflow:hidden;box-shadow:0 0 10px rgba(0,0,0,.22)}
         .fl-patience-fill{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(180deg,#39d353,#0a8f41);border-radius:999px}
-        .fl-bubble{position:absolute;bottom:78%;left:50%;transform:translateX(-50%);min-width:170px;max-width:230px;padding:12px 14px;border-radius:18px;background:rgba(255,247,233,.96);color:#6b3500;font-size:14px;line-height:1.45;box-shadow:0 12px 22px rgba(0,0,0,.18);display:none}
+        .fl-bubble{position:absolute;bottom:78%;left:50%;transform:translateX(-50%);min-width:178px;max-width:236px;padding:12px 14px;border-radius:18px;background:rgba(255,247,233,.96);color:#6b3500;font-size:14px;line-height:1.45;box-shadow:0 12px 22px rgba(0,0,0,.18);display:none}
         .fl-bubble.show{display:block}
         .fl-bubble::after{content:"";position:absolute;left:50%;bottom:-8px;transform:translateX(-50%);border-width:8px 8px 0 8px;border-style:solid;border-color:rgba(255,247,233,.96) transparent transparent transparent}
         .fl-order{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
         .fl-order img{width:28px;height:28px;object-fit:contain}
         .fl-tag{position:absolute;right:6px;bottom:6px;padding:6px 10px;border-radius:999px;background:rgba(82,22,4,.9);color:#ffe4b3;font-size:11px;font-weight:800;letter-spacing:.03em}
         .fl-sprite{width:100%;height:min(46vw,330px);background:center bottom/contain no-repeat}
-        .fl-garland{position:absolute;left:50%;bottom:145px;transform:translateX(-50%);width:min(42vw,360px);height:110px;display:flex;align-items:flex-start;justify-content:center}
+        .fl-garland{position:absolute;left:50%;bottom:154px;transform:translateX(-50%);width:min(40vw,340px);height:118px;display:flex;align-items:flex-start;justify-content:center}
         .fl-rope{position:absolute;top:10px;left:8%;right:8%;height:16px;background:url('${ASSET_BASE}/image/rope.png') center/contain repeat-x}
         .fl-stack{position:relative;display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap;justify-content:center;padding-top:18px;max-width:82%}
         .fl-stack img{width:34px;height:34px;object-fit:contain;filter:drop-shadow(0 4px 6px rgba(0,0,0,.22))}
-        .fl-table{position:absolute;left:0;right:0;bottom:0;height:235px;background:url('${ASSET_BASE}/image/table-front.png') center bottom/cover no-repeat;pointer-events:none}
-        .fl-controls{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);width:min(94vw,860px);display:grid;grid-template-columns:repeat(5,minmax(70px,1fr));gap:12px;z-index:4}
+        .fl-table{position:absolute;left:0;right:0;bottom:0;height:252px;background:url('${ASSET_BASE}/image/table-front.png') center bottom/cover no-repeat;pointer-events:none}
+        .fl-controls{position:absolute;left:50%;bottom:26px;transform:translateX(-50%);width:min(92vw,820px);display:grid;grid-template-columns:repeat(5,minmax(70px,1fr));gap:12px;z-index:4}
         .fl-btn{min-height:84px;border:none;border-radius:22px;background:rgba(255,250,241,.94);cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 12px 24px rgba(0,0,0,.2);transition:transform .16s ease,box-shadow .16s ease}
         .fl-btn:hover{transform:translateY(-2px);box-shadow:0 16px 28px rgba(0,0,0,.22)}
         .fl-btn img{width:54px;height:54px;object-fit:contain}
-        .fl-actions{position:absolute;right:16px;bottom:138px;display:flex;flex-direction:column;gap:10px;z-index:4}
+        .fl-actions{position:absolute;right:16px;bottom:146px;display:flex;flex-direction:column;gap:10px;z-index:4}
         .fl-action{border:none;border-radius:18px;padding:12px 16px;background:rgba(87,27,5,.9);color:#fff5df;font:inherit;font-weight:700;cursor:pointer;box-shadow:0 10px 22px rgba(0,0,0,.24)}
         .fl-action:disabled{opacity:.45;cursor:default}
-        .fl-topnote{position:absolute;left:50%;top:86px;transform:translateX(-50%);padding:10px 16px;border-radius:999px;background:rgba(255,247,230,.9);color:#703700;font-weight:700;z-index:4}
+        .fl-topnote{position:absolute;left:50%;top:76px;transform:translateX(-50%);padding:9px 16px;border-radius:999px;background:rgba(255,247,230,.9);color:#703700;font-weight:700;z-index:4}
         .fl-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(7,2,2,.58);z-index:10}
-        .fl-panel{position:relative;width:min(92vw,760px);padding:36px 34px 34px;border-radius:28px;background:url('${ASSET_BASE}/image/frame.png') center/100% 100% no-repeat;min-height:360px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+        .fl-panel{position:relative;width:min(92vw,760px);padding:32px 34px 30px;border-radius:28px;background:url('${ASSET_BASE}/image/frame.png') center/100% 100% no-repeat;min-height:344px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
         .fl-panel::before{content:"ร้านดอกไม้ไทย";position:absolute;top:22px;left:50%;transform:translateX(-50%);padding:8px 20px;border-radius:999px;background:rgba(120,40,0,.82);color:#ffe7bb;font-size:14px;font-weight:800;letter-spacing:.04em;box-shadow:0 10px 18px rgba(0,0,0,.18)}
         .fl-panel h2{margin:20px 0 8px;color:#7b2800;font-size:42px;line-height:1.05;text-shadow:0 2px 0 rgba(255,244,216,.55)}
         .fl-panel p{max-width:560px;color:#fff7ed;font-size:19px;line-height:1.6;text-shadow:0 2px 5px rgba(0,0,0,.35)}
@@ -137,7 +138,7 @@ export default class FlowerGameScene extends Phaser.Scene {
         .fl-subbtn{margin-top:10px;border:none;border-radius:999px;padding:10px 22px;background:rgba(82,29,5,.82);color:#fff4dc;font:inherit;font-weight:700;cursor:pointer}
         .fl-count{font-size:120px;font-weight:900;color:#fff8df;text-shadow:0 0 28px rgba(255,201,88,.4)}
         .fl-result{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(7,2,2,.76);z-index:12}
-        .fl-resultcard{position:relative;width:min(96vw,980px);aspect-ratio:16/9;background:url('${ASSET_BASE}/image/result_summary_banner.png') center/contain no-repeat;display:flex;align-items:center;justify-content:center;flex-direction:column}
+        .fl-resultcard{position:relative;width:min(96vw,980px);aspect-ratio:16/9;background:url('${ASSET_BASE}/image/result_summary_banner.png') center/contain no-repeat;display:flex;align-items:center;justify-content:center;flex-direction:column;padding-top:16px}
         .fl-resulttitle{margin-top:-10px;font-size:clamp(28px,4vw,48px);font-weight:900;color:#8c2700;text-shadow:0 2px 0 rgba(255,244,216,.65)}
         .fl-resultscore{margin-top:18px;font-size:clamp(54px,8vw,96px);font-weight:900;color:#b71d00}
         .fl-resultmeta{margin-top:8px;font-size:clamp(16px,2vw,22px);color:#5f2b00;font-weight:700;max-width:min(70vw,560px);text-align:center}
@@ -152,7 +153,7 @@ export default class FlowerGameScene extends Phaser.Scene {
         .fl-frozen{box-shadow:inset 0 0 0 1000px rgba(120,224,255,.08)}
         .fl-shake{animation:flShake .35s linear}
         @keyframes flShake{0%,100%{transform:translate(0,0)}25%{transform:translate(-6px,0)}50%{transform:translate(6px,0)}75%{transform:translate(-4px,0)}}
-        @media (max-width:900px){.fl-controls{grid-template-columns:repeat(5,minmax(56px,1fr));gap:8px}.fl-btn{min-height:72px}.fl-btn img{width:42px;height:42px}.fl-actions{right:10px;bottom:128px}.fl-action{padding:10px 12px;font-size:14px}.fl-topnote{top:92px;max-width:85vw;text-align:center}.fl-customers{inset:92px 0 190px}.fl-customer{width:min(28vw,160px)}.fl-tutorialgrid{grid-template-columns:1fr}}
+        @media (max-width:900px){.fl-controls{grid-template-columns:repeat(5,minmax(56px,1fr));gap:8px}.fl-btn{min-height:72px}.fl-btn img{width:42px;height:42px}.fl-actions{right:10px;bottom:132px}.fl-action{padding:10px 12px;font-size:14px}.fl-topnote{top:86px;max-width:85vw;text-align:center}.fl-customers{inset:82px 0 182px}.fl-customer{width:min(28vw,166px)}.fl-tutorialgrid{grid-template-columns:1fr}}
       </style>
       <div class="fl-root">
         <div class="fl-bg"></div>
@@ -236,7 +237,7 @@ export default class FlowerGameScene extends Phaser.Scene {
 
     this.audio.bgm = new Audio(`${ASSET_BASE}/audio/background.mp3`);
     this.audio.bgm.loop = true;
-    this.audio.bgm.volume = 0.25;
+    this.audio.bgm.volume = 0.22;
     this.audio.countdown = new Audio(`${ASSET_BASE}/audio/countdown.mp3`);
     this.audio.start = new Audio(`${ASSET_BASE}/audio/start.mp3`);
     this.renderHud();
@@ -396,6 +397,7 @@ export default class FlowerGameScene extends Phaser.Scene {
     if (this.state.ended) return;
     const customer = this.state.customers.find((entry) => entry.id === customerId && !entry.done);
     if (!customer) return;
+    this.playTone("select");
     this.state.selectedCustomerId = customerId;
     this.state.currentInput = [];
     this.garlandEl.innerHTML = "";
@@ -409,6 +411,7 @@ export default class FlowerGameScene extends Phaser.Scene {
     if (!customer || customer.done) return;
     const expected = customer.pattern[this.state.currentInput.length];
     if (color !== expected) {
+      this.playTone("wrong");
       this.state.perfectStreak = 0;
       this.state.combo = 0;
       this.shellEl.classList.add("fl-shake");
@@ -426,6 +429,7 @@ export default class FlowerGameScene extends Phaser.Scene {
       return;
     }
 
+    this.playTone("add");
     this.state.currentInput.push(color);
     this.state.perfectStreak += 1;
     const img = document.createElement("img");
@@ -441,6 +445,7 @@ export default class FlowerGameScene extends Phaser.Scene {
     const customer = this.state.customers.find((entry) => entry.id === customerId);
     if (!customer) return;
     this.state.combo += 1;
+    this.playTone("success");
     if (this.state.combo >= 10 && !this.state.feverMode) {
       this.state.feverMode = true;
       this.shellEl.classList.add("fl-fever");
@@ -475,6 +480,7 @@ export default class FlowerGameScene extends Phaser.Scene {
 
   useWater() {
     if (this.state.itemWaterCount <= 0 || this.state.isTimeFrozen || this.state.ended) return;
+    this.playTone("water");
     this.state.itemWaterCount -= 1;
     this.state.isTimeFrozen = true;
     this.shellEl.classList.add("fl-frozen");
@@ -488,6 +494,7 @@ export default class FlowerGameScene extends Phaser.Scene {
 
   usePowder() {
     if (this.state.itemPowderCount <= 0 || this.state.ended || !this.state.selectedCustomerId) return;
+    this.playTone("powder");
     this.state.itemPowderCount -= 1;
     this.renderHud();
     const customer = this.state.customers.find((entry) => entry.id === this.state.selectedCustomerId);
@@ -526,6 +533,7 @@ export default class FlowerGameScene extends Phaser.Scene {
     this.customerTimers.forEach((timer) => window.clearInterval(timer));
     this.customerTimers.clear();
     this.audio.bgm.pause();
+    this.playTone("end");
     this.finalScoreEl.textContent = `${this.state.score}`;
     this.finalMetaEl.textContent = `รอบ ${this.state.round} · คอมโบสูงสุดล่าสุด ${this.state.combo} · Perfect streak ${this.state.perfectStreak}`;
     this.resultOverlayEl.style.display = "flex";
@@ -551,5 +559,40 @@ export default class FlowerGameScene extends Phaser.Scene {
     });
     if (this.root?.parentNode) this.root.parentNode.removeChild(this.root);
     this.root = null;
+  }
+
+  playTone(kind) {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!this.audioContext) this.audioContext = new AudioCtx();
+      const ctx = this.audioContext;
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      const toneMap = {
+        select: { type: "triangle", freq: 520, end: 620, dur: 0.08, vol: 0.035 },
+        add: { type: "sine", freq: 660, end: 760, dur: 0.06, vol: 0.03 },
+        wrong: { type: "sawtooth", freq: 250, end: 170, dur: 0.16, vol: 0.045 },
+        success: { type: "triangle", freq: 720, end: 920, dur: 0.18, vol: 0.05 },
+        water: { type: "sine", freq: 440, end: 560, dur: 0.12, vol: 0.035 },
+        powder: { type: "triangle", freq: 840, end: 980, dur: 0.1, vol: 0.04 },
+        end: { type: "sine", freq: 600, end: 420, dur: 0.22, vol: 0.035 },
+      };
+      const cfg = toneMap[kind];
+      if (!cfg) return;
+
+      osc.type = cfg.type;
+      osc.frequency.setValueAtTime(cfg.freq, now);
+      osc.frequency.exponentialRampToValueAtTime(cfg.end, now + cfg.dur);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(cfg.vol, now + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + cfg.dur);
+      osc.start(now);
+      osc.stop(now + cfg.dur + 0.02);
+    } catch {}
   }
 }

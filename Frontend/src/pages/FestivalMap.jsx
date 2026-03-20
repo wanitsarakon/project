@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import GameContainer from "../games/GameContainer";
 import { FESTIVAL_BOOTHS } from "../games/FestivalMapScene";
@@ -23,7 +23,7 @@ function BottomPrizeBar({ prizes }) {
       style={{
         display: "flex",
         flexWrap: "wrap",
-        gap: 12,
+        gap: 8,
         justifyContent: "center",
       }}
     >
@@ -32,9 +32,9 @@ function BottomPrizeBar({ prizes }) {
           <div
             key={`${prize}-${index}`}
             style={{
-              minWidth: 132,
-              padding: "10px 14px",
-              borderRadius: 16,
+              minWidth: 116,
+              padding: "8px 12px",
+              borderRadius: 14,
               border: "2px solid rgba(255,218,118,0.72)",
               background:
                 "linear-gradient(180deg, rgba(93,49,11,0.92) 0%, rgba(52,25,8,0.94) 100%)",
@@ -50,8 +50,8 @@ function BottomPrizeBar({ prizes }) {
       ) : (
         <div
           style={{
-            padding: "10px 14px",
-            borderRadius: 16,
+            padding: "8px 12px",
+            borderRadius: 14,
             border: "2px dashed rgba(255,218,118,0.4)",
             color: "#ffe6ac",
           }}
@@ -77,11 +77,11 @@ function PlayerBottomHud({
       style={{
         position: "absolute",
         left: "50%",
-        bottom: 8,
+        bottom: 4,
         transform: "translateX(-50%)",
         width: "min(1080px, calc(100vw - 28px))",
-        padding: 12,
-        borderRadius: 22,
+        padding: 10,
+        borderRadius: 20,
         border: "2px solid rgba(255,221,133,0.82)",
         background:
           "linear-gradient(180deg, rgba(78,35,12,0.9) 0%, rgba(44,21,9,0.92) 55%, rgba(26,13,6,0.94) 100%)",
@@ -95,20 +95,20 @@ function PlayerBottomHud({
           style={{
             display: "grid",
             gridTemplateColumns: "1fr 0.9fr 1fr",
-            gap: 10,
+            gap: 8,
             alignItems: "stretch",
           }}
       >
         <div
           style={{
-            borderRadius: 16,
-            padding: 12,
+            borderRadius: 14,
+            padding: 10,
             background: "rgba(255,223,146,0.08)",
             border: "1px solid rgba(255,224,140,0.24)",
           }}
         >
-          <div style={{ fontSize: 13, color: "#ffd88c", marginBottom: 6 }}>ผู้เล่น</div>
-          <div style={{ fontSize: 21, fontWeight: 800, lineHeight: 1.05 }}>
+          <div style={{ fontSize: 12, color: "#ffd88c", marginBottom: 4 }}>ผู้เล่น</div>
+          <div style={{ fontSize: 18, fontWeight: 800, lineHeight: 1.05 }}>
             {player?.name || "ผู้เล่น"}
           </div>
           <div style={{ color: "#ffe7b5", marginTop: 4, fontSize: 15 }}>
@@ -118,14 +118,14 @@ function PlayerBottomHud({
 
         <div
           style={{
-            borderRadius: 16,
-            padding: 12,
+            borderRadius: 14,
+            padding: 10,
             background: "rgba(255,223,146,0.08)",
             border: "1px solid rgba(255,224,140,0.24)",
           }}
         >
-          <div style={{ fontSize: 13, color: "#ffd88c", marginBottom: 6 }}>คะแนนปัจจุบัน</div>
-          <div style={{ fontSize: 25, fontWeight: 800, lineHeight: 1 }}>{currentScore}</div>
+          <div style={{ fontSize: 12, color: "#ffd88c", marginBottom: 4 }}>คะแนนปัจจุบัน</div>
+          <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1 }}>{currentScore}</div>
           <div style={{ color: "#ffe7b5", marginTop: 6, fontSize: 15 }}>
             เล่นแล้ว {completedGames.length} / {TOTAL_GAMES} เกม
           </div>
@@ -138,13 +138,13 @@ function PlayerBottomHud({
 
         <div
           style={{
-            borderRadius: 16,
-            padding: 12,
+            borderRadius: 14,
+            padding: 10,
             background: "rgba(255,223,146,0.08)",
             border: "1px solid rgba(255,224,140,0.24)",
           }}
         >
-          <div style={{ fontSize: 13, color: "#ffd88c", marginBottom: 8 }}>ของรางวัล</div>
+          <div style={{ fontSize: 12, color: "#ffd88c", marginBottom: 6 }}>ของรางวัล</div>
           <BottomPrizeBar prizes={roomMeta.prizes} />
         </div>
       </div>
@@ -152,7 +152,7 @@ function PlayerBottomHud({
       {roomMeta.mode === "team" && teamMembers.length > 0 && (
         <div
           style={{
-            marginTop: 10,
+            marginTop: 8,
             display: "flex",
             flexWrap: "wrap",
             gap: 8,
@@ -240,7 +240,7 @@ function HostMonitor({ roomMeta, playerStatuses, completedPlayers, progressData,
             </div>
           </div>
 
-          <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button
               onClick={onFinalize}
               disabled={!progressData?.all_completed || finalizing}
@@ -294,7 +294,7 @@ function HostMonitor({ roomMeta, playerStatuses, completedPlayers, progressData,
         >
           <div
             style={{
-              borderRadius: 22,
+              borderRadius: 20,
               padding: 16,
               background: "rgba(255,255,255,0.05)",
               border: "1px solid rgba(255,219,125,0.2)",
@@ -308,7 +308,7 @@ function HostMonitor({ roomMeta, playerStatuses, completedPlayers, progressData,
 
           <div
             style={{
-              borderRadius: 22,
+              borderRadius: 20,
               padding: 16,
               background: "rgba(255,255,255,0.05)",
               border: "1px solid rgba(255,219,125,0.2)",
@@ -321,7 +321,7 @@ function HostMonitor({ roomMeta, playerStatuses, completedPlayers, progressData,
           {teamStandings.length > 0 ? (
             <div
               style={{
-                borderRadius: 22,
+                borderRadius: 20,
                 padding: 16,
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,219,125,0.2)",
@@ -333,8 +333,8 @@ function HostMonitor({ roomMeta, playerStatuses, completedPlayers, progressData,
                   <div
                     key={entry.team}
                     style={{
-                      borderRadius: 16,
-                      padding: 12,
+                      borderRadius: 14,
+                      padding: 10,
                       background: "rgba(255,233,174,0.08)",
                       border: "1px solid rgba(255,219,125,0.2)",
                     }}
@@ -352,7 +352,7 @@ function HostMonitor({ roomMeta, playerStatuses, completedPlayers, progressData,
           ) : (
             <div
               style={{
-                borderRadius: 22,
+                borderRadius: 20,
                 padding: 16,
                 background: "rgba(255,255,255,0.05)",
                 border: "1px solid rgba(255,219,125,0.2)",
@@ -792,7 +792,7 @@ export default function FestivalMap({
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              gap: 12,
+              gap: 8,
               padding: "12px 18px",
               borderRadius: 999,
               border: "2px solid rgba(255,221,133,0.72)",
@@ -812,7 +812,7 @@ export default function FestivalMap({
 
             <div
               style={{
-                padding: "10px 14px",
+                padding: "8px 12px",
                 borderRadius: 999,
                 background: "rgba(255,240,202,0.1)",
                 color: "#ffecc2",
@@ -877,3 +877,4 @@ export default function FestivalMap({
     </div>
   );
 }
+

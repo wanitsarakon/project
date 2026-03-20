@@ -111,7 +111,7 @@ export default class BalloonShootScene extends Phaser.Scene {
   _buildUILayer() {
     const layer = this._el("div", { id: "bs-ui-layer", class: "bs-ui-hidden" });
     layer.style.cssText = `
-      position:absolute; top:15px; left:20px; right:20px;
+      position:absolute; top:10px; left:18px; right:18px;
       display:flex; flex-direction:row; justify-content:space-between;
       align-items:flex-start; pointer-events:none; z-index:10;
     `;
@@ -126,9 +126,11 @@ export default class BalloonShootScene extends Phaser.Scene {
   _statBox(innerHTML) {
     const box = this._el("div");
     box.style.cssText = `
-      background:rgba(0,0,0,0.6); border:2px solid #ffd700; border-radius:10px;
-      padding:8px 16px; color:#fff; font-weight:600; font-size:1.1rem;
+      min-width:212px; background:linear-gradient(180deg,rgba(94,38,9,0.96),rgba(52,20,4,0.9));
+      border:3px solid #d59a38; border-radius:14px;
+      padding:8px 16px; color:#fff; font-weight:700; font-size:1.04rem;
       text-shadow:2px 2px 4px rgba(0,0,0,0.8); white-space:nowrap;
+      box-shadow:0 10px 20px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,240,208,0.2);
     `;
     box.innerHTML = innerHTML;
     return box;
@@ -137,7 +139,7 @@ export default class BalloonShootScene extends Phaser.Scene {
   _buildPowerBar() {
     const wrap = this._el("div", { id: "bs-power-bar", class: "bs-ui-hidden" });
     wrap.style.cssText = `
-      position:absolute; left:40px; bottom:120px; width:24px; height:250px;
+      position:absolute; left:28px; bottom:132px; width:22px; height:265px;
       background:rgba(0,0,0,0.3); border:3px solid #ffd700;
       box-shadow:0 0 10px rgba(212,175,55,0.6); border-radius:30px; z-index:10;
       overflow:visible;
@@ -152,7 +154,7 @@ export default class BalloonShootScene extends Phaser.Scene {
     const label = this._el("div");
     label.style.cssText = `
       position:absolute; bottom:-45px; left:50%; transform:translateX(-50%);
-      width:100px; text-align:center; font-size:14px; font-weight:bold;
+      width:100px; text-align:center; font-size:13px; font-weight:bold;
       letter-spacing:1.5px; color:#ffd700; text-shadow:2px 2px 4px rgba(0,0,0,0.9);
     `;
     label.textContent = "หลอดพลัง";
@@ -170,11 +172,12 @@ export default class BalloonShootScene extends Phaser.Scene {
 
     const inner = this._el("div");
     inner.style.cssText = "position:relative;width:min(92vw,760px);text-align:center;";
+    inner.style.cssText = "position:relative;width:min(92vw,720px);text-align:center;";
 
     const board = this._el("img");
     board.src = "/assets/balloonshoot/image/start_sign.png";
     board.style.cssText = `
-      width:min(92vw,760px); height:auto;
+      width:min(92vw,720px); height:auto;
       filter:drop-shadow(0 14px 28px rgba(0,0,0,0.55));
       pointer-events:none;
     `;
@@ -182,23 +185,23 @@ export default class BalloonShootScene extends Phaser.Scene {
     const title = this._el("img");
     title.src = "/assets/balloonshoot/image/top_sign.png";
     title.style.cssText = `
-      position:absolute; top:22px; left:50%; transform:translateX(-50%);
-      width:min(48vw,300px); height:auto; pointer-events:none;
+      position:absolute; top:18px; left:50%; transform:translateX(-50%);
+      width:min(48vw,286px); height:auto; pointer-events:none;
       filter:drop-shadow(0 8px 18px rgba(0,0,0,0.35));
     `;
 
     const sub = this._el("div");
     sub.style.cssText = `
-      position:absolute; top:132px; left:50%; transform:translateX(-50%);
-      width:min(70vw,480px); color:#fff7de; font-size:1.2rem; font-weight:700;
+      position:absolute; top:126px; left:50%; transform:translateX(-50%);
+      width:min(70vw,450px); color:#fff7de; font-size:1.02rem; font-weight:700;
       line-height:1.5; text-shadow:0 2px 8px rgba(0,0,0,0.8);
     `;
     sub.innerHTML = "ยิงลูกโป่งให้ได้คะแนนสูงที่สุดภายในเวลาที่กำหนด<br/>ชาร์จแรงยิงด้วยปุ่ม <strong>Space</strong> แล้วปล่อยให้จังหวะแม่นที่สุด";
 
     const btn = this._el("button");
     btn.style.cssText = `
-      position:absolute; left:50%; bottom:66px; transform:translateX(-50%);
-      padding:15px 40px; font-size:1.6rem; font-family:'Kanit',sans-serif; font-weight:bold;
+      position:absolute; left:50%; bottom:62px; transform:translateX(-50%);
+      min-width:220px; padding:13px 38px; font-size:1.48rem; font-family:'Kanit',sans-serif; font-weight:bold;
       color:#fff; background:linear-gradient(180deg,#ffcc00,#ff8800 50%,#ff4400);
       border:4px solid #fff; border-radius:50px; cursor:pointer;
       box-shadow:0 8px 0 #992200,0 15px 20px rgba(0,0,0,0.5);
@@ -232,19 +235,19 @@ export default class BalloonShootScene extends Phaser.Scene {
     const board = this._el("img");
     board.src = "/assets/balloonshoot/image/result_sign.png";
     board.style.cssText = `
-      width:min(92vw,760px); height:auto;
+      width:min(92vw,720px); height:auto;
       filter:drop-shadow(0 14px 28px rgba(0,0,0,0.55));
       pointer-events:none;
     `;
 
     const label = this._el("div");
-    label.style.cssText = "position:absolute; top:112px; left:50%; transform:translateX(-50%); font-size:1.5rem; color:#ffd700; margin-bottom:8px; text-shadow:0 2px 8px rgba(0,0,0,0.85);";
+    label.style.cssText = "position:absolute; top:102px; left:50%; transform:translateX(-50%); font-size:1.34rem; color:#ffd700; margin-bottom:8px; text-shadow:0 2px 8px rgba(0,0,0,0.85);";
     label.textContent = "คะแนนรวมของคุณ";
 
     const score = this._el("div", { id: "bs-total-score" });
     score.style.cssText = `
-      position:absolute; top:150px; left:50%; transform:translateX(-50%);
-      font-size:5rem; font-weight:900;
+      position:absolute; top:142px; left:50%; transform:translateX(-50%);
+      font-size:4.6rem; font-weight:900;
       background:linear-gradient(180deg,#fff 30%,#ffd700 60%,#ff8c00);
       -webkit-background-clip:text; -webkit-text-fill-color:transparent;
       filter:drop-shadow(4px 4px 0 #632b00);
@@ -254,8 +257,8 @@ export default class BalloonShootScene extends Phaser.Scene {
 
     const backBtn = this._el("button");
     backBtn.style.cssText = `
-      position:absolute; left:50%; bottom:64px; transform:translateX(-50%);
-      padding:12px 32px; font-size:1.2rem;
+      position:absolute; left:50%; bottom:58px; transform:translateX(-50%);
+      padding:12px 30px; font-size:1.12rem;
       font-family:'Kanit',sans-serif; font-weight:bold; color:#fff;
       background:linear-gradient(180deg,#ffcc00,#ff8800); border:3px solid #fff;
       border-radius:40px; cursor:pointer; outline:none;

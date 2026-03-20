@@ -2,19 +2,9 @@ import Phaser from "phaser";
 
 /**
  * CookingGameScene.jsx
- * แปลงจาก project-cooking/frontend/ → Phaser Scene (DOM overlay)
- * เกมทำลูกชุบ: ลากวัตถุดิบใส่ชาม → คน → จบเกม
- *
- * Assets path: /cooking/images/ และ /cooking/sounds/
- *
- * รับ props ผ่าน init(data):
- *   - onGameEnd({ score })  ← callback เมื่อเกมจบ
- *   - roomCode, player, roundId
- *
- * ระบบคะแนน (คำนวณ client-side ไม่ต้องพึ่ง Go backend):
- *   - ใส่วัตถุดิบถูกลำดับ: +10 ต่อขั้นตอน
- *   - ใส่ถูกครบ 7 และยังมีเวลา: +30 bonus
- *   - คะแนนสูงสุด: 100
+ * Thai dessert mixing mini-game built with a DOM overlay on top of Phaser.
+ * Players drag ingredients into the bowl in order, stir at the right moments,
+ * then receive a final score.
  */
 export default class CookingGameScene extends Phaser.Scene {
   constructor() {
@@ -28,6 +18,7 @@ export default class CookingGameScene extends Phaser.Scene {
     this.roomCode  = data.roomCode  ?? null;
     this.player    = data.player    ?? null;
     this.roundId   = data.roundId   ?? null;
+    this._audioCtx = null;
   }
 
   preload() {}
@@ -75,17 +66,17 @@ export default class CookingGameScene extends Phaser.Scene {
 
     // ─── Timer ───
     const timer = this._el("div", { id: "ck-timer", class: "ck-hidden" });
-    timer.textContent = "เวลา: 45";
+    timer.textContent = "\u0e40\u0e27\u0e25\u0e32: 45";
     overlay.appendChild(timer);
 
     // ─── NPC Area ───
     const npcArea = this._el("div", { id: "ck-npc-area", class: "ck-npc-area" });
     const bubble  = this._el("div", { class: "ck-speech-bubble" });
     const npcTxt  = this._el("p",   { id: "ck-npc-text" });
-    npcTxt.textContent = "รอก่อนนะหลาน...";
+    npcTxt.textContent = "\u0e23\u0e2d\u0e01\u0e48\u0e2d\u0e19\u0e19\u0e30\u0e2b\u0e25\u0e32\u0e19...";
     bubble.appendChild(npcTxt);
     const grandmaImg = this._el("img");
-    grandmaImg.src = `${I}ยาย.png`;
+    grandmaImg.src = `${I}\u0e22\u0e32\u0e22.png`;
     grandmaImg.className = "ck-grandma";
     grandmaImg.onerror = () => { grandmaImg.style.display = "none"; };
     npcArea.appendChild(bubble);
@@ -117,13 +108,13 @@ export default class CookingGameScene extends Phaser.Scene {
         <div class="ck-mouse-icon">🖱️</div>
         <div class="ck-arrow ck-arrow-right">→</div>
       </div>
-      <div class="ck-stir-msg">เลื่อนเมาส์ซ้าย-ขวาเพื่อผสม</div>
+      <div class="ck-stir-msg">\u0e40\u0e25\u0e37\u0e48\u0e2d\u0e19\u0e40\u0e21\u0e32\u0e2a\u0e4c\u0e0b\u0e49\u0e32\u0e22-\u0e02\u0e27\u0e32\u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e04\u0e19\u0e43\u0e2b\u0e49\u0e40\u0e02\u0e49\u0e32\u0e01\u0e31\u0e19</div>
     `;
     bowl.appendChild(stirHint);
 
     // bowl back
     const bowlBack = this._el("img");
-    bowlBack.src = `${I}ถ้วย copy.png`; bowlBack.className = "ck-bowl-back";
+    bowlBack.src = `${I}\u0e16\u0e49\u0e27\u0e22 copy.png`; bowlBack.className = "ck-bowl-back";
     bowlBack.onerror = () => { bowlBack.style.display = "none"; };
     bowl.appendChild(bowlBack);
 
@@ -149,7 +140,7 @@ export default class CookingGameScene extends Phaser.Scene {
 
     // spatula
     const spatula = this._el("img");
-    spatula.src = `${I}ช้อน.png`; spatula.id = "ck-spatula";
+    spatula.src = `${I}\u0e0a\u0e49\u0e2d\u0e19.png`; spatula.id = "ck-spatula";
     spatula.className = "ck-spatula ck-hidden";
     spatula.onerror = () => {
       spatula.src = `${I}spatula.png`;
@@ -159,13 +150,13 @@ export default class CookingGameScene extends Phaser.Scene {
 
     // bowl front
     const bowlFront = this._el("img");
-    bowlFront.src = `${I}ถ้วย.png`; bowlFront.className = "ck-bowl-front";
+    bowlFront.src = `${I}\u0e16\u0e49\u0e27\u0e22.png`; bowlFront.className = "ck-bowl-front";
     bowlFront.onerror = () => { bowlFront.style.display = "none"; };
     bowl.appendChild(bowlFront);
 
     // hint text
     const bowlHint = this._el("p", { class: "ck-bowl-hint", id: "ck-bowl-hint" });
-    bowlHint.textContent = "ลากวัตถุดิบมาที่นี่";
+    bowlHint.textContent = "\u0e25\u0e32\u0e01\u0e27\u0e31\u0e15\u0e16\u0e38\u0e14\u0e34\u0e1a\u0e21\u0e32\u0e17\u0e35\u0e48\u0e19\u0e35\u0e48";
     bowl.appendChild(bowlHint);
 
     overlay.appendChild(bowl);
@@ -188,13 +179,13 @@ export default class CookingGameScene extends Phaser.Scene {
     `;
     const wrapper = this._el("div", { class: "ck-banner-wrapper" });
     const bannerImg = this._el("img");
-    bannerImg.src = `${I}ป้ายด่าน.png`; bannerImg.className = "ck-stage-banner";
+    bannerImg.src = `${I}\u0e1b\u0e49\u0e32\u0e22\u0e14\u0e48\u0e32\u0e19.png`; bannerImg.className = "ck-stage-banner";
     bannerImg.onerror = () => { bannerImg.style.display="none"; };
     wrapper.appendChild(bannerImg);
 
     const inner = this._el("div", { class: "ck-banner-inner" });
     const btn = this._el("button", { id: "ck-btn-start" });
-    btn.textContent = "เริ่มทำขนม";
+    btn.textContent = "\u0e40\u0e23\u0e34\u0e48\u0e21\u0e17\u0e33\u0e02\u0e19\u0e21";
     btn.onclick = () => this._startGame();
     inner.appendChild(btn);
     wrapper.appendChild(inner);
@@ -212,7 +203,7 @@ export default class CookingGameScene extends Phaser.Scene {
     `;
     const wrapper = this._el("div", { class: "ck-banner-wrapper" });
     const bannerImg = this._el("img");
-    bannerImg.src = `${I}ป้ายด่าน2.png`; bannerImg.className = "ck-result-banner";
+    bannerImg.src = `${I}\u0e1b\u0e49\u0e32\u0e22\u0e14\u0e48\u0e32\u0e192.png`; bannerImg.className = "ck-result-banner";
     bannerImg.onerror = () => { bannerImg.style.display = "none"; };
     wrapper.appendChild(bannerImg);
 
@@ -222,12 +213,12 @@ export default class CookingGameScene extends Phaser.Scene {
     inner.appendChild(scoreEl);
 
     const noteEl = this._el("div", { id: "ck-result-note" });
-    noteEl.textContent = "คุณยายจะชิมแล้วบอกผลให้นะ";
+    noteEl.textContent = "\u0e04\u0e38\u0e13\u0e22\u0e32\u0e22\u0e08\u0e30\u0e0a\u0e34\u0e21\u0e41\u0e25\u0e49\u0e27\u0e1a\u0e2d\u0e01\u0e1c\u0e25\u0e43\u0e2b\u0e49\u0e19\u0e30";
     noteEl.style.cssText = "margin-top:10px; max-width:320px; text-align:center; color:#5f2b00; font-weight:700; line-height:1.5;";
     inner.appendChild(noteEl);
 
     const backBtn = this._el("button", { id: "ck-back-btn" });
-    backBtn.textContent = "กลับแผนที่";
+    backBtn.textContent = "\u0e01\u0e25\u0e31\u0e1a\u0e41\u0e1c\u0e19\u0e17\u0e35\u0e48";
     backBtn.onclick = () => {
       const score = this._gs?.score ?? 0;
       this._destroyUI();
@@ -244,31 +235,34 @@ export default class CookingGameScene extends Phaser.Scene {
     const S = BASE + "sounds/";
 
     // recipe & data
-    const recipe = ["ถั่วเหลือง","น้ำตาลทรายขาว","กะทิ","ผงวุ้น","สีผสมอาหาร","น้ำเปล่า","เกลือ"];
+    const recipe = ["bean", "sugar", "coconut", "agar", "color", "water", "salt"];
+    const recipeLabels = {
+      bean: "ถั่วเหลือง",
+      sugar: "น้ำตาลทรายขาว",
+      coconut: "กะทิ",
+      agar: "ผงวุ้น",
+      color: "สีผสมอาหาร",
+      water: "น้ำเปล่า",
+      salt: "เกลือ",
+    };
     const ingredientVisualMap = {
-      "ถั่วเหลือง":    "ck-fill-bean",
-      "น้ำตาลทรายขาว":"ck-fill-sugar",
-      "กะทิ":         "ck-fill-coconut",
-      "ผงวุ้น":       "ck-fill-agar",
-      "สีผสมอาหาร":   "ck-fill-color",
-      "น้ำเปล่า":     "ck-fill-water",
-      "เกลือ":        "ck-fill-salt",
+      bean: "ck-fill-bean",
+      sugar: "ck-fill-sugar",
+      coconut: "ck-fill-coconut",
+      agar: "ck-fill-agar",
+      color: "ck-fill-color",
+      water: "ck-fill-water",
+      salt: "ck-fill-salt",
     };
 
-    // วัตถุดิบ config [name, css-class, file]
     const INGREDIENTS = [
-      { name:"ถั่วเหลือง",    cls:"ck-green-bean",  file:"ถั่วเหลือง.png" },
-      { name:"น้ำตาลทรายขาว", cls:"ck-sugar",       file:"น้ำตาลทรายขาว.png" },
-      { name:"กะทิ",          cls:"ck-coconut",     file:"กะทิ.png" },
-      { name:"ผงวุ้น",        cls:"ck-agar",        file:"ผงวุ้น.png" },
-      { name:"สีผสมอาหาร",   cls:"ck-color",       file:"สีผสมอาหาร.png" },
-      { name:"น้ำเปล่า",      cls:"ck-water",       file:"น้ำเปล่า.png" },
-      { name:"เกลือ",         cls:"ck-salt",        file:"เกลือ.png" },
-      // decoys
-      { name:"palm_sugar",   cls:"ck-decoy-1",     file:"palm_sugar.png" },
-      { name:"ไข่ไก่",        cls:"ck-decoy-2",     file:"ไข่ไก่.png" },
-      { name:"น้ำเชื่อม",     cls:"ck-decoy-3",     file:"น้ำเชื่อม.png" },
-      { name:"กลิ่นผลไม้",   cls:"ck-decoy-4",     file:"กลิ่นผลไม้.png" },
+      { name: "bean", cls: "ck-green-bean", file: "ถั่วเหลือง.png" },
+      { name: "salt", cls: "ck-salt", file: "เกลือ.png" },
+      { name: "coconut", cls: "ck-coconut", file: "กะทิ.png" },
+      { name: "sugar", cls: "ck-sugar", file: "น้ำตาลทรายขาว.png" },
+      { name: "agar", cls: "ck-agar", file: "ผงวุ้น.png" },
+      { name: "color", cls: "ck-color", file: "สีผสมอาหาร.png" },
+      { name: "water", cls: "ck-water", file: "น้ำเปล่า.png" },
     ];
 
     // sounds
@@ -279,6 +273,35 @@ export default class CookingGameScene extends Phaser.Scene {
     this._bgm = bgm;
 
     const playClean = (a) => { try { a.pause(); a.currentTime=0; a.play(); } catch(_){} };
+    const playTone = (kind) => {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        if (!this._audioCtx) this._audioCtx = new AudioCtx();
+        const ctx = this._audioCtx;
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        const cfg = {
+          drop: { type: "triangle", start: 420, end: 620, dur: 0.09, vol: 0.03 },
+          stir: { type: "sine", start: 560, end: 740, dur: 0.08, vol: 0.025 },
+          phase: { type: "triangle", start: 680, end: 920, dur: 0.16, vol: 0.04 },
+          success: { type: "sine", start: 760, end: 1120, dur: 0.24, vol: 0.05 },
+          fail: { type: "sawtooth", start: 260, end: 180, dur: 0.2, vol: 0.04 },
+        }[kind];
+        if (!cfg) return;
+        osc.type = cfg.type;
+        osc.frequency.setValueAtTime(cfg.start, now);
+        osc.frequency.exponentialRampToValueAtTime(cfg.end, now + cfg.dur);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(cfg.vol, now + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + cfg.dur);
+        osc.start(now);
+        osc.stop(now + cfg.dur + 0.02);
+      } catch {}
+    };
 
     // game state
     const gs = {
@@ -330,7 +353,7 @@ export default class CookingGameScene extends Phaser.Scene {
           const ph = document.createElement("div");
           ph.className = `ck-ingredient ${ing.cls} ck-placeholder`;
           ph.dataset.name = ing.name;
-          ph.textContent = ing.name;
+          ph.textContent = recipeLabels[ing.name] || ing.name;
           ph.draggable = true;
           ph.addEventListener("dragstart", onDragStart);
           tableArea.appendChild(ph);
@@ -357,6 +380,7 @@ export default class CookingGameScene extends Phaser.Scene {
       if (!name || !srcEl) return;
 
       gs.steps.push(name);
+      playTone("drop");
       document.getElementById("ck-bowl-hint")?.classList.add("ck-hidden");
       srcEl.style.visibility = "hidden";
 
@@ -373,7 +397,7 @@ export default class CookingGameScene extends Phaser.Scene {
       document.body.appendChild(wrapper);
 
       const img = document.createElement("img");
-      img.src = `${I}${name}.png`;
+      img.src = `${I}${recipeLabels[name] || name}.png`;
       img.className = "ck-item-pouring";
       img.onerror = () => { img.style.display = "none"; };
       wrapper.appendChild(img);
@@ -392,13 +416,18 @@ export default class CookingGameScene extends Phaser.Scene {
     });
 
     // ─── Pour Effect ───
-    const isLiquid = n => ["กะทิ","น้ำเปล่า","สีผสมอาหาร","น้ำเชื่อม","ไข่ไก่","กลิ่นผลไม้"].includes(n);
+    const isLiquid = (n) => ["coconut", "water", "color"].includes(n);
 
     function getStreamColor(n) {
-      const m = { "ถั่วเหลือง":"#f3e18a","น้ำตาลทรายขาว":"#fff","กะทิ":"#fff",
-        "ผงวุ้น":"rgba(255,255,255,0.7)","สีผสมอาหาร":"#ff4d4d",
-        "น้ำเปล่า":"rgba(120,199,226,0.6)","เกลือ":"#eee",
-        "palm_sugar":"#f2efed","ไข่ไก่":"#FFD700","น้ำเชื่อม":"#FFFACD","กลิ่นผลไม้":"#FF69B4" };
+      const m = {
+        bean: "#f3e18a",
+        sugar: "#fff",
+        coconut: "#fff",
+        agar: "rgba(255,255,255,0.7)",
+        color: "#ff4d4d",
+        water: "rgba(120,199,226,0.6)",
+        salt: "#eee",
+      };
       return m[n] || "#fff";
     }
 
@@ -445,6 +474,7 @@ export default class CookingGameScene extends Phaser.Scene {
     function triggerStirPhase() {
       gs.isStirringEnabled = true;
       gs.stirProgress = 0;
+      playTone("phase");
       const bar = document.getElementById("ck-stir-bar");
       if (bar) bar.style.height = "0%";
       document.getElementById("ck-stir-progress")?.classList.remove("ck-hidden");
@@ -483,6 +513,7 @@ export default class CookingGameScene extends Phaser.Scene {
         if (delta >  Math.PI) delta -= Math.PI * 2;
         if (delta < -Math.PI) delta += Math.PI * 2;
         gs.stirProgress += Math.abs(delta) * 2.5;
+        if (Math.floor(gs.stirProgress) % 18 === 0) playTone("stir");
         const bar = document.getElementById("ck-stir-bar");
         if (bar) bar.style.height = Math.min(gs.stirProgress, 100) + "%";
         if (gs.stirProgress >= 100) finishStirring();
@@ -494,6 +525,7 @@ export default class CookingGameScene extends Phaser.Scene {
       gs.isStirringEnabled = false;
       gs.stirProgress = 0;
       gs.lastAngle = null;
+      playTone("phase");
       bowl.removeEventListener("mousemove", handleStirring);
       document.getElementById("ck-stir-progress")?.classList.add("ck-hidden");
       document.getElementById("ck-spatula")?.classList.add("ck-hidden");
@@ -528,7 +560,7 @@ export default class CookingGameScene extends Phaser.Scene {
       if (npcBubble) npcBubble.classList.remove("ck-hidden");
       await speak("มาหลาน... ยายจะบอกสูตรลูกชุบให้ฟังนะ ตั้งใจฟังล่ะ", 2000);
       for (let i = 0; i < recipe.length; i++) {
-        await speak(`ขั้นตอนที่ ${i + 1}: ใส่ "${recipe[i]}"`, 1000);
+        await speak(`?????????? ${i + 1}: ??? "${recipeLabels[recipe[i]]}"`, 1000);
       }
       await speak("ใส่ส่วนผสมแล้ว อย่าลืมคนให้เข้ากันตามที่ยายบอกด้วยนะหลาน... เริ่มได้!", 2000);
       if (npcBubble) npcBubble.classList.add("ck-hidden");
@@ -543,7 +575,7 @@ export default class CookingGameScene extends Phaser.Scene {
         const ov  = document.getElementById("ck-countdown-overlay");
         const txt = document.getElementById("ck-countdown-text");
         if (ov) ov.style.display = "flex";
-        const counts = [3, 2, 1, "เริ่ม!"];
+        const counts = [3, 2, 1, "\u0e40\u0e23\u0e34\u0e48\u0e21!"];
         let idx = 0;
         const iv = setInterval(() => {
           if (idx < counts.length) {
@@ -569,10 +601,10 @@ export default class CookingGameScene extends Phaser.Scene {
     function startGameplay() {
       gs.isGameActive = true;
       const t = document.getElementById("ck-timer");
-      if (t) { t.classList.remove("ck-hidden"); t.textContent = `เวลา: ${gs.gameTimeLeft}`; }
+      if (t) { t.classList.remove("ck-hidden"); t.textContent = `\u0e40\u0e27\u0e25\u0e32: ${gs.gameTimeLeft}`; }
       gs.gameInterval = setInterval(() => {
         gs.gameTimeLeft--;
-        if (t) t.textContent = `เวลา: ${gs.gameTimeLeft}`;
+        if (t) t.textContent = `\u0e40\u0e27\u0e25\u0e32: ${gs.gameTimeLeft}`;
         if (gs.gameTimeLeft <= 0) finishGame(true);
       }, 1000);
     }
@@ -591,6 +623,7 @@ export default class CookingGameScene extends Phaser.Scene {
 
       setTimeout(() => {
         if (npcBubble) npcBubble.classList.remove("ck-hidden");
+        playTone(isTimeout ? "fail" : "success");
         const msg = isTimeout
           ? "หมดเวลาแล้วจ๊ะ! มัวแต่คนเพลินหรือเปล่านี่เรา"
           : "ทำเสร็จแล้วรึ? ไหนยายดูซิว่าคนจนเนียนดีหรือยัง...";
@@ -610,12 +643,15 @@ export default class CookingGameScene extends Phaser.Scene {
 
       let text, grade;
       if (correct === recipe.length) {
+        playTone("success");
         text = `โอ้โห! เก่งมากหลาน ทำถูกหมดทั้ง 7 ขั้นตอนเลย รับไป ${score} คะแนนเต็ม!`;
         grade = "ยอดเชฟลูกชุบ";
       } else if (correct >= 4) {
+        playTone("phase");
         text = `ทำเสร็จแล้วจ้ะหลาน ได้ไป ${score} คะแนน... มีบางขั้นตอนที่สลับกันนะ`;
         grade = "พ่อครัวฝึกหัด";
       } else {
+        playTone("fail");
         text = `ยายชิมแล้วรสชาติแปลกๆ นะหลาน... ได้ไป ${score} คะแนนจ้ะ`;
         grade = "ต้องพยายามอีกนิด";
       }
@@ -661,26 +697,29 @@ export default class CookingGameScene extends Phaser.Scene {
 
       /* ─── Timer ─── */
       #ck-timer {
-        position: absolute; top: 10px; right: 20px; z-index: 10;
-        background: rgba(0,0,0,0.6); color: #ffd700;
-        font-size: 1.5rem; font-weight: 800; padding: 8px 20px; border-radius: 12px;
-        border: 2px solid #ffd700;
+        position: absolute; top: 16px; left: 18px; z-index: 10;
+        background: linear-gradient(180deg, rgba(51,19,4,0.9), rgba(102,46,8,0.88));
+        color: #ffe4a8;
+        font-size: 1.55rem; font-weight: 800; padding: 10px 22px; border-radius: 14px;
+        border: 2px solid rgba(255,215,120,0.85);
+        box-shadow: 0 10px 18px rgba(0,0,0,0.28);
       }
 
       /* ─── NPC ─── */
       .ck-npc-area {
-        position: absolute; bottom: 0; left: 20px;
+        position: absolute; bottom: 118px; right: 26px;
         display: flex; align-items: flex-end; gap: 10px; z-index: 5;
         pointer-events: none;
+        flex-direction: row-reverse;
       }
       .ck-speech-bubble {
-        background: white; border: 2px solid #555; border-radius: 14px;
-        padding: 10px 16px; font-size: 1rem; font-weight: 700; color: #333;
-        max-width: 260px; position: relative; margin-bottom: 60px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        background: white; border: 2px solid #555; border-radius: 16px;
+        padding: 12px 18px; font-size: 1rem; font-weight: 700; color: #333;
+        max-width: 190px; position: relative; margin-bottom: 98px;
+        box-shadow: 0 8px 18px rgba(0,0,0,0.28);
       }
       .ck-speech-bubble p { margin: 0; }
-      .ck-grandma { width: 160px; height: auto; animation: ck-nudge 3s ease-in-out infinite; }
+      .ck-grandma { width: 138px; height: auto; animation: ck-nudge 3s ease-in-out infinite; }
       @keyframes ck-nudge {
         0%,100% { transform: translateY(0); }
         50%      { transform: translateY(-10px); }
@@ -688,23 +727,23 @@ export default class CookingGameScene extends Phaser.Scene {
 
       /* ─── Table Area ─── */
       .ck-table-area {
-        position: absolute; bottom: 82px; left: 51%; transform: translateX(-50%);
-        display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
-        max-width: 700px; z-index: 4; padding: 0 20px;
+        position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%);
+        display: flex; flex-wrap: nowrap; justify-content: center; gap: 18px;
+        max-width: 760px; z-index: 4; padding: 0 48px; width: min(78vw, 780px);
       }
       .ck-table-decor {
         position: absolute;
-        bottom: 22px;
+        bottom: 8px;
         left: 50%;
         transform: translateX(-50%);
-        width: min(78vw, 800px);
+        width: min(88vw, 980px);
         height: auto;
         z-index: 2;
         pointer-events: none;
         filter: drop-shadow(0 10px 20px rgba(0,0,0,0.35));
       }
       .ck-ingredient {
-        width: 70px; height: 70px; object-fit: contain; cursor: grab;
+        width: 52px; height: 52px; object-fit: contain; cursor: grab;
         filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
         transition: transform 0.15s;
       }
@@ -719,8 +758,8 @@ export default class CookingGameScene extends Phaser.Scene {
 
       /* ─── Bowl ─── */
       .ck-bowl-container {
-        position: absolute; top: 52%; left: 58%; transform: translate(-50%, -50%);
-        width: 300px; height: 300px; z-index: 4;
+        position: absolute; top: 43%; left: 50%; transform: translate(-50%, -50%);
+        width: 270px; height: 228px; z-index: 4;
       }
       .ck-bowl-back, .ck-bowl-front {
         position: absolute; width: 100%; bottom: 0; z-index: 2;
@@ -736,12 +775,12 @@ export default class CookingGameScene extends Phaser.Scene {
         transition: opacity 0.5s, transform 0.5s;
       }
       .ck-spatula {
-        position: absolute; bottom: 60px; left: 100px; width: 60px;
+        position: absolute; bottom: 60px; left: 104px; width: 58px;
         z-index: 7; pointer-events: none;
         transition: left 0.1s, bottom 0.1s, transform 0.1s;
       }
       .ck-bowl-hint {
-        position: absolute; bottom: 30px; width: 100%; text-align: center;
+        position: absolute; bottom: 34px; width: 100%; text-align: center;
         color: rgba(255,255,255,0.8); font-size: 0.9rem; font-weight: 700;
         z-index: 8; pointer-events: none; text-shadow: 1px 1px 3px #000;
       }
@@ -850,17 +889,31 @@ export default class CookingGameScene extends Phaser.Scene {
       @media (max-width: 900px) {
         .ck-table-decor {
           width: min(90vw, 740px);
-          bottom: 34px;
+          bottom: 18px;
         }
         .ck-table-area {
-          bottom: 94px;
+          bottom: 98px;
           max-width: 90vw;
           gap: 6px;
+          flex-wrap: wrap;
         }
         .ck-ingredient,
         .ck-placeholder {
           width: 58px;
           height: 58px;
+        }
+        .ck-npc-area {
+          right: 14px;
+          bottom: 118px;
+        }
+        .ck-speech-bubble {
+          max-width: 190px;
+          margin-bottom: 96px;
+        }
+        .ck-bowl-container {
+          width: 248px;
+          height: 220px;
+          top: 38%;
         }
       }
     `;
