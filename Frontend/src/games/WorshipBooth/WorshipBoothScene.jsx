@@ -326,9 +326,9 @@ export default class WorshipBoothScene extends Phaser.Scene {
         .wb-halo {
           position: absolute;
           left: 50%;
-          top: 35%;
-          width: 280px;
-          height: 280px;
+          top: 39%;
+          width: 340px;
+          height: 340px;
           transform: translate(-50%, -50%);
           border-radius: 50%;
           background: radial-gradient(circle, rgba(255, 219, 125, 0.82), rgba(255, 219, 125, 0.12) 48%, rgba(255, 219, 125, 0) 72%);
@@ -338,10 +338,10 @@ export default class WorshipBoothScene extends Phaser.Scene {
         .wb-buddha {
           position: absolute;
           left: 50%;
-          top: 33%;
+          top: 39%;
           transform: translate(-50%, -50%);
-          width: min(44%, 270px);
-          max-height: 48%;
+          width: min(56%, 370px);
+          max-height: 62%;
           object-fit: contain;
           filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.34));
         }
@@ -349,10 +349,10 @@ export default class WorshipBoothScene extends Phaser.Scene {
         .wb-altar-shadow {
           position: absolute;
           left: 50%;
-          bottom: 80px;
+          bottom: 126px;
           transform: translateX(-50%);
-          width: 300px;
-          height: 88px;
+          width: 420px;
+          height: 118px;
           border-radius: 999px;
           background: radial-gradient(circle, rgba(63, 18, 8, 0.9), rgba(63, 18, 8, 0.78) 46%, rgba(63, 18, 8, 0) 72%);
           filter: blur(8px);
@@ -362,18 +362,18 @@ export default class WorshipBoothScene extends Phaser.Scene {
         .wb-altar {
           position: absolute;
           left: 50%;
-          bottom: 14px;
+          bottom: 92px;
           transform: translateX(-50%);
-          width: 388px;
+          width: 540px;
           display: grid;
-          grid-template-columns: 304px 74px;
+          grid-template-columns: 418px 122px;
           align-items: end;
-          gap: 10px;
+          gap: 0;
         }
 
         .wb-altar-table {
           position: relative;
-          height: 152px;
+          height: 228px;
           overflow: visible;
         }
 
@@ -386,25 +386,25 @@ export default class WorshipBoothScene extends Phaser.Scene {
         }
 
         .wb-altar-base {
-          transform: scale(1.16);
+          transform: scale(1.46);
           transform-origin: center bottom;
         }
 
         .wb-can {
-          width: 76px;
+          width: 126px;
           display: block;
           filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.22));
-          transform: translateY(0);
+          transform: translate(-10px, 8px);
         }
 
         .wb-footer {
           background: url('${BOTTOM_PANEL_IMAGE}') center/100% 100% no-repeat;
-          padding: 8px 10px 10px;
+          padding: 10px 12px 18px;
           display: grid;
           grid-template-columns: 1fr 230px;
           gap: 8px;
           align-items: end;
-          margin-top: -10px;
+          margin-top: -18px;
         }
 
         .wb-tabs {
@@ -430,9 +430,11 @@ export default class WorshipBoothScene extends Phaser.Scene {
 
         .wb-message {
           min-height: 28px;
-          margin: 6px 0 4px;
+          margin: 6px 0 8px;
           text-align: center;
-          font-size: 18px;
+          font-size: 17px;
+          line-height: 1.2;
+          white-space: normal;
           font-weight: 900;
           color: #fff0c8;
         }
@@ -446,7 +448,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
         .wb-action {
           border: none;
           border-radius: 16px;
-          padding: 6px 8px 8px;
+          padding: 10px 8px 12px;
           font: inherit;
           color: #fff8eb;
           background: linear-gradient(180deg, rgba(62, 24, 8, 0.96), rgba(35, 11, 4, 0.98));
@@ -463,7 +465,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
           width: 52px;
           height: 52px;
           display: block;
-          margin: 0 auto 4px;
+          margin: 0 auto 6px;
           object-fit: contain;
         }
 
