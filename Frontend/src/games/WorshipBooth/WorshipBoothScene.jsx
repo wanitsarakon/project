@@ -138,7 +138,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
         .wb-side,
         .wb-footer,
         .wb-status-card {
-          border-radius: 24px;
+          border-radius: 26px;
           box-shadow: 0 16px 26px rgba(0, 0, 0, 0.22);
         }
 
@@ -150,8 +150,8 @@ export default class WorshipBoothScene extends Phaser.Scene {
           align-items: center;
           justify-content: center;
           gap: 12px;
-          font-size: 19px;
-          font-weight: 900;
+          font-size: 25px;
+          font-weight: 1000;
           color: #fff4d8;
         }
 
@@ -278,6 +278,15 @@ export default class WorshipBoothScene extends Phaser.Scene {
           gap: 14px;
         }
 
+        .wb-bottom {
+          position: relative;
+          width: min(1320px, calc(100% - 44px));
+          margin: 2px auto 0;
+          padding-right: 246px;
+          margin-top: 2px;
+          padding-bottom: 0;
+        }
+
         .wb-stage {
           position: relative;
           overflow: hidden;
@@ -325,10 +334,10 @@ export default class WorshipBoothScene extends Phaser.Scene {
 
         .wb-halo {
           position: absolute;
-          left: 50%;
-          top: 39%;
-          width: 340px;
-          height: 340px;
+          left: 48.5%;
+          top: 34%;
+          width: 410px;
+          height: 410px;
           transform: translate(-50%, -50%);
           border-radius: 50%;
           background: radial-gradient(circle, rgba(255, 219, 125, 0.82), rgba(255, 219, 125, 0.12) 48%, rgba(255, 219, 125, 0) 72%);
@@ -337,11 +346,11 @@ export default class WorshipBoothScene extends Phaser.Scene {
 
         .wb-buddha {
           position: absolute;
-          left: 50%;
-          top: 39%;
+          left: 47.5%;
+          top: 30%;
           transform: translate(-50%, -50%);
-          width: min(56%, 370px);
-          max-height: 62%;
+          width: min(180%, 650px);
+          max-height: 230%;
           object-fit: contain;
           filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.34));
         }
@@ -349,31 +358,31 @@ export default class WorshipBoothScene extends Phaser.Scene {
         .wb-altar-shadow {
           position: absolute;
           left: 50%;
-          bottom: 126px;
+          bottom: 96px;
           transform: translateX(-50%);
           width: 420px;
-          height: 118px;
+          height: 106px;
           border-radius: 999px;
-          background: radial-gradient(circle, rgba(63, 18, 8, 0.9), rgba(63, 18, 8, 0.78) 46%, rgba(63, 18, 8, 0) 72%);
-          filter: blur(8px);
-          opacity: 0.92;
+          background: radial-gradient(circle, rgba(63, 18, 8, 0.84), rgba(63, 18, 8, 0.72) 48%, rgba(63, 18, 8, 0) 74%);
+          filter: blur(10px);
+          opacity: 0.82;
         }
 
         .wb-altar {
           position: absolute;
           left: 50%;
-          bottom: 92px;
+          bottom: 60px;
           transform: translateX(-50%);
-          width: 540px;
+          width: 576px;
           display: grid;
-          grid-template-columns: 418px 122px;
+          grid-template-columns: 444px 132px;
           align-items: end;
           gap: 0;
         }
 
         .wb-altar-table {
           position: relative;
-          height: 228px;
+          height: 232px;
           overflow: visible;
         }
 
@@ -386,26 +395,17 @@ export default class WorshipBoothScene extends Phaser.Scene {
         }
 
         .wb-altar-base {
-          transform: scale(1.46);
+          transform: scale(1.47);
           transform-origin: center bottom;
         }
 
         .wb-can {
-          width: 126px;
+          width: 300px;
           display: block;
           filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.22));
-          transform: translate(-10px, 8px);
+          transform: translate(16px, 10px);
         }
 
-        .wb-footer {
-          background: url('${BOTTOM_PANEL_IMAGE}') center/100% 100% no-repeat;
-          padding: 10px 12px 18px;
-          display: grid;
-          grid-template-columns: 1fr 230px;
-          gap: 8px;
-          align-items: end;
-          margin-top: -18px;
-        }
 
         .wb-tabs {
           display: flex;
@@ -415,7 +415,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
         .wb-tab {
           flex: 1;
           border-radius: 999px;
-          padding: 8px 10px;
+          padding: 7px 12px;
           text-align: center;
           font-size: 16px;
           font-weight: 900;
@@ -430,9 +430,9 @@ export default class WorshipBoothScene extends Phaser.Scene {
 
         .wb-message {
           min-height: 28px;
-          margin: 6px 0 8px;
+          margin: 2px 0 6px;
           text-align: center;
-          font-size: 17px;
+          font-size: 23px;
           line-height: 1.2;
           white-space: normal;
           font-weight: 900;
@@ -442,19 +442,22 @@ export default class WorshipBoothScene extends Phaser.Scene {
         .wb-grid {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
-          gap: 8px;
+          gap: 12px;
         }
 
         .wb-action {
           border: none;
-          border-radius: 16px;
-          padding: 10px 8px 12px;
+          border-radius: 18px;
+          min-height: 138px;
+          padding: 12px 10px 12px;
           font: inherit;
           color: #fff8eb;
           background: linear-gradient(180deg, rgba(62, 24, 8, 0.96), rgba(35, 11, 4, 0.98));
           border: 2px solid rgba(255, 219, 140, 0.3);
           cursor: pointer;
           transition: transform 0.15s ease, filter 0.15s ease;
+          font-size: 18px;
+          font-weight: 900;
         }
 
         .wb-action:hover { transform: translateY(-2px); }
@@ -462,26 +465,29 @@ export default class WorshipBoothScene extends Phaser.Scene {
         .wb-action.wrong { background: linear-gradient(180deg, #b74729, #6d1b0f); }
 
         .wb-action img {
-          width: 52px;
-          height: 52px;
+          width: 150px;
+          height: 150px;
           display: block;
-          margin: 0 auto 6px;
+          margin: 0 auto 25px;
           object-fit: contain;
         }
 
         .wb-pray {
-          width: 100%;
-          min-height: 92px;
+          position: absolute;
+          right: 0;
+          bottom: 8px;
+          width: 230px;
+          min-height: 88px;
           border: none;
           border-radius: 24px;
           background: url('${PRAY_BUTTON_IMAGE}') center/100% 100% no-repeat;
           font: inherit;
-          font-size: 18px;
+          font-size: 16px;
           font-weight: 900;
           color: #fff7e1;
           text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
           cursor: pointer;
-          padding: 0 16px;
+          padding: 0 18px;
         }
 
         .wb-pray[disabled] {
@@ -525,7 +531,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
           max-width: 720px;
           font-size: 21px;
           line-height: 1.6;
-          color: #ffe4b5;
+          color: #c60000;
         }
 
         .wb-startimg {
@@ -561,11 +567,11 @@ export default class WorshipBoothScene extends Phaser.Scene {
         .wb-count {
           font-size: 132px;
           font-weight: 900;
-          color: #fff6da;
+          color: #ffffff;
         }
 
         .wb-result {
-          background: rgba(255, 248, 235, 0.98);
+          background: rgba(235, 250, 255, 0.7);
           color: #683105;
         }
 
@@ -573,6 +579,16 @@ export default class WorshipBoothScene extends Phaser.Scene {
           display: block;
           margin-top: 12px;
           font-size: 36px;
+        }
+
+        #wb-final-fortune {  //คำทำนายจากเซียมซี
+          color: #b71c1c;
+          font-weight: 900;
+        }
+
+        #wb-final-meta {
+          color: #b71c1c;
+          font-weight: 900;
         }
 
         .wb-wish {
@@ -608,13 +624,12 @@ export default class WorshipBoothScene extends Phaser.Scene {
           font-size: 15px;
         }
 
-        @media (max-width: 1180px) {
+        @media (max-width: 980px) {
           .wb-wrap {
             grid-template-columns: 1fr;
           }
 
-          .wb-top,
-          .wb-footer {
+          .wb-top {
             grid-template-columns: 1fr;
           }
 
@@ -623,18 +638,30 @@ export default class WorshipBoothScene extends Phaser.Scene {
             grid-template-columns: 1fr 1fr;
             gap: 12px;
           }
+
+          .wb-bottom {
+            width: 100%;
+            padding-right: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+          }
         }
 
-        @media (max-width: 760px) {
-          .wb-wrap { padding: 12px; }
+        @media (max-width: 780px) {
+          .wb-wrap { padding: 15px; }
           .wb-left { grid-template-columns: 1fr; }
-          .wb-title { font-size: 36px; }
-          .wb-sub { font-size: 13px; }
-          .wb-message { font-size: 22px; }
+          .wb-title { font-size: 40px; }
+          .wb-sub { font-size: 16px; }
+          .wb-message { font-size: 25px; }
           .wb-grid { grid-template-columns: 1fr; }
-          .wb-footer { grid-template-columns: 1fr; }
-          .wb-pray { min-height: 88px; font-size: 20px; }
-          .wb-bubble { font-size: 18px; }
+          .wb-pray {
+            position: static;
+            width: 100%;
+            min-height: 90px;
+            font-size: 23px;
+          }
+          .wb-bubble { font-size: 20px; }
         }
       </style>
       <div class="wb-root">
@@ -681,8 +708,8 @@ export default class WorshipBoothScene extends Phaser.Scene {
               </div>
             </div>
 
-            <div class="wb-footer">
-              <div>
+            <div class="wb-bottom">
+              <div class="wb-footer">
                 <div id="wb-sequence" class="wb-tabs"></div>
                 <div id="wb-msg" class="wb-message">เริ่มจาก รูป</div>
                 <div id="wb-grid" class="wb-grid"></div>
@@ -698,7 +725,6 @@ export default class WorshipBoothScene extends Phaser.Scene {
             <h2>ซุ้มไหว้พระขอพร</h2>
             <p>ทำพิธีเพียงรอบเดียวตามลำดับ ธูป → เทียน → ดอกบัว เมื่อครบแล้วจึงไหว้พระขอพรและเสี่ยงเซียมซีรับพรกลับบ้านอย่างเป็นมงคล ด่านนี้ไม่นับคะแนนรวม</p>
             <button id="wb-start-btn" class="wb-mainbtn">เริ่มพิธี</button>
-            <div><button id="wb-help-btn" class="wb-subbtn">ดูวิธีเล่นอีกครั้ง</button></div>
           </div>
         </div>
 
@@ -715,7 +741,6 @@ export default class WorshipBoothScene extends Phaser.Scene {
             <div class="wb-wish">
               <label for="wb-wish-text">เขียนคำอธิษฐานหรือพรที่อยากขอไว้เป็นสิริมงคล</label>
               <textarea id="wb-wish-text" placeholder="เช่น ขอให้สุขภาพแข็งแรง การงานราบรื่น และมีแต่เรื่องดี ๆ เข้ามา"></textarea>
-              <div class="wb-note">ด่านนี้ไม่นับคะแนน ใช้เป็นช่วงปิดท้ายให้ผู้เล่นได้ขอพรและรับเซียมซีอย่างสบายใจ</div>
             </div>
             <button id="wb-finish-btn" class="wb-mainbtn">กลับแผนที่</button>
           </div>
@@ -756,9 +781,6 @@ export default class WorshipBoothScene extends Phaser.Scene {
     });
 
     this.root.querySelector("#wb-start-btn")?.addEventListener("click", () => this.startCountdown());
-    this.root.querySelector("#wb-help-btn")?.addEventListener("click", () => {
-      this.msgEl.textContent = "กดตามลำดับ ธูป → เทียน → ดอกบัว หากกดผิดต้องเริ่มลำดับใหม่";
-    });
     this.prayBtn?.addEventListener("click", () => this.finishRitual());
     this.root.querySelector("#wb-finish-btn")?.addEventListener("click", () => {
       this.onGameEnd?.({

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import GameContainer from "./games/GameContainer";
 
 import Home from "./pages/Home";
 import Host from "./pages/Host";
@@ -14,6 +15,11 @@ export default function App() {
   const [summary, setSummary] = useState(null);
   const [miniGameActive, setMiniGameActive] = useState(false);
   const bgmRef = useRef(null);
+  const searchParams =
+    typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search)
+      : null;
+  const debugScene = searchParams?.get("scene") ?? "";
 
   useEffect(() => {
     if (!bgmRef.current) {
@@ -53,6 +59,12 @@ export default function App() {
       bgmRef.current.currentTime = 0;
     }
   }, []);
+
+  if (debugScene === "worship") {
+    return (
+      <WorshipPreview />
+    );
+  }
 
   /* =========================
      NAV HELPERS
@@ -229,4 +241,32 @@ export default function App() {
 
   return null;
 
+}
+
+function WorshipPreview() {
+  useEffect(() => {
+    const kickOff = window.setInterval(() => {
+      if (!window.__festivalDebug?.startMiniGame) return;
+      window.__festivalDebug.startMiniGame("WorshipBoothScene");
+      window.clearInterval(kickOff);
+    }, 250);
+
+    return () => window.clearInterval(kickOff);
+  }, []);
+
+  return (
+    <GameContainer
+      roomCode="preview-room"
+      player={{ id: "preview-player", name: "Preview Player" }}
+      wsRef={{ current: null }}
+      allowRoundEvents={false}
+      mapData={{
+        boothStates: {
+          WorshipBoothScene: "unlocked",
+        },
+      }}
+      onGameEnd={() => {}}
+      onGameStart={() => {}}
+    />
+  );
 }
