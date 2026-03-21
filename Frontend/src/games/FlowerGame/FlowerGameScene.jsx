@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 
 const ASSET_BASE = "/assets/flowergame";
+const HUD_SIGN_IMAGE = "/assets/เเผ่นป้ายเวลากับคะเเนน.png";
 
 const FLOWERS = [
   { id: "white", label: "มะลิ", image: `${ASSET_BASE}/image/flower-white.png`, glow: "#fff6d7" },
@@ -90,7 +91,7 @@ export default class FlowerGameScene extends Phaser.Scene {
         .fl-dim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(20,6,8,.35),rgba(20,6,8,.62))}
         .fl-ui{position:absolute;inset:0;display:flex;flex-direction:column}
         .fl-header{display:flex;justify-content:space-between;align-items:flex-start;padding:14px 16px;gap:12px;z-index:3}
-        .fl-sign{min-width:140px;padding:10px 18px;border-radius:22px;background:rgba(52,17,8,.84);border:1px solid rgba(255,213,139,.25);text-align:center;box-shadow:0 10px 22px rgba(0,0,0,.24)}
+        .fl-sign{min-width:214px;min-height:88px;padding:18px 18px 12px;box-sizing:border-box;background:url('${HUD_SIGN_IMAGE}') center/100% 100% no-repeat;text-align:center;box-shadow:0 10px 22px rgba(0,0,0,.24);display:flex;flex-direction:column;justify-content:center}
         .fl-sign .label{font-size:14px;color:#ffdfad}
         .fl-sign .value{font-size:32px;font-weight:800;color:#fff9e8;line-height:1.05}
         .fl-items{display:flex;gap:10px}
@@ -160,12 +161,12 @@ export default class FlowerGameScene extends Phaser.Scene {
         <div class="fl-dim"></div>
         <div id="gameShell" class="fl-ui">
           <div class="fl-header">
-            <div class="fl-sign"><div class="label">เวลา</div><div id="time" class="value">120</div></div>
+            <div class="fl-sign"><div class="label">คะแนน</div><div id="score" class="value">0</div></div>
             <div class="fl-items">
               <div class="fl-item"><strong>น้ำอบ</strong><span id="water">3</span></div>
               <div class="fl-item"><strong>ธูป</strong><span id="powder">1</span></div>
             </div>
-            <div class="fl-sign"><div class="label">คะแนน</div><div id="score" class="value">0</div></div>
+            <div class="fl-sign"><div class="label">เวลา</div><div id="time" class="value">120</div></div>
           </div>
           <div id="note" class="fl-topnote">เลือกลูกค้าก่อน แล้วค่อยร้อยพวงมาลัยตามแบบ</div>
           <div class="fl-area">

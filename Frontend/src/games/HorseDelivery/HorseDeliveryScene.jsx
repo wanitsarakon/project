@@ -21,6 +21,7 @@ const START_SOUND = new URL("./sounds/start.mp3", import.meta.url).href;
 const HORSE_GALLOP = new URL("./sounds/horse_gallop.wav", import.meta.url).href;
 const HORSE_NEIGH = new URL("./sounds/horse_neigh.wav", import.meta.url).href;
 const FAIR_AMBIENCE = new URL("./sounds/fair_ambience.wav", import.meta.url).href;
+const HUD_SIGN_IMAGE = "/assets/เเผ่นป้ายเวลากับคะเเนน.png";
 
 export default class HorseDeliveryScene extends Phaser.Scene {
   constructor() {
@@ -52,6 +53,7 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     this.load.image("horse-rule-sign", RULE_SIGN);
     this.load.image("horse-start-sign", START_SIGN);
     this.load.image("horse-result-sign", RESULT_SIGN);
+    this.load.image("horse-hud-sign", HUD_SIGN_IMAGE);
     this.load.audio("horse-count", COUNT_SOUND);
     this.load.audio("horse-start", START_SOUND);
     this.load.audio("horse-gallop", HORSE_GALLOP);
@@ -85,12 +87,12 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     this.scoreManager = new ScoreManager(this);
     this.scoreManager.hide();
 
-    this.timeFrame = this.add.rectangle(170, 44, 292, 62, 0x5a2811, 0.82)
-      .setStrokeStyle(4, 0xa35c24)
+    this.timeFrame = this.add.image(width - 168, 44, "horse-hud-sign")
+      .setDisplaySize(258, 86)
       .setDepth(19)
       .setVisible(false);
 
-    this.timeText = this.add.text(170, 44, `TIME: ${GAME_TIME}s`, {
+    this.timeText = this.add.text(width - 168, 44, `เวลา: ${GAME_TIME} วิ`, {
       fontFamily: "Kanit",
       fontSize: "28px",
       color: "#fff4bf",
@@ -305,7 +307,7 @@ export default class HorseDeliveryScene extends Phaser.Scene {
       callback: () => {
         if (this.ended) return;
         this.timeLeft -= 1;
-        this.timeText.setText(`TIME: ${Math.max(0, this.timeLeft)}s`);
+        this.timeText.setText(`เวลา: ${Math.max(0, this.timeLeft)} วิ`);
         if (this.timeLeft === 25) {
           this.infoText.setText("ช่วงท้ายแล้ว ของจะมาไวขึ้นอีก ระวังจังหวะเก็บกับจังหวะกระโดดให้ดี!");
         }

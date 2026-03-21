@@ -4,12 +4,12 @@ export default class ScoreManager {
     this.score = 0;
 
     this.scoreFrame = scene.add
-      .rectangle(scene.scale.width - 168, 44, 292, 62, 0x5a2811, 0.82)
-      .setStrokeStyle(4, 0xa35c24)
+      .image(168, 44, "horse-hud-sign")
+      .setDisplaySize(258, 86)
       .setDepth(19);
 
     this.scoreText = scene.add
-      .text(scene.scale.width - 168, 44, "SCORE: 0", {
+      .text(168, 44, "คะแนน: 0", {
         fontFamily: "Kanit",
         fontSize: "28px",
         color: "#fff6cb",
@@ -27,7 +27,7 @@ export default class ScoreManager {
   }
 
   updateUI() {
-    this.scoreText.setText(`SCORE: ${this.score}`);
+    this.scoreText.setText(`คะแนน: ${this.score}`);
   }
 
   getScore() {

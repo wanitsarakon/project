@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 
 const ASSET_BASE = "/assets/dollgame";
+const HUD_SIGN_IMAGE = "/assets/เเผ่นป้ายเวลากับคะเเนน.png";
 
 const TARGET_TYPES = [
   "big",
@@ -29,10 +30,10 @@ const IMAGE_PATHS = {
   bg: `${ASSET_BASE}/images/bg.png`,
   scoreLegend: `${ASSET_BASE}/images/scoredoll.png`,
   ammoBoard: `${ASSET_BASE}/images/board_ammo.png`,
-  timeBoard: `${ASSET_BASE}/images/board_time.png`,
+  timeBoard: HUD_SIGN_IMAGE,
   topSign: `${ASSET_BASE}/images/top_sign.png`,
   header: `${ASSET_BASE}/images/your-header-logo.png`,
-  hud: `${ASSET_BASE}/images/your-hud-bg.png`,
+  hud: HUD_SIGN_IMAGE,
   startFrame: `${ASSET_BASE}/images/your-frame-bg.png`,
   endFrame: `${ASSET_BASE}/images/your-frame-bg2.png`,
 };

@@ -1,5 +1,7 @@
 import Phaser from "phaser";
 
+const HUD_SIGN_IMAGE = "/assets/เเผ่นป้ายเวลากับคะเเนน.png";
+
 /**
  * CookingGameScene.jsx
  * Thai dessert mixing mini-game built with a DOM overlay on top of Phaser.
@@ -697,12 +699,13 @@ export default class CookingGameScene extends Phaser.Scene {
 
       /* ─── Timer ─── */
       #ck-timer {
-        position: absolute; top: 16px; left: 18px; z-index: 10;
-        background: linear-gradient(180deg, rgba(51,19,4,0.9), rgba(102,46,8,0.88));
+        position: absolute; top: 16px; right: 18px; z-index: 10;
+        min-width: 236px; min-height: 86px; box-sizing: border-box;
+        background: url('${HUD_SIGN_IMAGE}') center/100% 100% no-repeat;
         color: #ffe4a8;
-        font-size: 1.55rem; font-weight: 800; padding: 10px 22px; border-radius: 14px;
-        border: 2px solid rgba(255,215,120,0.85);
+        font-size: 1.5rem; font-weight: 800; padding: 22px 26px 12px;
         box-shadow: 0 10px 18px rgba(0,0,0,0.28);
+        display: flex; align-items: center; justify-content: center;
       }
 
       /* ─── NPC ─── */

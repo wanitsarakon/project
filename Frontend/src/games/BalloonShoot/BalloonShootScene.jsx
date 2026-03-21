@@ -1,5 +1,7 @@
 import Phaser from "phaser";
 
+const HUD_SIGN_IMAGE = "/assets/เเผ่นป้ายเวลากับคะเเนน.png";
+
 /**
  * BalloonShootScene.jsx
  * แปลงจาก project-ballonshoot-game-update/frontend/game.js
@@ -117,7 +119,7 @@ export default class BalloonShootScene extends Phaser.Scene {
     `;
 
     const scoreBox = this._statBox(`คะแนน: <span id="bs-score" style="color:#ffd700;font-size:1.3rem;">0 (x0)</span>`);
-    const timeBox  = this._statBox(`<span id="bs-wind-info">เวลา: 60s | ลม: 0.0</span>`);
+    const timeBox  = this._statBox(`<span id="bs-wind-info">เวลา: 60 วิ | ลม: 0.0</span>`);
     layer.appendChild(scoreBox);
     layer.appendChild(timeBox);
     return layer;
@@ -126,11 +128,13 @@ export default class BalloonShootScene extends Phaser.Scene {
   _statBox(innerHTML) {
     const box = this._el("div");
     box.style.cssText = `
-      min-width:212px; background:linear-gradient(180deg,rgba(94,38,9,0.96),rgba(52,20,4,0.9));
-      border:3px solid #d59a38; border-radius:14px;
-      padding:8px 16px; color:#fff; font-weight:700; font-size:1.04rem;
+      min-width:236px; min-height:86px;
+      background:url('${HUD_SIGN_IMAGE}') center/100% 100% no-repeat;
+      padding:18px 26px 12px; box-sizing:border-box;
+      color:#fff; font-weight:800; font-size:1.06rem;
       text-shadow:2px 2px 4px rgba(0,0,0,0.8); white-space:nowrap;
-      box-shadow:0 10px 20px rgba(0,0,0,0.24), inset 0 1px 0 rgba(255,240,208,0.2);
+      box-shadow:0 10px 20px rgba(0,0,0,0.24);
+      display:flex; align-items:center; justify-content:center;
     `;
     box.innerHTML = innerHTML;
     return box;
@@ -540,7 +544,7 @@ export default class BalloonShootScene extends Phaser.Scene {
 
           if (b.color === "FREEZE" && !isFrozen) {
             playSfx(sounds.timeStop); gs.screenShake=10;
-            createFloatingText(bx, b.y, "TIME STOP!", "#a0e9ff", true);
+            createFloatingText(bx, b.y, "หยุดเวลา!", "#a0e9ff", true);
             const frozen_bx_offset = gs.balloonOffset;
             gs.balloons.forEach(ob => {
               if (!ob.active) return;
@@ -567,7 +571,7 @@ export default class BalloonShootScene extends Phaser.Scene {
           createFloatingText(bx, b.y, `+${finalScore}`, gs.doubleScoreTimer>0 ? "#FFD700" : "#fff");
           if (b.color === "RAINBOW") {
             gs.doubleScoreTimer = 10;
-            createFloatingText(bx, b.y-40, "DOUBLE SCORE!", "#FFD700", true);
+            createFloatingText(bx, b.y-40, "คะแนน x2!", "#FFD700", true);
           }
         });
 
@@ -707,7 +711,7 @@ export default class BalloonShootScene extends Phaser.Scene {
         const grad = ctx.createLinearGradient(0,80,0,130);
         grad.addColorStop(0,"#FFF700"); grad.addColorStop(1,"#FFA200");
         ctx.fillStyle=grad;
-        ctx.fillText(`✨ GOLDEN TIME: ${Math.ceil(gs.doubleScoreTimer)}s (x2 SCORE) ✨`, canvas.width/2, 110);
+        ctx.fillText(`✨ เวลาทอง ${Math.ceil(gs.doubleScoreTimer)} วิ (คะแนน x2) ✨`, canvas.width/2, 110);
         ctx.restore();
       }
 
@@ -800,7 +804,7 @@ export default class BalloonShootScene extends Phaser.Scene {
       const windEl  = document.getElementById("bs-wind-info");
       const fillEl  = document.getElementById("bs-power-fill");
       if (scoreEl) scoreEl.textContent = `${gs.totalScore} (x${gs.comboCount})`;
-      if (windEl)  windEl.textContent  = `เวลา: ${gs.timeLeft}s | ลม: ${gs.wind.toFixed(1)}`;
+      if (windEl)  windEl.textContent  = `เวลา: ${gs.timeLeft} วิ | ลม: ${gs.wind.toFixed(1)}`;
       if (fillEl)  fillEl.style.height = gs.power + "%";
 
       ctx.restore();

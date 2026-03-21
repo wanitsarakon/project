@@ -1,5 +1,7 @@
 import Phaser from "phaser";
 
+const HUD_SIGN_IMAGE = "/assets/เเผ่นป้ายเวลากับคะเเนน.png";
+
 /**
  * BoxingGameScene.jsx
  * แปลงจาก game-boxing/frontend/ → Phaser Scene (DOM overlay)
@@ -85,8 +87,8 @@ export default class BoxingGameScene extends Phaser.Scene {
       max-width: 1100px; padding: 12px 42px; box-sizing: border-box;
       pointer-events: none; margin-top: -16px;
     `;
-    hud.appendChild(this._hudBox(`<span id="bg-timer" style="color:#d32f2f;">เวลา:20</span>`));
-    hud.appendChild(this._hudBox(`<span id="bg-score" style="color:#2e7d32;">คะแนน:0</span>`));
+    hud.appendChild(this._hudBox('<span id="bg-score" style="color:#2e7d32;">คะแนน: 0</span>'));
+    hud.appendChild(this._hudBox('<span id="bg-timer" style="color:#d32f2f;">เวลา: 20</span>'));
     main.appendChild(hud);
 
     // Progress Bar
@@ -147,14 +149,14 @@ export default class BoxingGameScene extends Phaser.Scene {
   _hudBox(innerHTML) {
     const box = this._el("div");
     box.style.cssText = `
-      background-image: url('/assets/boxing/images/counttime.png');
-      background-size: 100% 100%; width: 224px; height: 156px;
+      background-image: url('${HUD_SIGN_IMAGE}');
+      background-size: 100% 100%; width: 248px; height: 108px;
       display: flex; justify-content: center; align-items: center;
       filter: drop-shadow(0 8px 15px rgba(0,0,0,0.4));
     `;
     const val = this._el("div");
     val.style.cssText = `
-      font-size: 1.36rem; font-weight: 700; margin-top: -10px;
+      font-size: 1.24rem; font-weight: 800; margin-top: 4px;
       background: linear-gradient(180deg,#fff 0%,#ffd700 50%,#f39c12 100%);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       filter: drop-shadow(2px 2px 0 #3e2723) drop-shadow(-1px -1px 0 #3e2723);
@@ -511,14 +513,14 @@ export default class BoxingGameScene extends Phaser.Scene {
     function startMemorizeTimer() {
       gs.timeLeft = 20;
       const t = document.getElementById("bg-timer");
-      if (t) t.textContent = `เวลา:${gs.timeLeft}`;
+      if (t) t.textContent = `เวลา: ${gs.timeLeft}`;
       const inst = getInst();
       if (inst) { inst.textContent = "ช่วงจดจำ: จำรูปท่าและชื่อให้แม่น!"; inst.style.color = "#ffd700"; }
       if (gs.timerInterval) clearInterval(gs.timerInterval);
       gs.timerInterval = setInterval(() => {
         gs.timeLeft--;
         const t = document.getElementById("bg-timer");
-        if (t) t.textContent = `เวลา:${gs.timeLeft}`;
+        if (t) t.textContent = `เวลา: ${gs.timeLeft}`;
         if (gs.timeLeft <= 0) { clearInterval(gs.timerInterval); animateShuffle(); }
       }, 1000);
     }
@@ -611,11 +613,11 @@ export default class BoxingGameScene extends Phaser.Scene {
       if (gs.timerInterval) clearInterval(gs.timerInterval);
       gs.hasShuffledMidGame = false;
       const t = document.getElementById("bg-timer");
-      if (t) t.textContent = `เวลา:${gs.playTime}`;
+      if (t) t.textContent = `เวลา: ${gs.playTime}`;
       gs.timerInterval = setInterval(() => {
         gs.playTime--;
         const t = document.getElementById("bg-timer");
-        if (t) t.textContent = `เวลา:${gs.playTime}`;
+        if (t) t.textContent = `เวลา: ${gs.playTime}`;
         if (gs.playTime === 5 && !gs.hasShuffledMidGame) { triggerMidGameShuffle(); gs.hasShuffledMidGame = true; }
         if (gs.playTime <= 0) { clearInterval(gs.timerInterval); checkAnswer(true); }
       }, 1000);
@@ -652,7 +654,7 @@ export default class BoxingGameScene extends Phaser.Scene {
 
       gs.score = score;
       const sc = document.getElementById("bg-score");
-      if (sc) sc.textContent = `คะแนน:${score}`;
+      if (sc) sc.textContent = `คะแนน: ${score}`;
 
       getDeck()?.style && (getDeck().style.display = "none");
 

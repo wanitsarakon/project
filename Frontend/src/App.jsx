@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import GameContainer from "./games/GameContainer";
+import { FESTIVAL_BOOTHS } from "./games/FestivalMapScene";
 
 import Home from "./pages/Home";
 import Host from "./pages/Host";
@@ -7,6 +8,21 @@ import RoomList from "./pages/RoomList";
 import Lobby from "./pages/Lobby";
 import FestivalMap from "./pages/FestivalMap";
 import SummaryPage from "./pages/SummaryPage";
+
+const DEBUG_SCENE_ALIASES = {
+  "festival-map": "FestivalMapScene",
+  festival: "FestivalMapScene",
+  fish: "FishScoopingScene",
+  horse: "HorseDeliveryScene",
+  boxing: "BoxingGameScene",
+  cooking: "CookingGameScene",
+  balloon: "BalloonShootScene",
+  doll: "DollGameScene",
+  flower: "FlowerGameScene",
+  haunted: "HauntedHouseScene",
+  tug: "TugOfWarScene",
+  worship: "WorshipBoothScene",
+};
 
 export default function App() {
 
@@ -20,6 +36,9 @@ export default function App() {
       ? new URLSearchParams(window.location.search)
       : null;
   const debugScene = searchParams?.get("scene") ?? "";
+  const resolvedDebugScene = DEBUG_SCENE_ALIASES[debugScene] ?? debugScene;
+  const isMiniGamePreview =
+    Boolean(resolvedDebugScene) && resolvedDebugScene !== "FestivalMapScene";
 
   useEffect(() => {
     if (!bgmRef.current) {
@@ -30,7 +49,7 @@ export default function App() {
     }
 
     const audio = bgmRef.current;
-    const shouldPlay = !miniGameActive;
+    const shouldPlay = !miniGameActive && !isMiniGamePreview;
 
     const tryPlay = () => {
       if (!shouldPlay) return;
@@ -51,7 +70,7 @@ export default function App() {
       window.removeEventListener("pointerdown", tryPlay);
       window.removeEventListener("keydown", tryPlay);
     };
-  }, [miniGameActive]);
+  }, [isMiniGamePreview, miniGameActive]);
 
   useEffect(() => () => {
     if (bgmRef.current) {
@@ -60,9 +79,15 @@ export default function App() {
     }
   }, []);
 
-  if (debugScene === "worship") {
+  if (resolvedDebugScene === "FestivalMapScene") {
     return (
-      <WorshipPreview />
+      <FestivalMapPreview />
+    );
+  }
+
+  if (resolvedDebugScene) {
+    return (
+      <MiniGamePreview sceneKey={resolvedDebugScene} />
     );
   }
 
@@ -243,16 +268,16 @@ export default function App() {
 
 }
 
-function WorshipPreview() {
+function MiniGamePreview({ sceneKey }) {
   useEffect(() => {
     const kickOff = window.setInterval(() => {
       if (!window.__festivalDebug?.startMiniGame) return;
-      window.__festivalDebug.startMiniGame("WorshipBoothScene");
+      window.__festivalDebug.startMiniGame(sceneKey);
       window.clearInterval(kickOff);
     }, 250);
 
     return () => window.clearInterval(kickOff);
-  }, []);
+  }, [sceneKey]);
 
   return (
     <GameContainer
@@ -261,9 +286,27 @@ function WorshipPreview() {
       wsRef={{ current: null }}
       allowRoundEvents={false}
       mapData={{
-        boothStates: {
-          WorshipBoothScene: "unlocked",
-        },
+        boothStates: Object.fromEntries(FESTIVAL_BOOTHS.map((booth) => [booth.scene, "unlocked"])),
+      }}
+      onGameEnd={() => {}}
+      onGameStart={() => {}}
+    />
+  );
+}
+
+function FestivalMapPreview() {
+  const previewBoothStates = Object.fromEntries(
+    FESTIVAL_BOOTHS.map((booth, index) => [booth.scene, index === 0 ? "unlocked" : "locked"]),
+  );
+
+  return (
+    <GameContainer
+      roomCode="preview-room"
+      player={{ id: "preview-player", name: "Preview Player" }}
+      wsRef={{ current: null }}
+      allowRoundEvents={false}
+      mapData={{
+        boothStates: previewBoothStates,
       }}
       onGameEnd={() => {}}
       onGameStart={() => {}}

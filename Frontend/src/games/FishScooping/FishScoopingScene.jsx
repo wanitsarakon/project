@@ -19,6 +19,7 @@ const COUNTDOWN_SOUND = new URL("./sounds/countdown.mp3", import.meta.url).href;
 const START_SOUND = new URL("./sounds/start.mp3", import.meta.url).href;
 const SCOOP_SOUND = new URL("./sounds/scoop.wav", import.meta.url).href;
 const FAIR_AMBIENCE = new URL("./sounds/fair_ambience.wav", import.meta.url).href;
+const HUD_SIGN_IMAGE = "/assets/เเผ่นป้ายเวลากับคะเเนน.png";
 const GAME_TIME = 60;
 const MAX_FISH = 10;
 const HOLD_LIMIT_MS = 1000;
@@ -62,6 +63,7 @@ export default class FishScoopingScene extends Phaser.Scene {
     this.load.audio("fish-start-sfx", START_SOUND);
     this.load.audio("fish-scoop", SCOOP_SOUND);
     this.load.audio("fish-fair-bgm", FAIR_AMBIENCE);
+    this.load.image("fish-hud-sign", HUD_SIGN_IMAGE);
   }
 
   create() {
@@ -104,18 +106,18 @@ export default class FishScoopingScene extends Phaser.Scene {
     const { width } = this.scale;
 
     const createPanel = (x, y, label, valueColor) => {
-      const bg = this.add.rectangle(x, y, 178, 68, 0x2f1f0f, 0.76)
-        .setStrokeStyle(2, 0xffec9b, 0.9)
+      const bg = this.add.image(x, y, "fish-hud-sign")
+        .setDisplaySize(222, 84)
         .setScrollFactor(0)
         .setDepth(10);
       const labelText = this.add.text(x, y - 12, label, {
         fontFamily: "Kanit",
-        fontSize: "18px",
+        fontSize: "17px",
         color: "#ffe8b0",
       }).setOrigin(0.5).setDepth(11);
       const valueText = this.add.text(x, y + 10, "0", {
         fontFamily: "Kanit",
-        fontSize: "28px",
+        fontSize: "26px",
         fontStyle: "bold",
         color: valueColor,
         stroke: "#2b1703",
@@ -124,8 +126,8 @@ export default class FishScoopingScene extends Phaser.Scene {
       return { bg, labelText, valueText };
     };
 
-    this.hud.score = createPanel(width * 0.13, 54, "คะแนน", "#fff7cc");
-    this.hud.timer = createPanel(width * 0.87, 54, "เวลา", "#ffd86a");
+    this.hud.score = createPanel(width * 0.15, 58, "คะแนน", "#fff7cc");
+    this.hud.timer = createPanel(width * 0.85, 58, "เวลา", "#ffd86a");
     this.hud.note = this.add.text(width / 2, 92, "ลากช้อนให้ถึงตัวปลาแล้วคลิกตัก รีบเอาไปลงถังภายใน 1 วินาที", {
       fontFamily: "Kanit",
       fontSize: "18px",

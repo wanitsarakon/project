@@ -1,89 +1,4 @@
-﻿import Phaser from "phaser";
-
-const START_IMAGE = new URL("./assetsWSB/ไหว้พระเริ่มเกม.png", import.meta.url).href;
-const MONK_IMAGE = new URL("./monk.png", import.meta.url).href;
-const BELL_SOUND = new URL("./sounds/temple_bell.wav", import.meta.url).href;
-const CALM_AMBIENCE = new URL("./sounds/calm_ambience.wav", import.meta.url).href;
-
-const TEMPLE_BG = "/assets/flowergame/image/bg-temple.png";
-const WORSHIP_IMAGE = "/assets/worship_ui/พระพุธรูป.png";
-const TOP_SIGN_IMAGE = "/assets/worship_ui/top_sign.svg";
-const SIDE_PANEL_IMAGE = "/assets/worship_ui/side_panel.svg";
-const BOTTOM_PANEL_IMAGE = "/assets/worship_ui/bottom_panel.svg";
-const PRAY_BUTTON_IMAGE = "/assets/worship_ui/pray_button.svg";
-const INCENSE_ICON = "/assets/worship_ui/ธูป.png";
-const CANDLE_ICON = "/assets/worship_ui/เทียน.png";
-const LOTUS_ICON = "/assets/worship_ui/ดอกบัว.png";
-const ALTAR_IMAGE = "/assets/worship_ui/โต๊ะบูชา.png";
-const SIAMSI_IMAGE = "/assets/worship_ui/เซียมซี.png";
-const HUD_SIGN_IMAGE = "/assets/เเผ่นป้ายเวลากับคะเเนน.png";
-
-const STEPS = [
-  { id: "incense", label: "ธูป", action: "จุดธูป", icon: INCENSE_ICON },
-  { id: "candle", label: "เทียน", action: "จุดเทียน", icon: CANDLE_ICON },
-  { id: "lotus", label: "ดอกบัว", action: "ถวายดอกบัว", icon: LOTUS_ICON },
-];
-
-const FORTUNES = [
-  "เซียมซีเลข 3: ช่วงนี้มีคนเมตตา คิดสิ่งใดให้ค่อย ๆ ทำด้วยใจเย็น",
-  "เซียมซีเลข 8: งานที่หวังไว้จะสำเร็จทีละขั้น ขอเพียงตั้งใจต่อเนื่อง",
-  "เซียมซีเลข 15: มีโอกาสรับข่าวดีและความช่วยเหลือจากผู้ใหญ่",
-  "เซียมซีเลข 21: เรื่องที่เหนื่อยอยู่จะคลี่คลาย ได้พักใจและพบทางออก",
-  "เซียมซีเลข 28: โชคลาภเล็ก ๆ และรอยยิ้มดี ๆ กำลังเดินเข้ามา",
-];
-
-const BLESSINGS = [
-  "ขอให้สุขภาพแข็งแรง ใจสงบ และพบแต่สิ่งเป็นมงคล",
-  "ขอให้การเรียนการงานราบรื่น มีคนเมตตาอุปถัมภ์",
-  "ขอให้สิ่งที่ตั้งใจค่อย ๆ สำเร็จ สมหวังดังปรารถนา",
-  "ขอให้ครอบครัวอบอุ่น เดินทางปลอดภัย และมีความสุข",
-  "ขอให้โชคดีตลอดปี มีแต่เรื่องดี ๆ เข้ามาในชีวิต",
-];
-
-export default class WorshipBoothScene extends Phaser.Scene {
-  constructor() {
-    super({ key: "WorshipBoothScene" });
-    this.onGameEnd = null;
-    this.root = null;
-    this.state = null;
-    this.countdownTimer = null;
-    this.ritualTimer = null;
-    this.calmBgm = null;
-  }
-
-  init(data = {}) {
-    this.onGameEnd = data?.onGameEnd ?? null;
-  }
-
-  preload() {
-    this.load.audio("worship-bell", BELL_SOUND);
-    this.load.audio("worship-calm", CALM_AMBIENCE);
-  }
-
-  create() {
-    this.state = {
-      phase: "intro",
-      timer: 45,
-      stepIndex: 0,
-      completed: false,
-      mistakes: 0,
-      blessing: "",
-      fortune: "",
-    };
-
-    this.buildDom();
-    this.renderState();
-
-    this.events.once("shutdown", () => this.cleanup());
-    this.events.once("destroy", () => this.cleanup());
-  }
-
-  buildDom() {
-    const container = this.game.canvas?.parentElement;
-    if (!container) return;
-
-    this.root = document.createElement("div");
-    this.root.innerHTML = `
+import{P as h}from"./phaser-iZDVk5aZ.js";const c=new URL("/assets/%E0%B9%84%E0%B8%AB%E0%B8%A7%E0%B9%89%E0%B8%9E%E0%B8%A3%E0%B8%B0%E0%B9%80%E0%B8%A3%E0%B8%B4%E0%B9%88%E0%B8%A1%E0%B9%80%E0%B8%81%E0%B8%A1-Bos3kp7C.png",import.meta.url).href,g=new URL("/assets/monk-CheTvQqz.png",import.meta.url).href,w=new URL("/assets/temple_bell-zYhLx0tT.wav",import.meta.url).href,u=new URL("/assets/calm_ambience-BqQWv_i4.wav",import.meta.url).href,x="/assets/flowergame/image/bg-temple.png",m="/assets/worship_ui/พระพุธรูป.png",f="/assets/worship_ui/top_sign.svg",d="/assets/worship_ui/side_panel.svg",v="/assets/worship_ui/pray_button.svg",y="/assets/worship_ui/ธูป.png",E="/assets/worship_ui/เทียน.png",k="/assets/worship_ui/ดอกบัว.png",S="/assets/worship_ui/โต๊ะบูชา.png",B="/assets/worship_ui/เซียมซี.png",I="/assets/เเผ่นป้ายเวลากับคะเเนน.png",r=[{id:"incense",label:"ธูป",action:"จุดธูป",icon:y},{id:"candle",label:"เทียน",action:"จุดเทียน",icon:E},{id:"lotus",label:"ดอกบัว",action:"ถวายดอกบัว",icon:k}],p=["เซียมซีเลข 3: ช่วงนี้มีคนเมตตา คิดสิ่งใดให้ค่อย ๆ ทำด้วยใจเย็น","เซียมซีเลข 8: งานที่หวังไว้จะสำเร็จทีละขั้น ขอเพียงตั้งใจต่อเนื่อง","เซียมซีเลข 15: มีโอกาสรับข่าวดีและความช่วยเหลือจากผู้ใหญ่","เซียมซีเลข 21: เรื่องที่เหนื่อยอยู่จะคลี่คลาย ได้พักใจและพบทางออก","เซียมซีเลข 28: โชคลาภเล็ก ๆ และรอยยิ้มดี ๆ กำลังเดินเข้ามา"],b=["ขอให้สุขภาพแข็งแรง ใจสงบ และพบแต่สิ่งเป็นมงคล","ขอให้การเรียนการงานราบรื่น มีคนเมตตาอุปถัมภ์","ขอให้สิ่งที่ตั้งใจค่อย ๆ สำเร็จ สมหวังดังปรารถนา","ขอให้ครอบครัวอบอุ่น เดินทางปลอดภัย และมีความสุข","ขอให้โชคดีตลอดปี มีแต่เรื่องดี ๆ เข้ามาในชีวิต"];class T extends h.Scene{constructor(){super({key:"WorshipBoothScene"}),this.onGameEnd=null,this.root=null,this.state=null,this.countdownTimer=null,this.ritualTimer=null,this.calmBgm=null}init(t={}){this.onGameEnd=(t==null?void 0:t.onGameEnd)??null}preload(){this.load.audio("worship-bell",w),this.load.audio("worship-calm",u)}create(){this.state={phase:"intro",timer:45,stepIndex:0,completed:!1,mistakes:0,blessing:"",fortune:""},this.buildDom(),this.renderState(),this.events.once("shutdown",()=>this.cleanup()),this.events.once("destroy",()=>this.cleanup())}buildDom(){var e,s,o,n;const t=(e=this.game.canvas)==null?void 0:e.parentElement;t&&(this.root=document.createElement("div"),this.root.innerHTML=`
       <style>
         .wb-root {
           position: absolute;
@@ -100,7 +15,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
           background:
             linear-gradient(180deg, rgba(15, 3, 1, 0.2), rgba(15, 3, 1, 0.64)),
             radial-gradient(circle at 50% 32%, rgba(255, 219, 132, 0.2), rgba(255, 219, 132, 0) 30%),
-            url('${TEMPLE_BG}') center/cover no-repeat;
+            url('${x}') center/cover no-repeat;
           filter: saturate(1.12) blur(1px);
           transform: scale(1.03);
         }
@@ -145,7 +60,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
 
         .wb-mini {
           min-height: 78px;
-          background: url('${HUD_SIGN_IMAGE}') center/100% 100% no-repeat;
+          background: url('${I}') center/100% 100% no-repeat;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -168,7 +83,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
         .wb-sign {
           min-height: 92px;
           padding: 12px 26px 10px;
-          background: url('${TOP_SIGN_IMAGE}') center/100% 100% no-repeat;
+          background: url('${f}') center/100% 100% no-repeat;
           text-align: center;
           display: flex;
           flex-direction: column;
@@ -199,7 +114,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
         }
 
         .wb-side {
-          background: url('${SIDE_PANEL_IMAGE}') center/100% 100% no-repeat;
+          background: url('${d}') center/100% 100% no-repeat;
           padding: 14px;
           position: relative;
         }
@@ -248,7 +163,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
         }
 
         .wb-status-card {
-          background: url('${SIDE_PANEL_IMAGE}') center/100% 100% no-repeat;
+          background: url('${d}') center/100% 100% no-repeat;
           padding: 10px 12px;
         }
 
@@ -482,7 +397,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
           min-height: 88px;
           border: none;
           border-radius: 24px;
-          background: url('${PRAY_BUTTON_IMAGE}') center/100% 100% no-repeat;
+          background: url('${v}') center/100% 100% no-repeat;
           font: inherit;
           font-size: 16px;
           font-weight: 900;
@@ -540,7 +455,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
           width: min(100%, 700px);
           aspect-ratio: 16 / 9;
           margin: 0 auto 18px;
-          background: url('${START_IMAGE}') center/contain no-repeat;
+          background: url('${c}') center/contain no-repeat;
         }
 
         .wb-mainbtn,
@@ -682,7 +597,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
           <div class="wb-left">
             <div class="wb-side wb-monk-box">
               <div class="wb-bubble">เจริญพรญาติโยม</div>
-              <img class="wb-monk" src="${MONK_IMAGE}" alt="พระอาจารย์" />
+              <img class="wb-monk" src="${g}" alt="พระอาจารย์" />
             </div>
             <div class="wb-status-card">
               <div class="wb-status-title">สถานะพิธี</div>
@@ -700,13 +615,13 @@ export default class WorshipBoothScene extends Phaser.Scene {
               <div class="wb-ribbon left"></div>
               <div class="wb-ribbon right"></div>
               <div class="wb-halo"></div>
-              <img class="wb-buddha" src="${WORSHIP_IMAGE}" alt="พระพุทธรูป" />
+              <img class="wb-buddha" src="${m}" alt="พระพุทธรูป" />
               <div class="wb-altar-shadow"></div>
               <div class="wb-altar">
                 <div class="wb-altar-table">
-                  <img class="wb-altar-base" src="${ALTAR_IMAGE}" alt="โต๊ะบูชา" />
+                  <img class="wb-altar-base" src="${S}" alt="โต๊ะบูชา" />
                 </div>
-                <div><img class="wb-can" src="${SIAMSI_IMAGE}" alt="เซียมซี" /></div>
+                <div><img class="wb-can" src="${B}" alt="เซียมซี" /></div>
               </div>
             </div>
 
@@ -748,220 +663,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
           </div>
         </div>
       </div>
-    `;
-
-    container.appendChild(this.root);
-
-    this.timerEl = this.root.querySelector("#wb-timer");
-    this.progressEl = this.root.querySelector("#wb-progress");
-    this.orderEl = this.root.querySelector("#wb-order");
-    this.stateEl = this.root.querySelector("#wb-state");
-    this.mistakesEl = this.root.querySelector("#wb-mistakes");
-    this.sequenceEl = this.root.querySelector("#wb-sequence");
-    this.msgEl = this.root.querySelector("#wb-msg");
-    this.gridEl = this.root.querySelector("#wb-grid");
-    this.prayBtn = this.root.querySelector("#wb-pray");
-    this.introEl = this.root.querySelector("#wb-intro");
-    this.countdownEl = this.root.querySelector("#wb-countdown");
-    this.countValueEl = this.root.querySelector("#wb-count");
-    this.resultEl = this.root.querySelector("#wb-result");
-    this.finalBlessingEl = this.root.querySelector("#wb-final-blessing");
-    this.finalFortuneEl = this.root.querySelector("#wb-final-fortune");
-    this.finalMetaEl = this.root.querySelector("#wb-final-meta");
-    this.wishInputEl = this.root.querySelector("#wb-wish-text");
-
-    STEPS.forEach((step) => {
-      const button = document.createElement("button");
-      button.className = "wb-action";
-      button.dataset.stepId = step.id;
-      button.innerHTML = `
-        <img src="${step.icon}" alt="${step.label}" />
-        ${step.action}
-      `;
-      button.addEventListener("click", () => this.pickStep(step.id, button));
-      this.gridEl.appendChild(button);
-    });
-
-    this.root.querySelector("#wb-start-btn")?.addEventListener("click", () => this.startCountdown());
-    this.prayBtn?.addEventListener("click", () => this.finishRitual());
-    this.root.querySelector("#wb-finish-btn")?.addEventListener("click", () => {
-      this.onGameEnd?.({
-        score: 0,
-        meta: {
-          mistakes: this.state.mistakes,
-          completed: this.state.completed,
-          blessing: this.state.blessing,
-          fortune: this.state.fortune,
-          wishText: this.wishInputEl?.value?.trim() ?? "",
-        },
-      });
-    });
-  }
-
-  startCountdown() {
-    if (this.state.phase !== "intro") return;
-
-    this.state.phase = "countdown";
-    this.introEl.style.display = "none";
-    this.countdownEl.style.display = "flex";
-
-    let count = 3;
-    this.countValueEl.textContent = "3";
-
-    this.countdownTimer = window.setInterval(() => {
-      count -= 1;
-      if (count > 0) {
-        this.countValueEl.textContent = String(count);
-        return;
-      }
-      if (count === 0) {
-        this.countValueEl.textContent = "เริ่ม!";
-        if (this.cache.audio?.exists("worship-bell")) {
-          this.sound.play("worship-bell", { volume: 0.28 });
-        }
-        return;
-      }
-
-      window.clearInterval(this.countdownTimer);
-      this.countdownTimer = null;
-      this.countdownEl.style.display = "none";
-      this.state.phase = "playing";
-      this.msgEl.textContent = "เริ่มจาก ธูป";
-      this.startTimer();
-      this.playCalmBgm();
-      this.renderState();
-    }, 1000);
-  }
-
-  startTimer() {
-    this.stopTimer();
-    this.ritualTimer = window.setInterval(() => {
-      if (this.state.phase !== "playing" && this.state.phase !== "ready") return;
-
-      this.state.timer = Math.max(0, this.state.timer - 1);
-      if (this.timerEl) this.timerEl.textContent = String(this.state.timer);
-
-      if (this.state.timer === 0 && !this.state.completed) {
-        this.state.mistakes += 1;
-        this.state.stepIndex = 0;
-        this.state.timer = 45;
-        this.msgEl.textContent = "หมดเวลา ลองเริ่มลำดับใหม่จาก ธูป";
-        if (this.timerEl) this.timerEl.textContent = String(this.state.timer);
-        this.renderState();
-      }
-    }, 1000);
-  }
-
-  stopTimer() {
-    window.clearInterval(this.ritualTimer);
-    this.ritualTimer = null;
-  }
-
-  playCalmBgm() {
-    if (!this.cache.audio?.exists("worship-calm")) return;
-    this.calmBgm?.stop();
-    this.calmBgm?.destroy();
-    this.calmBgm = this.sound.add("worship-calm", { loop: true, volume: 0.14 });
-    try {
-      this.calmBgm.play();
-    } catch {}
-  }
-
-  pickStep(stepId, button) {
-    if (this.state.phase !== "playing") return;
-
-    const expected = STEPS[this.state.stepIndex]?.id;
-    const isCorrect = expected === stepId;
-
-    button.classList.remove("right", "wrong");
-    void button.offsetWidth;
-    button.classList.add(isCorrect ? "right" : "wrong");
-    window.setTimeout(() => button.classList.remove("right", "wrong"), 260);
-
-    if (!isCorrect) {
-      this.state.mistakes += 1;
-      this.state.stepIndex = 0;
-      this.msgEl.textContent = "ลำดับผิด ต้องเริ่มใหม่จาก ธูป";
-      this.renderState();
-      return;
-    }
-
-    this.state.stepIndex += 1;
-    if (this.cache.audio?.exists("worship-bell")) {
-      this.sound.play("worship-bell", { volume: 0.24 });
-    }
-
-    if (this.state.stepIndex >= STEPS.length) {
-      this.state.completed = true;
-      this.state.phase = "ready";
-      this.msgEl.textContent = "ทำพิธีครบแล้ว กดไหว้พระขอพรและเสี่ยงเซียมซีได้เลย";
-      this.renderState();
-      return;
-    }
-
-    this.msgEl.textContent = `ต่อไป: ${STEPS[this.state.stepIndex].label}`;
-    this.renderState();
-  }
-
-  finishRitual() {
-    if (this.state.phase === "result" || !this.state.completed) return;
-
-    this.stopTimer();
-    this.calmBgm?.stop();
-    this.state.phase = "result";
-    this.state.blessing = BLESSINGS[Math.floor(Math.random() * BLESSINGS.length)];
-    this.state.fortune = FORTUNES[Math.floor(Math.random() * FORTUNES.length)];
-
-    if (this.cache.audio?.exists("worship-bell")) {
-      this.sound.play("worship-bell", { volume: 0.4 });
-    }
-
-    this.finalBlessingEl.textContent = this.state.blessing;
-    this.finalFortuneEl.textContent = this.state.fortune;
-    this.finalMetaEl.textContent = `ทำพิธีครบ 1 รอบ พลาด ${this.state.mistakes} ครั้ง แล้วรับพรกลับบ้านอย่างเป็นมงคล`;
-    this.resultEl.style.display = "flex";
-    this.renderState();
-  }
-
-  renderState() {
-    if (this.timerEl) this.timerEl.textContent = String(this.state.timer);
-    if (this.progressEl) this.progressEl.textContent = `${this.state.completed ? 1 : 0} / 1`;
-    if (this.orderEl) this.orderEl.textContent = `${this.state.stepIndex} / ${STEPS.length}`;
-    if (this.mistakesEl) this.mistakesEl.textContent = String(this.state.mistakes);
-
-    if (this.stateEl) {
-      this.stateEl.textContent =
-        this.state.phase === "ready"
-          ? "พร้อมขอพร"
-          : this.state.phase === "result"
-            ? "รับพรแล้ว"
-            : this.state.phase === "playing"
-              ? "กำลังทำพิธี"
-              : "รอเริ่ม";
-    }
-
-    if (this.sequenceEl) {
-      this.sequenceEl.innerHTML = STEPS.map((step, index) => {
-        const active =
-          index < this.state.stepIndex ||
-          (index === this.state.stepIndex && (this.state.phase === "playing" || this.state.phase === "ready"));
-        return `<div class="wb-tab ${active ? "active" : ""}">${step.label}</div>`;
-      }).join("");
-    }
-
-    if (this.prayBtn) {
-      this.prayBtn.disabled = this.state.phase !== "ready";
-    }
-  }
-
-  cleanup() {
-    window.clearInterval(this.countdownTimer);
-    this.countdownTimer = null;
-    this.stopTimer();
-    this.calmBgm?.stop();
-    this.calmBgm?.destroy();
-    this.calmBgm = null;
-    if (this.root?.parentNode) this.root.parentNode.removeChild(this.root);
-    this.root = null;
-  }
-}
+    `,t.appendChild(this.root),this.timerEl=this.root.querySelector("#wb-timer"),this.progressEl=this.root.querySelector("#wb-progress"),this.orderEl=this.root.querySelector("#wb-order"),this.stateEl=this.root.querySelector("#wb-state"),this.mistakesEl=this.root.querySelector("#wb-mistakes"),this.sequenceEl=this.root.querySelector("#wb-sequence"),this.msgEl=this.root.querySelector("#wb-msg"),this.gridEl=this.root.querySelector("#wb-grid"),this.prayBtn=this.root.querySelector("#wb-pray"),this.introEl=this.root.querySelector("#wb-intro"),this.countdownEl=this.root.querySelector("#wb-countdown"),this.countValueEl=this.root.querySelector("#wb-count"),this.resultEl=this.root.querySelector("#wb-result"),this.finalBlessingEl=this.root.querySelector("#wb-final-blessing"),this.finalFortuneEl=this.root.querySelector("#wb-final-fortune"),this.finalMetaEl=this.root.querySelector("#wb-final-meta"),this.wishInputEl=this.root.querySelector("#wb-wish-text"),r.forEach(i=>{const a=document.createElement("button");a.className="wb-action",a.dataset.stepId=i.id,a.innerHTML=`
+        <img src="${i.icon}" alt="${i.label}" />
+        ${i.action}
+      `,a.addEventListener("click",()=>this.pickStep(i.id,a)),this.gridEl.appendChild(a)}),(s=this.root.querySelector("#wb-start-btn"))==null||s.addEventListener("click",()=>this.startCountdown()),(o=this.prayBtn)==null||o.addEventListener("click",()=>this.finishRitual()),(n=this.root.querySelector("#wb-finish-btn"))==null||n.addEventListener("click",()=>{var i,a,l;(l=this.onGameEnd)==null||l.call(this,{score:0,meta:{mistakes:this.state.mistakes,completed:this.state.completed,blessing:this.state.blessing,fortune:this.state.fortune,wishText:((a=(i=this.wishInputEl)==null?void 0:i.value)==null?void 0:a.trim())??""}})}))}startCountdown(){if(this.state.phase!=="intro")return;this.state.phase="countdown",this.introEl.style.display="none",this.countdownEl.style.display="flex";let t=3;this.countValueEl.textContent="3",this.countdownTimer=window.setInterval(()=>{var e;if(t-=1,t>0){this.countValueEl.textContent=String(t);return}if(t===0){this.countValueEl.textContent="เริ่ม!",(e=this.cache.audio)!=null&&e.exists("worship-bell")&&this.sound.play("worship-bell",{volume:.28});return}window.clearInterval(this.countdownTimer),this.countdownTimer=null,this.countdownEl.style.display="none",this.state.phase="playing",this.msgEl.textContent="เริ่มจาก ธูป",this.startTimer(),this.playCalmBgm(),this.renderState()},1e3)}startTimer(){this.stopTimer(),this.ritualTimer=window.setInterval(()=>{this.state.phase!=="playing"&&this.state.phase!=="ready"||(this.state.timer=Math.max(0,this.state.timer-1),this.timerEl&&(this.timerEl.textContent=String(this.state.timer)),this.state.timer===0&&!this.state.completed&&(this.state.mistakes+=1,this.state.stepIndex=0,this.state.timer=45,this.msgEl.textContent="หมดเวลา ลองเริ่มลำดับใหม่จาก ธูป",this.timerEl&&(this.timerEl.textContent=String(this.state.timer)),this.renderState()))},1e3)}stopTimer(){window.clearInterval(this.ritualTimer),this.ritualTimer=null}playCalmBgm(){var t,e,s;if((t=this.cache.audio)!=null&&t.exists("worship-calm")){(e=this.calmBgm)==null||e.stop(),(s=this.calmBgm)==null||s.destroy(),this.calmBgm=this.sound.add("worship-calm",{loop:!0,volume:.14});try{this.calmBgm.play()}catch{}}}pickStep(t,e){var n,i;if(this.state.phase!=="playing")return;const o=((n=r[this.state.stepIndex])==null?void 0:n.id)===t;if(e.classList.remove("right","wrong"),e.offsetWidth,e.classList.add(o?"right":"wrong"),window.setTimeout(()=>e.classList.remove("right","wrong"),260),!o){this.state.mistakes+=1,this.state.stepIndex=0,this.msgEl.textContent="ลำดับผิด ต้องเริ่มใหม่จาก ธูป",this.renderState();return}if(this.state.stepIndex+=1,(i=this.cache.audio)!=null&&i.exists("worship-bell")&&this.sound.play("worship-bell",{volume:.24}),this.state.stepIndex>=r.length){this.state.completed=!0,this.state.phase="ready",this.msgEl.textContent="ทำพิธีครบแล้ว กดไหว้พระขอพรและเสี่ยงเซียมซีได้เลย",this.renderState();return}this.msgEl.textContent=`ต่อไป: ${r[this.state.stepIndex].label}`,this.renderState()}finishRitual(){var t,e;this.state.phase==="result"||!this.state.completed||(this.stopTimer(),(t=this.calmBgm)==null||t.stop(),this.state.phase="result",this.state.blessing=b[Math.floor(Math.random()*b.length)],this.state.fortune=p[Math.floor(Math.random()*p.length)],(e=this.cache.audio)!=null&&e.exists("worship-bell")&&this.sound.play("worship-bell",{volume:.4}),this.finalBlessingEl.textContent=this.state.blessing,this.finalFortuneEl.textContent=this.state.fortune,this.finalMetaEl.textContent=`ทำพิธีครบ 1 รอบ พลาด ${this.state.mistakes} ครั้ง แล้วรับพรกลับบ้านอย่างเป็นมงคล`,this.resultEl.style.display="flex",this.renderState())}renderState(){this.timerEl&&(this.timerEl.textContent=String(this.state.timer)),this.progressEl&&(this.progressEl.textContent=`${this.state.completed?1:0} / 1`),this.orderEl&&(this.orderEl.textContent=`${this.state.stepIndex} / ${r.length}`),this.mistakesEl&&(this.mistakesEl.textContent=String(this.state.mistakes)),this.stateEl&&(this.stateEl.textContent=this.state.phase==="ready"?"พร้อมขอพร":this.state.phase==="result"?"รับพรแล้ว":this.state.phase==="playing"?"กำลังทำพิธี":"รอเริ่ม"),this.sequenceEl&&(this.sequenceEl.innerHTML=r.map((t,e)=>`<div class="wb-tab ${e<this.state.stepIndex||e===this.state.stepIndex&&(this.state.phase==="playing"||this.state.phase==="ready")?"active":""}">${t.label}</div>`).join("")),this.prayBtn&&(this.prayBtn.disabled=this.state.phase!=="ready")}cleanup(){var t,e,s;window.clearInterval(this.countdownTimer),this.countdownTimer=null,this.stopTimer(),(t=this.calmBgm)==null||t.stop(),(e=this.calmBgm)==null||e.destroy(),this.calmBgm=null,(s=this.root)!=null&&s.parentNode&&this.root.parentNode.removeChild(this.root),this.root=null}}export{T as W};
