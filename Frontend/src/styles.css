@@ -85,7 +85,7 @@ button:disabled {
 .home-root {
   min-height: 100svh;
   width: 100vw;
-  background-image: url("/assets/backgroundHome.png");
+  background-image: url("/assets/backgroundHome.png.PNG");
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -94,6 +94,12 @@ button:disabled {
   align-items: center;
   justify-content: center;
   padding: 24px;
+}
+
+.home-root-landing {
+  padding: 0;
+  background-size: 100% 100%;
+  background-position: center;
 }
 
 /* =========================
@@ -558,6 +564,14 @@ select {
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.42);
 }
 
+.landing-stage-minimal {
+  width: 100%;
+  min-height: 100svh;
+  border-radius: 0;
+  box-shadow: none;
+  align-items: flex-end;
+}
+
 .landing-stage::before {
   content: "";
   position: absolute;
@@ -741,6 +755,30 @@ select {
   color: #fff5af;
   font-size: clamp(28px, 3vw, 38px);
   font-weight: 700;
+  box-shadow:
+    0 0 0 4px rgba(97, 47, 0, 0.55),
+    0 16px 0 #5e2800,
+    0 28px 38px rgba(0, 0, 0, 0.34);
+}
+
+.landing-start-only {
+  position: absolute;
+  left: 50%;
+  bottom: 12svh;
+  transform: translateX(-50%);
+  z-index: 4;
+}
+
+.landing-start-only:hover {
+  transform: translateX(-50%);
+  box-shadow:
+    0 0 0 4px rgba(97, 47, 0, 0.55),
+    0 16px 0 #5e2800,
+    0 28px 38px rgba(0, 0, 0, 0.34);
+}
+
+.landing-stage-minimal .temple-enter-btn:hover {
+  transform: translateX(-50%);
   box-shadow:
     0 0 0 4px rgba(97, 47, 0, 0.55),
     0 16px 0 #5e2800,
@@ -942,6 +980,11 @@ select {
     border-radius: 28px;
   }
 
+  .landing-stage-minimal {
+    min-height: 100svh;
+    border-radius: 0;
+  }
+
   .landing-poster {
     width: calc(100% - 24px);
     padding: 40px 12px 56px;
@@ -959,6 +1002,11 @@ select {
     min-width: min(280px, 86vw);
     font-size: 26px;
     padding: 18px 28px;
+  }
+
+  .landing-start-only {
+    bottom: 10svh;
+    transform: translateX(-50%);
   }
 
   .festival-form-shell {

@@ -15,7 +15,7 @@ export default function Home({ onSelect }) {
 
   useEffect(() => {
     if (step === "form") {
-      setTimeout(() => inputRef.current?.focus(), 120);
+      window.setTimeout(() => inputRef.current?.focus(), 120);
     }
   }, [step]);
 
@@ -58,36 +58,16 @@ export default function Home({ onSelect }) {
   }, [handleConfirm, loading, step]);
 
   return (
-    <div className="home-root">
+    <div className={`home-root ${step === "landing" ? "home-root-landing" : ""}`}>
       {step === "landing" ? (
-        <section className="landing-stage">
-          <div className="landing-sky-glow landing-sky-glow-left" />
-          <div className="landing-sky-glow landing-sky-glow-right" />
-          <div className="landing-moon" />
-          <div className="landing-string-light string-top" />
-          <div className="landing-string-light string-mid" />
-          <div className="landing-firework firework-left" />
-          <div className="landing-firework firework-right" />
-          <div className="landing-firework firework-center" />
-
-          <div className="landing-poster">
-            <div className="landing-badge">Temple Fair</div>
-
-            <h1 className="landing-title">
-              Temple fair
-              <span>mini-game 2D website</span>
-            </h1>
-
-            <p className="landing-subtitle">เรียนเชิญเข้าสู่งานวัดชิงรางวัล</p>
-
-            <button
-              className="enter-btn temple-enter-btn"
-              onClick={() => setStep("form")}
-            >
-              <span className="enter-btn-arrow">▶</span>
-              เข้าสู่เกม
-            </button>
-          </div>
+        <section className="landing-stage landing-stage-minimal">
+          <button
+            className="enter-btn temple-enter-btn landing-start-only"
+            onClick={() => setStep("form")}
+          >
+            <span className="enter-btn-arrow">▶</span>
+            เริ่มเกม
+          </button>
         </section>
       ) : (
         <section className="festival-form-shell">
