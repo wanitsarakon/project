@@ -7,10 +7,10 @@ export default class Spoon extends Phaser.Physics.Arcade.Image {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    this.setScale(0.255);
-    this.setOrigin(0.3, 0.64);
+    this.setScale(0.26);
+    this.setOrigin(0.34, 0.7);
     this.setDepth(5);
-    this.body.setCircle(34, 10, 18);
+    this.body.setCircle(34, 10, 24);
     this.body.allowGravity = false;
 
     this.holdingFish = null;
@@ -19,17 +19,34 @@ export default class Spoon extends Phaser.Physics.Arcade.Image {
   update(pointer, enabled = true) {
     if (!pointer) return;
 
-    this.x = Phaser.Math.Clamp(pointer.x, 18, this.scene.scale.width - 18);
-    this.y = Phaser.Math.Clamp(pointer.y, 18, this.scene.scale.height - 18);
+    const anchorOffset = this.getNetAnchorOffset();
+    this.x = Phaser.Math.Clamp(pointer.x + anchorOffset.x, 18, this.scene.scale.width - 18);
+    this.y = Phaser.Math.Clamp(pointer.y + anchorOffset.y, 18, this.scene.scale.height - 18);
 
     if (!enabled && this.holdingFish) {
       this.releaseFish();
     }
 
     if (this.holdingFish) {
-      this.holdingFish.x = this.x - 12;
-      this.holdingFish.y = this.y + 6;
+      const netCenter = this.getNetCenter();
+      this.holdingFish.x = netCenter.x;
+      this.holdingFish.y = netCenter.y;
     }
+  }
+
+  getNetCenter() {
+    const anchorOffset = this.getNetAnchorOffset();
+    return {
+      x: this.x - anchorOffset.x,
+      y: this.y - anchorOffset.y,
+    };
+  }
+
+  getNetAnchorOffset() {
+    return {
+      x: this.displayWidth * 0.14,
+      y: this.displayHeight * 0.21,
+    };
   }
 
   catchFish(fish) {
@@ -38,6 +55,9 @@ export default class Spoon extends Phaser.Physics.Arcade.Image {
     this.holdingFish = fish;
     fish.isCaught = true;
     fish.body.enable = false;
+    const netCenter = this.getNetCenter();
+    fish.x = netCenter.x;
+    fish.y = netCenter.y;
   }
 
   releaseFish() {

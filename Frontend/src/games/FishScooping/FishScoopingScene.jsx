@@ -2,17 +2,16 @@ import Phaser from "phaser";
 import Spoon from "./components/Spoon";
 import Fish from "./components/Fish";
 
-const BG_IMAGE = new URL("./assetsFish/BGfish.jpg", import.meta.url).href;
-const SPOON_IMAGE = new URL("./assetsFish/Spoon.png", import.meta.url).href;
-const BUCKET_IMAGE = new URL("./assetsFish/WaterBowl.png", import.meta.url).href;
+const BG_IMAGE = new URL("./assetsFish/พื้นหลังเกมตักปลา.PNG", import.meta.url).href;
+const SPOON_IMAGE = new URL("./assetsFish/ช้อนตักปลา.png", import.meta.url).href;
+const BUCKET_IMAGE = new URL("./assetsFish/ถังไม้.png", import.meta.url).href;
+const POND_IMAGE = new URL("./assetsFish/อ่างปลา.png", import.meta.url).href;
 const START_IMAGE = new URL("./assetsFish/fish_start.png", import.meta.url).href;
 const RESULT_IMAGE = new URL("./assetsFish/fish_score.png", import.meta.url).href;
 const FISH_IMAGES = {
-  fish1: new URL("./assetsFish/1.png", import.meta.url).href,
-  fish2: new URL("./assetsFish/2.png", import.meta.url).href,
-  fish3: new URL("./assetsFish/3.png", import.meta.url).href,
-  fish4: new URL("./assetsFish/4.png", import.meta.url).href,
-  fish5: new URL("./assetsFish/5.png", import.meta.url).href,
+  red: new URL("./assetsFish/ปลาเเดง.png", import.meta.url).href,
+  silver: new URL("./assetsFish/ปลาเงิน.png", import.meta.url).href,
+  gold: new URL("./assetsFish/ปลาทอง.png", import.meta.url).href,
 };
 
 const COUNTDOWN_SOUND = new URL("./sounds/countdown.mp3", import.meta.url).href;
@@ -52,13 +51,12 @@ export default class FishScoopingScene extends Phaser.Scene {
     this.load.image("bg", BG_IMAGE);
     this.load.image("spoon", SPOON_IMAGE);
     this.load.image("bucket", BUCKET_IMAGE);
+    this.load.image("pond", POND_IMAGE);
     this.load.image("fish-start", START_IMAGE);
     this.load.image("fish-result", RESULT_IMAGE);
-    this.load.image("fish1", FISH_IMAGES.fish1);
-    this.load.image("fish2", FISH_IMAGES.fish2);
-    this.load.image("fish3", FISH_IMAGES.fish3);
-    this.load.image("fish4", FISH_IMAGES.fish4);
-    this.load.image("fish5", FISH_IMAGES.fish5);
+    this.load.image("fish-red", FISH_IMAGES.red);
+    this.load.image("fish-silver", FISH_IMAGES.silver);
+    this.load.image("fish-gold", FISH_IMAGES.gold);
     this.load.audio("fish-count", COUNTDOWN_SOUND);
     this.load.audio("fish-start-sfx", START_SOUND);
     this.load.audio("fish-scoop", SCOOP_SOUND);
@@ -68,18 +66,22 @@ export default class FishScoopingScene extends Phaser.Scene {
 
   create() {
     const { width, height } = this.scale;
+    const pondSize = Math.min(width * 1.28, height * 1.95);
 
     this.add.image(width / 2, height / 2, "bg").setDisplaySize(width, height);
+    this.pond = this.add.image(width * 0.51, height * 0.81, "pond")
+      .setDisplaySize(pondSize, pondSize)
+      .setDepth(1);
 
     this.waterZone = {
-      cx: width * 0.546,
-      cy: height * 0.692,
-      rx: width * 0.254,
-      ry: height * 0.188,
+      cx: width * 0.51,
+      cy: height * 0.815,
+      rx: pondSize * 0.29,
+      ry: pondSize * 0.205,
     };
 
-    this.bucket = this.physics.add.image(width * 0.108, height * 0.86, "bucket")
-      .setScale(Math.min(width / 800, height / 600) * 0.52)
+    this.bucket = this.physics.add.image(width * 0.11, height * 0.865, "bucket")
+      .setScale(Math.min(width / 800, height / 600) * 0.34)
       .setImmovable(true)
       .setDepth(3);
     this.bucket.body.allowGravity = false;
@@ -211,7 +213,7 @@ export default class FishScoopingScene extends Phaser.Scene {
   }
 
   spawnInitialFish() {
-    const fishTextures = ["fish1", "fish2", "fish3", "fish4", "fish5"];
+    const normalFishTextures = ["fish-red", "fish-silver"];
 
     for (let i = 0; i < 8; i += 1) {
       const isGold = i >= 6;
@@ -220,7 +222,7 @@ export default class FishScoopingScene extends Phaser.Scene {
         this,
         point.x,
         point.y,
-        Phaser.Utils.Array.GetRandom(fishTextures),
+        isGold ? "fish-gold" : Phaser.Utils.Array.GetRandom(normalFishTextures),
         isGold ? "gold" : "normal",
       );
       this.fishes.add(fish);
@@ -287,14 +289,15 @@ export default class FishScoopingScene extends Phaser.Scene {
       callback: () => {
         if (this.phase !== "playing") return;
         if (this.fishes.countActive(true) >= MAX_FISH) return;
-        const fishTextures = ["fish1", "fish2", "fish3", "fish4", "fish5"];
+        const normalFishTextures = ["fish-red", "fish-silver"];
+        const isGold = Math.random() < 0.28;
         const point = this.randomPointInWater();
         const fish = new Fish(
           this,
           point.x,
           point.y,
-          Phaser.Utils.Array.GetRandom(fishTextures),
-          Math.random() < 0.28 ? "gold" : "normal",
+          isGold ? "fish-gold" : Phaser.Utils.Array.GetRandom(normalFishTextures),
+          isGold ? "gold" : "normal",
         );
         this.fishes.add(fish);
       },
@@ -319,8 +322,9 @@ export default class FishScoopingScene extends Phaser.Scene {
 
     this.fishes.children.each((fish) => {
       if (!fish?.active || fish.isCaught) return;
-      const distance = Phaser.Math.Distance.Between(this.spoon.x, this.spoon.y, fish.x, fish.y);
-      if (distance < 56 && distance < nearestDistance) {
+      const netCenter = this.spoon.getNetCenter();
+      const distance = Phaser.Math.Distance.Between(netCenter.x, netCenter.y, fish.x, fish.y);
+      if (distance < 68 && distance < nearestDistance) {
         nearestFish = fish;
         nearestDistance = distance;
       }
@@ -357,9 +361,10 @@ export default class FishScoopingScene extends Phaser.Scene {
     this.spoon?.update(pointer, this.phase === "playing");
 
     if (this.phase === "playing") {
+      const netCenter = this.spoon?.getNetCenter?.() ?? null;
       this.fishes.children.each((fish) => {
         if (!fish?.active) return;
-        fish.update(this.waterZone);
+        fish.update(this.waterZone, netCenter);
       });
 
       if (this.spoon?.holdingFish) {
@@ -371,7 +376,7 @@ export default class FishScoopingScene extends Phaser.Scene {
           this.bucket.y,
         );
 
-        if (dist < 116) {
+        if (dist < 128) {
           this.registerCatch(fish);
         }
       }
@@ -394,14 +399,14 @@ export default class FishScoopingScene extends Phaser.Scene {
     this.cameras.main.flash(90, 255, 247, 210, false);
     this.tweens.add({
       targets: this.bucket,
-      scaleX: this.bucket.scaleX * 1.08,
-      scaleY: this.bucket.scaleY * 1.08,
+      scaleX: this.bucket.scaleX * 1.06,
+      scaleY: this.bucket.scaleY * 1.06,
       duration: 120,
       yoyo: true,
       ease: "Sine.easeOut",
     });
 
-    const burst = this.add.circle(this.bucket.x, this.bucket.y - 30, 16, 0xffef9c, 0.9).setDepth(7);
+    const burst = this.add.circle(this.bucket.x, this.bucket.y - 44, 16, 0xffef9c, 0.9).setDepth(7);
     this.tweens.add({
       targets: burst,
       scale: 3,
