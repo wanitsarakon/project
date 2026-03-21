@@ -1,7 +1,7 @@
 import Phaser from "phaser";
 
 const BOOTH_SPACING = 620;
-const BOOTH_Y = 500;
+const BOOTH_Y = 585;
 const WORLD_MARGIN = 220;
 const STALL_WIDTH = 430;
 const STALL_HEIGHT = 430;
@@ -110,6 +110,12 @@ export default class FestivalMapScene extends Phaser.Scene {
       "festival-stall-bg",
     );
     bg.setOrigin(0.5, 0.5);
+    const texture = this.textures.get("festival-stall-bg")?.getSourceImage?.();
+    if (texture?.width && texture?.height) {
+      const scaleByHeight = height / texture.height;
+      bg.tileScaleX = scaleByHeight;
+      bg.tileScaleY = scaleByHeight;
+    }
   }
 
   drawFestivalBackdrop(height) {
