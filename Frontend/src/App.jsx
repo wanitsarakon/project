@@ -24,6 +24,8 @@ const DEBUG_SCENE_ALIASES = {
   worship: "WorshipBoothScene",
 };
 
+const FESTIVAL_BGM_STOP_EVENT = "festival-bgm-stop";
+
 export default function App() {
 
   const [view, setView] = useState("home");
@@ -56,19 +58,24 @@ export default function App() {
       const promise = audio.play();
       if (promise?.catch) promise.catch(() => {});
     };
+    const stopImmediately = () => {
+      audio.pause();
+    };
 
     if (shouldPlay) {
       tryPlay();
     } else {
-      audio.pause();
+      stopImmediately();
     }
 
     window.addEventListener("pointerdown", tryPlay, { passive: true });
     window.addEventListener("keydown", tryPlay);
+    window.addEventListener(FESTIVAL_BGM_STOP_EVENT, stopImmediately);
 
     return () => {
       window.removeEventListener("pointerdown", tryPlay);
       window.removeEventListener("keydown", tryPlay);
+      window.removeEventListener(FESTIVAL_BGM_STOP_EVENT, stopImmediately);
     };
   }, [isMiniGamePreview, miniGameActive]);
 

@@ -1,0 +1,50 @@
+[
+  {
+    "name": "ผู้ชายผอม",
+    "power": 2.0,
+    "speed": 1.8,
+    "note": "กดรัวได้ไว",
+    "image": "skinny.png",
+    "pullImage": "skinny_pull.png"
+  },
+  {
+    "name": "หนุ่มนักกล้าม",
+    "power": 5.0,
+    "speed": 0.6,
+    "note": "แรงสูงมาก",
+    "image": "buff.png",
+    "pullImage": "buff_pull.png"
+  },
+  {
+    "name": "คนแก่เเต่เท่",
+    "power": 3.5,
+    "speed": 0.4,
+    "note": "เก๋าเเรงเยอะเเต่เหนื่อยง่าย",
+    "image": "old.png",
+    "pullImage": "old_pull.png"
+  },
+  {
+    "name": "เด็ก",
+    "power": 1.0,
+    "speed": 1.4,
+    "note": "เร็วแต่แรงน้อย",
+    "image": "kid.png",
+    "pullImage": "kid_pull.png"
+  },
+  {
+    "name": "ผู้หญิงธรรมดา",
+    "power": 2.5,
+    "speed": 1.0,
+    "note": "แรงน้อยกว่าผู้ชาย",
+    "image": "woman.png",
+    "pullImage": "woman_pull.png"
+  },
+  {
+    "name": "ผู้ชายธรรมดา",
+    "power": 4.0,
+    "speed": 1.1,
+    "note": "สมดุล",
+    "image": "man.png",
+    "pullImage": "man_pull.png"
+  }
+]

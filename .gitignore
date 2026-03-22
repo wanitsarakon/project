@@ -1,0 +1,3 @@
+Frontend/dist/
+.artifacts/*.log
+.artifacts/**/*.log

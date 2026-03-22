@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ชักกะเย่อ 2D - งานวัด</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="start-screen">
+        <div class="result-container">
+            <img src="images/your_banner_image.png" id="result-banner">
+            <div class="result-text-overlay">
+                <button id="enter-game-btn" onclick="startGame()">เข้าสู่เกม</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-content" class="initial-blur">
+        <div id="game-container">
+            <div id="setup-page" class="page">
+                <div class="top-header">
+                    <img src="images/main_title_banner.png" class="main-banner-img">
+                </div>
+
+                <div class="selection-area">
+                    <div class="team-side left-side">
+                        <img src="images/team_player_label.png" class="team-banner">
+                        <div id="my-team-slots" class="slots">
+                            <div class="slot">?</div>
+                            <div class="slot">?</div>
+                            <div class="slot">?</div>
+                            <div class="slot">?</div>
+                        </div>
+                    </div>
+                    
+                    <div id="item-selection-area" style="display:none; text-align:center;">
+                        <div class="char-footer" id="item-list" style="justify-content: center; display: flex; gap: 20px;">
+                            <div class="char-item has-tooltip" onclick="selectItem('amulet', this)">
+                                <img src="images/item_amulet.png">
+                                <div class="ability-tooltip">
+                                    <div class="tooltip-title">พระเครื่อง</div>
+                                    <div class="tooltip-stat"><span>คุณสมบัติ:</span> <span>กัน Freeze</span></div>
+                                    <div class="tooltip-note">แคล้วคลาดจากคำสาปตะคริวของฝั่งตรงข้าม</div>
+                                </div>
+                            </div>
+                            <div class="char-item has-tooltip" onclick="selectItem('drink', this)">
+                                <img src="images/item_drink.png">
+                                <div class="ability-tooltip">
+                                    <div class="tooltip-title">เครื่องดื่มชูกำลัง</div>
+                                    <div class="tooltip-stat"><span>คุณสมบัติ:</span> <span>อึดขึ้น 30%</span></div>
+                                    <div class="tooltip-note">เพิ่มพลังกายช่วยให้เหนื่อยช้าลงขณะดึงเชือก</div>
+                                </div>
+                            </div>
+                            <div class="char-item has-tooltip" onclick="selectItem('oil', this)">
+                                <img src="images/item_oil.png">
+                                <div class="ability-tooltip">
+                                    <div class="tooltip-title">น้ำมันมวย</div>
+                                    <div class="tooltip-stat"><span>คุณสมบัติ:</span> <span>ดึงแรงขึ้น 15%</span></div>
+                                    <div class="tooltip-note">เพิ่มพลังการดึงให้คนในทีม</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="center-stage">
+                        <div id="rps-ui">
+                            <p id="turn-display">กรุณาเลือกปุ่มที่ต้องการออก</p>
+                            <div id="hands-battle" class="hands-battle-area">
+                                <div class="hand-wrapper left">
+                                    <div class="hand-pillar"></div> <img id="player-hand" src="" class="hand-img">
+                                </div>
+                                <div class="hand-wrapper right">
+                                    <div class="hand-pillar"></div> <img id="ai-hand" src="" class="hand-img">
+                                </div>
+                            </div>
+
+                            <div class="rps-choices">
+                                <div class="rps-item" onclick="playRPS('rock')">
+                                    <img src="images/rock2.png" alt="ค้อน">
+                                </div>
+                                <div class="rps-item" onclick="playRPS('paper')">
+                                    <img src="images/paper2.png" alt="กระดาษ">
+                                </div>
+                                <div class="rps-item" onclick="playRPS('scissors')">
+                                    <img src="images/scissors2.png" alt="กรรไกร">
+                                </div>
+                            </div>
+                            <div id="rps-result"></div>
+                        </div>
+                    </div>
+
+                    <div class="team-side right-side">
+                        <img src="images/team_ai_label.png" class="team-banner">
+                        <div id="ai-team-slots" class="slots">
+                            <div class="slot">?</div>
+                            <div class="slot">?</div>
+                            <div class="slot">?</div>
+                            <div class="slot">?</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="char-list" class="char-footer"></div>
+            </div>
+
+            <div id="game-arena" class="page" style="display:none; position: relative; width: 100vw; height: 100vh;">
+                <div id="power-bar-container">
+                    <div class="team-label p1">ทีมคุณ</div>
+                    <div id="power-bar-bg">
+                        <div id="power-fill"></div> 
+                        <div id="power-indicator"></div>
+                    </div>
+                    <div class="team-label p2">ทีมคู่แข่ง</div>
+                </div>
+
+                <div id="stamina-ui-overlay" style="position: absolute; top: 80px; width: 100%; display: flex; justify-content: space-between; padding: 0 50px; box-sizing: border-box; z-index: 1000;">
+                    <div class="stamina-wrapper" style="width: 250px;">
+                        <div style="color: white; font-family: 'Kanit'; font-size: 14px; margin-bottom: 5px;">พลังกายคุณ</div>
+                        <div id="stamina-container" style="width: 100%; height: 15px; background: rgba(0,0,0,0.5); border: 2px solid #fff; border-radius: 10px; overflow: hidden;">
+                            <div id="stamina-bar" style="width: 100%; height: 100%; background: #00ff00; transition: width 0.1s;"></div>
+                        </div>
+                    </div>
+                    <div class="stamina-wrapper" style="width: 250px; text-align: right;">
+                        <div style="color: white; font-family: 'Kanit'; font-size: 14px; margin-bottom: 5px;">พลังกายคู่แข่ง</div>
+                        <div id="ai-stamina-container" style="width: 100%; height: 15px; background: rgba(0,0,0,0.5); border: 2px solid #fff; border-radius: 10px; overflow: hidden;">
+                            <div id="ai-stamina-bar" style="width: 100%; height: 100%; background: #00ffff; float: right;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="ingame-item-display" style="position: absolute; bottom: 30px; left: 30px; z-index: 1002;">
+                    <div id="my-item-slot-arena" class="ingame-item-slot">
+                        <div class="key-hint">ทีมคุณ</div>
+                    </div>
+                </div>
+
+                <div id="ai-item-display" style="position: absolute; bottom: 30px; right: 30px; z-index: 1002;">
+                    <div id="ai-item-slot-arena" class="ingame-item-slot" style="border-color: #ff5252;">
+                        <div class="key-hint" style="background: linear-gradient(180deg, #ff5252, #b71c1c); color: white;">คู่แข่ง</div>
+                    </div>
+                </div>
+
+                <div id="controls-guide" style="position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; background: rgba(0, 0, 0, 0.7); padding: 8px 25px; border-radius: 50px; border: 1px solid rgba(255, 215, 0, 0.4); z-index: 1005;">
+                    <div style="display: flex; align-items: center; gap: 8px; color: white; font-family: 'Kanit'; font-size: 14px;">
+                        <span style="background: #444; color: #ffd700; padding: 2px 10px; border-radius: 5px; border: 1px solid #666; font-weight: bold; font-size: 12px;">Space</span> <span>ดึงเชือก</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; color: white; font-family: 'Kanit'; font-size: 14px;">
+                        <span style="background: #444; color: #ffd700; padding: 2px 10px; border-radius: 5px; border: 1px solid #666; font-weight: bold; font-size: 12px;">Q</span> <span>ใช้ไอเท็ม</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; color: white; font-family: 'Kanit'; font-size: 14px;">
+                        <span style="background: #444; color: #ffd700; padding: 2px 10px; border-radius: 5px; border: 1px solid #666; font-weight: bold; font-size: 12px;">S</span> <span>เสียงเชียร์เพิ่มพลังการดึง</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; color: white; font-family: 'Kanit'; font-size: 14px;">
+                        <span style="background: #444; color: #ffd700; padding: 2px 10px; border-radius: 5px; border: 1px solid #666; font-weight: bold; font-size: 12px;">D</span> <span>ทำให้คู่เเข่งเป็นตะคริว</span>
+                    </div>
+                </div>
+
+                <div id="keyboard-controls" style="z-index: 1001;">
+                    <div class="key-btn" id="key-s">
+                        <img src="images/key_s.png" alt="S">
+                        <div class="key-tooltip">เสียงเชียร์: เพิ่มพลังการดึง</div>
+                    </div>
+                    
+                    <div class="key-btn" id="key-space">
+                        <img src="images/spacebar.png" alt="Spacebar">
+                        <div class="key-tooltip">ดึงเชือก!</div>
+                    </div>
+                    
+                    <div class="key-btn" id="key-d">
+                        <img src="images/key_d.png" alt="D">
+                        <div class="key-tooltip">ทำให้คู่แข่งเป็นตะคริว</div>
+                    </div>
+                </div>
+
+                <canvas id="gameCanvas" style="display: block;"></canvas>
+            </div>
+<div id="countdown-overlay">
+    <div id="countdown-text"></div>
+</div>
+            <div id="result-screen" style="display:none;">
+                <div class="result-container">
+                    <img src="images/your_banner_image1.png" id="result-banner">
+                    <div class="result-text-overlay">
+                        <h1 id="total-score">0</h1>
+                    </div>
+                </div>
+            </div>
+        </div> 
+    </div> 
+
+    <script>
+        function startGame() {
+            const ss = document.getElementById('start-screen');
+            if (ss) {
+                ss.style.opacity = '0';
+                ss.style.pointerEvents = 'none';
+                setTimeout(() => { ss.style.display = 'none'; }, 500);
+            }
+            const gc = document.getElementById('game-content');
+            if (gc) gc.classList.remove('initial-blur');
+
+            if (typeof enterGame === "function") enterGame(); 
+        }
+    </script>
+    <script src="game.js"></script>
+</body>
+</html>

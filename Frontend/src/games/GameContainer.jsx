@@ -19,6 +19,8 @@ import FlowerGameScene from "./FlowerGame/FlowerGameScene";
 import HauntedHouseScene from "./HauntedHouse/HauntedHouseScene";
 import TugOfWarScene from "./TugOfWar/TugOfWarScene";
 
+const FESTIVAL_BGM_STOP_EVENT = "festival-bgm-stop";
+
 export default function GameContainer({
   roomCode,
   player,
@@ -113,6 +115,10 @@ export default function GameContainer({
   const startMiniGame = (gameKey) => {
 
     if (!gameRef.current) return;
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new Event(FESTIVAL_BGM_STOP_EVENT));
+    }
 
     const game = gameRef.current;
 
