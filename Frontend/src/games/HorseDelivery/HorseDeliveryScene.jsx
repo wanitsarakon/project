@@ -6,14 +6,18 @@ import Items from "./components/Items";
 import ScoreManager from "./components/ScoreManager";
 
 const GAME_TIME = 60;
-const BG_IMAGE = "/assetsHorse/BGhorse.png";
-const HORSE_IMAGE = "/assetsHorse/horse.png";
-const OBSTACLE_IMAGE = "/assetsHorse/obstacle.png";
-const ITEM_CANDY = "/assetsHorse/item_candy.png";
-const ITEM_COIN = "/assetsHorse/item_coin.png";
-const ITEM_GIFT = "/assetsHorse/item_gift.png";
-const ITEM_HAY = "/assetsHorse/item_hay.png";
-const RULE_SIGN = "/assetsHorse/sign.png";
+const BG_IMAGE = new URL("./assetsHorse/BGhorse.PNG", import.meta.url).href;
+const HORSE_TEXTURES = [
+  { key: "horse-1", asset: new URL("./assetsHorse/ขี่ม้า1.png", import.meta.url).href, label: "ขี่ม้า 1" },
+  { key: "horse-2", asset: new URL("./assetsHorse/ขี่ม้า2.png", import.meta.url).href, label: "ขี่ม้า 2" },
+  { key: "horse-3", asset: new URL("./assetsHorse/ขี่ม้า3.png", import.meta.url).href, label: "ขี่ม้า 3" },
+];
+const OBSTACLE_IMAGE = new URL("./assetsHorse/obstacle.png", import.meta.url).href;
+const ITEM_CANDY = new URL("./assetsHorse/item_candy.png", import.meta.url).href;
+const ITEM_COIN = new URL("./assetsHorse/item_coin.png", import.meta.url).href;
+const ITEM_GIFT = new URL("./assetsHorse/item_gift.png", import.meta.url).href;
+const ITEM_HAY = new URL("./assetsHorse/item_hay.png", import.meta.url).href;
+const RULE_SIGN = new URL("./assetsHorse/sign.png", import.meta.url).href;
 const START_SIGN = new URL("./assetsHorse/ขี่ม้าเริ่มเกม.png", import.meta.url).href;
 const RESULT_SIGN = new URL("./assetsHorse/ขี่ม้าคะเนน.png", import.meta.url).href;
 const COUNT_SOUND = new URL("./sounds/countdown.mp3", import.meta.url).href;
@@ -22,13 +26,28 @@ const HORSE_GALLOP = new URL("./sounds/horse_gallop.wav", import.meta.url).href;
 const HORSE_NEIGH = new URL("./sounds/horse_neigh.wav", import.meta.url).href;
 const FAIR_AMBIENCE = new URL("./sounds/fair_ambience.wav", import.meta.url).href;
 const HUD_SIGN_IMAGE = "/assets/เเผ่นป้ายเวลากับคะเเนน.png";
+const HORSE_SWAP_TIMINGS = [
+  { elapsed: 15, index: 1 },
+  { elapsed: 45, index: 2 },
+];
+const RUN_SPEED = 320;
+const ITEM_SPAWN_OFFSET_X = 320;
+const ITEM_Y_OFFSET = 146;
+const ITEM_MIN_SPACING = RUN_SPEED * 1.05;
+const SWAP_PREVIEW_SCREEN_X = 640;
+const WORLD_WIDTH = 50000;
 
 export default class HorseDeliveryScene extends Phaser.Scene {
   constructor() {
     super("HorseDeliveryScene");
     this.spawnClock = null;
     this.itemClock = null;
+    this.itemWaveCalls = [];
     this.timerEvent = null;
+    this.swapDeadlineEvent = null;
+    this.penaltyEvent = null;
+    this.previewTween = null;
+    this.swapApproachTween = null;
   }
 
   init(data = {}) {
@@ -37,14 +56,24 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     this.roundId = data.roundId ?? null;
 
     this.timeLeft = GAME_TIME;
+    this.elapsedSeconds = 0;
     this.ended = false;
     this.started = false;
     this.midgameRampApplied = false;
+    this.deliveries = 0;
+    this.crashes = 0;
+    this.currentHorseIndex = 0;
+    this.pendingHorseIndex = null;
+    this.swapWindowActive = false;
+    this.speedPenaltyActive = false;
+    this.worldSpeedFactor = 1;
+    this.nextSwapStep = 0;
+    this.itemWaveRemaining = 0;
   }
 
   preload() {
     this.load.image("horse-bg", BG_IMAGE);
-    this.load.image("horse", HORSE_IMAGE);
+    HORSE_TEXTURES.forEach((horse) => this.load.image(horse.key, horse.asset));
     this.load.image("obstacle", OBSTACLE_IMAGE);
     this.load.image("item_candy", ITEM_CANDY);
     this.load.image("item_coin", ITEM_COIN);
@@ -64,12 +93,14 @@ export default class HorseDeliveryScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale;
 
-    this.add.image(width / 2, height / 2, "horse-bg").setDisplaySize(width, height);
-    this.add.rectangle(width / 2, height - 74, width, 160, 0x5f3517, 0.01);
+    this.bg = this.add.tileSprite(width / 2, height / 2, width, height, "horse-bg")
+      .setScrollFactor(0)
+      .setDepth(-5);
+    this.add.rectangle(width / 2, height - 74, width, 160, 0x5f3517, 0.01).setScrollFactor(0);
 
     this.groundY = height - 132;
-    this.ground = this.physics.add.staticImage(width / 2, this.groundY + 30)
-      .setDisplaySize(width, 90)
+    this.ground = this.physics.add.staticImage(WORLD_WIDTH / 2, this.groundY + 30)
+      .setDisplaySize(WORLD_WIDTH, 90)
       .setVisible(false);
     this.ground.refreshBody();
 
@@ -90,7 +121,8 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     this.timeFrame = this.add.image(width - 168, 44, "horse-hud-sign")
       .setDisplaySize(258, 86)
       .setDepth(19)
-      .setVisible(false);
+      .setVisible(false)
+      .setScrollFactor(0);
 
     this.timeText = this.add.text(width - 168, 44, `เวลา: ${GAME_TIME} วิ`, {
       fontFamily: "Kanit",
@@ -98,52 +130,42 @@ export default class HorseDeliveryScene extends Phaser.Scene {
       color: "#fff4bf",
       stroke: "#4f1e00",
       strokeThickness: 5,
-    }).setOrigin(0.5).setDepth(20).setVisible(false);
+    }).setOrigin(0.5).setDepth(20).setVisible(false).setScrollFactor(0);
 
-    this.infoText = this.add.text(width / 2, 28, "แตะหน้าจอหรือกด Space เพื่อกระโดดข้ามสิ่งกีดขวาง", {
+    this.infoText = this.add.text(width / 2, 28, "", {
       fontFamily: "Kanit",
       fontSize: "18px",
       color: "#fffbe6",
       backgroundColor: "rgba(51,26,4,0.5)",
       padding: { left: 14, right: 14, top: 6, bottom: 6 },
-    }).setOrigin(0.5, 0).setDepth(20).setVisible(false);
+      align: "center",
+    }).setOrigin(0.5, 0).setDepth(20).setVisible(false).setScrollFactor(0);
 
-    this.rulePanel = this.add.container(width - 210, 170).setDepth(18).setVisible(false);
-    const ruleBoard = this.add.rectangle(0, 0, 290, 192, 0x673116, 0.88).setStrokeStyle(5, 0xd8a04f);
-    const ruleSign = this.add.image(0, 0, "horse-rule-sign").setDisplaySize(250, 176);
-    this.rulePanel.add([ruleBoard, ruleSign]);
-
-    this.boostShell = this.add.rectangle(width / 2, height - 38, 432, 38, 0x5e250f, 0.92)
-      .setStrokeStyle(4, 0xd2872d)
-      .setDepth(19)
-      .setVisible(false);
-    this.boostTrack = this.add.rectangle(width / 2 - 36, height - 38, 286, 18, 0x2a1306, 0.9)
-      .setDepth(20)
-      .setVisible(false);
-    this.boostFill = this.add.rectangle(width / 2 - 179, height - 38, 0, 18, 0x2d9cff, 1)
-      .setOrigin(0, 0.5)
-      .setDepth(21)
-      .setVisible(false);
-    this.boostLabel = this.add.text(width / 2 + 164, height - 38, "BOOST", {
+    this.swapPromptText = this.add.text(width / 2, 70, "", {
       fontFamily: "Kanit",
-      fontSize: "26px",
+      fontSize: "24px",
       fontStyle: "bold",
-      color: "#fff0bf",
-      stroke: "#5a2200",
+      color: "#fff6d6",
+      stroke: "#4f1e00",
       strokeThickness: 5,
-    }).setOrigin(0.5).setDepth(22).setVisible(false);
+      align: "center",
+    }).setOrigin(0.5, 0).setDepth(21).setVisible(false).setScrollFactor(0);
+
+    this.rulePanel = this.add.container(width - 210, 170).setDepth(18).setVisible(false).setScrollFactor(0);
+    const ruleSign = this.add.image(0, 0, "horse-rule-sign").setDisplaySize(320, 228);
+    this.rulePanel.add([ruleSign]);
+
   }
 
   createStartOverlay() {
     const { width, height } = this.scale;
-    this.startOverlay = this.add.container(0, 0).setDepth(40);
+    this.startOverlay = this.add.container(0, 0).setDepth(40).setScrollFactor(0);
     const dim = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.58);
     const banner = this.add.image(width / 2, height / 2 - 96, "horse-start-sign").setDisplaySize(700, 468);
-    const ruleSign = this.add.image(width / 2 + 4, height / 2 + 118, "horse-rule-sign").setDisplaySize(430, 318);
     const copy = this.add.text(
       width / 2,
       height / 2 + 4,
-      "เก็บลูกอม เหรียญ และของขวัญได้ +1 แต่ถ้าชนถังหรือเก็บฟางจะโดน -1 กระโดดให้แม่นเพื่อเก็บของส่งเมืองให้มากที่สุดก่อนหมดเวลา",
+      "เก็บลูกอม เหรียญ และของขวัญได้ +1 แต่ถ้าชนถังหรือเก็บฟางจะโดน -1\nครบ 15 และ 45 วินาที ต้องกด Space หรือคลิกเพื่อเปลี่ยนม้าให้ทัน",
       {
         fontFamily: "Kanit",
         fontSize: "18px",
@@ -154,7 +176,7 @@ export default class HorseDeliveryScene extends Phaser.Scene {
         align: "center",
       },
     ).setOrigin(0.5);
-    const button = this.add.text(width / 2, height / 2 + 256, "เริ่มแข่ง", {
+    const button = this.add.text(width / 2, height / 2 + 216, "เริ่มแข่ง", {
       fontFamily: "Kanit",
       fontSize: "28px",
       color: "#fff7d9",
@@ -165,12 +187,12 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
     button.on("pointerdown", () => this.startCountdown());
 
-    this.startOverlay.add([dim, banner, ruleSign, copy, button]);
+    this.startOverlay.add([dim, banner, copy, button]);
   }
 
   createResultOverlay() {
     const { width, height } = this.scale;
-    this.resultOverlay = this.add.container(0, 0).setDepth(50).setVisible(false);
+    this.resultOverlay = this.add.container(0, 0).setDepth(50).setVisible(false).setScrollFactor(0);
     const dim = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7);
     const banner = this.add.image(width / 2, height / 2, "horse-result-sign").setDisplaySize(720, 480);
     this.resultScoreText = this.add.text(width / 2, height / 2 + 18, "0", {
@@ -202,8 +224,8 @@ export default class HorseDeliveryScene extends Phaser.Scene {
         roundId: this.roundId,
         meta: {
           timeLeft: this.timeLeft,
-          deliveries: this.deliveries ?? 0,
-          crashes: this.crashes ?? 0,
+          deliveries: this.deliveries,
+          crashes: this.crashes,
         },
       });
     });
@@ -215,8 +237,6 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     if (this.started) return;
     this.started = true;
     this.startOverlay.setVisible(false);
-    this.deliveries = 0;
-    this.crashes = 0;
 
     this.countdownText = this.add.text(this.scale.width / 2, this.scale.height / 2, "3", {
       fontFamily: "Kanit",
@@ -250,6 +270,7 @@ export default class HorseDeliveryScene extends Phaser.Scene {
 
   startGame() {
     const { width, height } = this.scale;
+    this.playerCruiseX = width / 2;
 
     this.gallopBgm = this.sound.add("horse-gallop", { loop: true, volume: 0.24 });
     this.fairBgm = this.sound.add("horse-fair-bgm", { loop: true, volume: 0.11 });
@@ -261,11 +282,9 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     this.timeFrame.setVisible(true);
     this.timeText.setVisible(true);
     this.infoText.setVisible(true);
+    this.swapPromptText.setVisible(true);
     this.rulePanel.setVisible(true);
-    this.boostShell.setVisible(true);
-    this.boostTrack.setVisible(true);
-    this.boostFill.setVisible(true);
-    this.boostLabel.setVisible(true);
+    this.setDefaultHudMessage();
 
     this.tweens.add({
       targets: this.infoText,
@@ -275,8 +294,14 @@ export default class HorseDeliveryScene extends Phaser.Scene {
       repeat: 1,
     });
 
-    this.player = new Horse(this, 280, this.groundY - 18);
+    this.player = new Horse(this, this.playerCruiseX, this.groundY - 18, HORSE_TEXTURES[0].key);
     this.physics.add.collider(this.player, this.ground);
+    this.nextHorsePreview = this.add.image(this.player.x + SWAP_PREVIEW_SCREEN_X, this.player.y - 10, HORSE_TEXTURES[1].key)
+      .setOrigin(0.5, 1)
+      .setScale(this.player.baseScale * 0.94)
+      .setDepth(7)
+      .setAlpha(0.72)
+      .setVisible(false);
 
     this.obstacles = this.physics.add.group({ maxSize: 24 });
     this.items = this.physics.add.group({ maxSize: 24 });
@@ -287,42 +312,46 @@ export default class HorseDeliveryScene extends Phaser.Scene {
       callback: () => this.spawnObstacle(),
     });
 
-    this.itemClock = this.time.addEvent({
-      delay: 3260,
-      loop: true,
-      callback: () => this.spawnItem(),
-    });
+    this.startItemWaveLoop(7200);
 
     this.physics.add.collider(this.player, this.obstacles, this.hitObstacle, null, this);
     this.physics.add.overlap(this.player, this.items, this.collectItem, null, this);
 
-    this.jumpHandler = () => this.player?.jump();
-    this.input.on("pointerdown", this.jumpHandler);
+    this.actionHandler = () => this.handleActionInput();
+    this.input.on("pointerdown", this.actionHandler);
     this.keyJump = this.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-    this.keyJump?.on("down", this.jumpHandler);
+    this.keyJump?.on("down", this.actionHandler);
 
     this.timerEvent = this.time.addEvent({
       delay: 1000,
       loop: true,
       callback: () => {
         if (this.ended) return;
+        this.elapsedSeconds += 1;
         this.timeLeft -= 1;
         this.timeText.setText(`เวลา: ${Math.max(0, this.timeLeft)} วิ`);
-        if (this.timeLeft === 25) {
-          this.infoText.setText("ช่วงท้ายแล้ว ของจะมาไวขึ้นอีก ระวังจังหวะเก็บกับจังหวะกระโดดให้ดี!");
+        this.maybeStartHorseSwap();
+        if (this.timeLeft === 25 && !this.swapWindowActive && !this.speedPenaltyActive) {
+          this.infoText.setText("ช่วงท้ายแล้ว ของจะมาไวขึ้น เตรียมกระโดดและสลับม้าให้แม่น");
         }
         if (this.timeLeft <= 0) this.endGame();
       },
     });
 
-    this.cameras.main.setBounds(0, 0, width, height);
+    this.cameras.main.setBounds(0, 0, WORLD_WIDTH, height);
+    this.cameras.main.startFollow(this.player, false, 1, 1);
+    this.cameras.main.setDeadzone(0, 0);
   }
 
   spawnObstacle() {
     if (this.ended) return;
-    const obstacle = new Obstacle(this, this.scale.width + 72, this.groundY + 10);
+    if (!this.canSpawnObstacleNow()) return;
+    const obstacle = new Obstacle(
+      this,
+      this.cameras.main.scrollX + this.scale.width + ITEM_SPAWN_OFFSET_X,
+      this.groundY + 10,
+    );
     this.obstacles.add(obstacle);
-    obstacle.setVelocityX(-(320 + (GAME_TIME - this.timeLeft) * 2.6));
 
     if (this.timeLeft <= 24 && !this.midgameRampApplied) {
       this.midgameRampApplied = true;
@@ -331,39 +360,255 @@ export default class HorseDeliveryScene extends Phaser.Scene {
         loop: true,
         callback: () => this.spawnObstacle(),
       });
-      this.itemClock?.reset({
-        delay: 2860,
-        loop: true,
-        callback: () => this.spawnItem(),
-      });
+      this.startItemWaveLoop(6200);
     }
+  }
+
+  startItemWaveLoop(delay) {
+    this.itemClock?.remove(false);
+    this.itemClock = this.time.addEvent({
+      delay,
+      loop: true,
+      callback: () => this.beginItemWave(),
+    });
+  }
+
+  beginItemWave() {
+    if (this.ended || this.itemWaveRemaining > 0) return;
+    this.itemWaveRemaining = 2;
+    this.scheduleNextWaveItem(0);
+  }
+
+  scheduleNextWaveItem(delay = 0) {
+    const event = this.time.delayedCall(delay, () => {
+      if (this.ended) return;
+      if (this.itemWaveRemaining <= 0) return;
+
+      if (!this.canSpawnItemNow()) {
+        this.scheduleNextWaveItem(220);
+        return;
+      }
+
+      this.spawnItem();
+      this.itemWaveRemaining -= 1;
+
+      if (this.itemWaveRemaining > 0) {
+        this.scheduleNextWaveItem(1000);
+      }
+    });
+    this.itemWaveCalls.push(event);
+  }
+
+  canSpawnItemNow() {
+    const spawnX = this.cameras.main.scrollX + this.scale.width + ITEM_SPAWN_OFFSET_X;
+    const nearestItemX = this.getRightmostActiveX(this.items);
+    const nearestObstacleX = this.getRightmostActiveX(this.obstacles);
+    return nearestItemX < spawnX - ITEM_MIN_SPACING && nearestObstacleX < spawnX - ITEM_MIN_SPACING;
+  }
+
+  canSpawnObstacleNow() {
+    const spawnX = this.cameras.main.scrollX + this.scale.width + ITEM_SPAWN_OFFSET_X;
+    const nearestItemX = this.getRightmostActiveX(this.items);
+    const nearestObstacleX = this.getRightmostActiveX(this.obstacles);
+    return nearestItemX < spawnX - ITEM_MIN_SPACING && nearestObstacleX < spawnX - ITEM_MIN_SPACING;
+  }
+
+  getRightmostActiveX(group) {
+    let rightmost = -Infinity;
+    group?.children?.each((entity) => {
+      if (entity?.active) rightmost = Math.max(rightmost, entity.x);
+    });
+    return rightmost;
   }
 
   spawnItem() {
     if (this.ended) return;
     const item = new Items(
       this,
-      this.scale.width + 72,
-      this.groundY - Phaser.Math.Between(74, 108),
+      this.cameras.main.scrollX + this.scale.width + ITEM_SPAWN_OFFSET_X,
+      this.groundY - ITEM_Y_OFFSET,
     );
     this.items.add(item);
-    item.setVelocityX(-(270 + (GAME_TIME - this.timeLeft) * 1.9));
   }
 
   update() {
     if (this.ended || !this.player) return;
 
     this.player.update();
-    const boostRatio = this.player.getBoostRatio();
-    this.boostFill.width = 286 * boostRatio;
-    this.boostFill.fillColor = boostRatio > 0.7 ? 0x2d9cff : 0xffb323;
-
+    this.advanceRun(this.game.loop.delta / 1000);
+    this.bg.tilePositionX = this.cameras.main.scrollX * 0.18;
     this.obstacles?.children?.each((obs) => {
-      if (obs?.active && obs.x < -100) obs.destroy();
+      if (obs?.active && obs.x < this.cameras.main.scrollX - 120) obs.destroy();
     });
 
     this.items?.children?.each((item) => {
-      if (item?.active && item.x < -100) item.destroy();
+      if (item?.active && item.x < this.cameras.main.scrollX - 120) item.destroy();
+    });
+  }
+
+  advanceRun(deltaSeconds) {
+    if (this.swapWindowActive || this.speedPenaltyActive) return;
+    const distance = RUN_SPEED * this.worldSpeedFactor * deltaSeconds;
+    if (distance <= 0) return;
+    this.player.setX(this.player.x + distance);
+  }
+
+  handleActionInput() {
+    if (this.ended || !this.started) return;
+    if (this.swapWindowActive) {
+      this.completeHorseSwap();
+      return;
+    }
+    if (this.speedPenaltyActive) return;
+    this.player?.jump();
+  }
+
+  maybeStartHorseSwap() {
+    const nextSwap = HORSE_SWAP_TIMINGS[this.nextSwapStep];
+    if (!nextSwap || this.elapsedSeconds !== nextSwap.elapsed) return;
+
+    this.beginHorseSwap(nextSwap.index);
+    this.nextSwapStep += 1;
+  }
+
+  beginHorseSwap(targetHorseIndex) {
+    if (this.swapWindowActive || this.speedPenaltyActive || !this.player) return;
+
+    this.pendingHorseIndex = targetHorseIndex;
+    this.swapWindowActive = true;
+    this.setWorldSpeedFactor(0);
+    this.showNextHorsePreview(targetHorseIndex);
+    this.swapPromptText.setText(`ถึงจุดเปลี่ยนเป็น ${HORSE_TEXTURES[targetHorseIndex].label}\nกด Space หรือคลิกภายใน 4 วินาที`);
+    this.infoText.setText("ตอนนี้ปุ่ม Space และคลิกจะใช้สำหรับเปลี่ยนม้า");
+    this.swapPromptText.setAlpha(1);
+    this.sound.play("horse-neigh", { volume: 0.26 });
+
+    this.tweens.add({
+      targets: this.swapPromptText,
+      alpha: 0.35,
+      duration: 160,
+      yoyo: true,
+      repeat: 5,
+    });
+
+    this.swapDeadlineEvent?.remove(false);
+    this.swapDeadlineEvent = this.time.delayedCall(4000, () => this.failHorseSwap());
+  }
+
+  completeHorseSwap() {
+    if (!this.swapWindowActive || this.pendingHorseIndex == null) return;
+
+    this.swapDeadlineEvent?.remove(false);
+    const nextHorseIndex = this.pendingHorseIndex;
+    this.swapWindowActive = false;
+    this.pendingHorseIndex = null;
+    this.hideNextHorsePreview();
+    this.setHorseCharacter(nextHorseIndex);
+    this.setWorldSpeedFactor(1);
+    this.resetPlayerLane();
+    this.swapPromptText.setText(`${HORSE_TEXTURES[nextHorseIndex].label} พร้อมลุยแล้ว`);
+    this.deferPromptClear();
+    this.setDefaultHudMessage();
+  }
+
+  failHorseSwap() {
+    if (!this.swapWindowActive || this.pendingHorseIndex == null) return;
+
+    const nextHorseIndex = this.pendingHorseIndex;
+    this.swapWindowActive = false;
+    this.pendingHorseIndex = null;
+    this.speedPenaltyActive = true;
+    this.setWorldSpeedFactor(0);
+    this.infoText.setText("เปลี่ยนม้าไม่ทัน ม้าจะหยุดวิ่ง 3 วินาที");
+    this.swapPromptText.setText(`กำลังสลับเป็น ${HORSE_TEXTURES[nextHorseIndex].label}`);
+
+    this.penaltyEvent?.remove(false);
+    this.penaltyEvent = this.time.delayedCall(3000, () => {
+      this.speedPenaltyActive = false;
+      this.setWorldSpeedFactor(1);
+      this.hideNextHorsePreview();
+      this.setHorseCharacter(nextHorseIndex);
+      this.resetPlayerLane();
+      this.swapPromptText.setText(`${HORSE_TEXTURES[nextHorseIndex].label} กลับมาวิ่งต่อแล้ว`);
+      this.deferPromptClear();
+      this.setDefaultHudMessage();
+    });
+  }
+
+  setHorseCharacter(horseIndex) {
+    this.currentHorseIndex = horseIndex;
+    this.player?.setHorseTexture(HORSE_TEXTURES[horseIndex].key);
+    this.sound.play("horse-neigh", { volume: 0.3 });
+    this.tweens.add({
+      targets: this.player,
+      scaleX: this.player.baseScale + 0.03,
+      scaleY: this.player.baseScale + 0.03,
+      duration: 120,
+      yoyo: true,
+      onComplete: () => this.player?.setScale(this.player.baseScale),
+    });
+  }
+
+  showNextHorsePreview(horseIndex) {
+    if (!this.nextHorsePreview || !this.player) return;
+    this.nextHorsePreview
+      .setTexture(HORSE_TEXTURES[horseIndex].key)
+      .setPosition(this.player.x + SWAP_PREVIEW_SCREEN_X, this.player.y - 10)
+      .setScale(this.player.baseScale * 0.94)
+      .setAlpha(0.72)
+      .setVisible(true);
+    this.previewTween?.stop();
+    this.previewTween = null;
+    this.swapApproachTween?.stop();
+    this.swapApproachTween = this.tweens.add({
+      targets: this.player,
+      x: this.nextHorsePreview.x - 190,
+      duration: 3200,
+      ease: "Sine.easeOut",
+    });
+  }
+
+  hideNextHorsePreview() {
+    this.previewTween?.stop();
+    this.previewTween = null;
+    this.swapApproachTween?.stop();
+    this.swapApproachTween = null;
+    this.nextHorsePreview?.setVisible(false);
+  }
+
+  resetPlayerLane() {
+    if (!this.player) return;
+    this.swapApproachTween?.stop();
+    this.swapApproachTween = this.tweens.add({
+      targets: this.player,
+      x: this.playerCruiseX ?? this.scale.width / 2,
+      duration: 260,
+      ease: "Sine.easeOut",
+      onComplete: () => {
+        this.swapApproachTween = null;
+      },
+    });
+  }
+
+  setWorldSpeedFactor(factor) {
+    this.worldSpeedFactor = factor;
+  }
+
+  setDefaultHudMessage() {
+    if (!this.infoText) return;
+    if (this.timeLeft <= 25) {
+      this.infoText.setText("ช่วงท้ายแล้ว ของจะมาไวขึ้น เตรียมกระโดดและสลับม้าให้แม่น");
+      return;
+    }
+    this.infoText.setText("คลิกหรือกด Space เพื่อกระโดด และเมื่อมีข้อความแจ้งให้กดอีกครั้งเพื่อสลับม้า");
+  }
+
+  deferPromptClear() {
+    this.time.delayedCall(900, () => {
+      if (!this.ended && !this.swapWindowActive && !this.speedPenaltyActive) {
+        this.swapPromptText.setText("");
+        this.swapPromptText.setAlpha(1);
+      }
     });
   }
 
@@ -403,9 +648,6 @@ export default class HorseDeliveryScene extends Phaser.Scene {
       this.scoreManager.addScore(1);
       this.flashFeedback("+1", "#ffefbe");
       this.sound.play("horse-neigh", { volume: 0.28 });
-    } else if (type === "item_candy" || type === "item_coin") {
-      this.scoreManager.addScore(1);
-      this.flashFeedback("+1", "#ddffd8");
     } else {
       this.scoreManager.addScore(1);
       this.flashFeedback("+1", "#ddffd8");
@@ -458,16 +700,19 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     this.physics.pause();
     this.spawnClock?.remove(false);
     this.itemClock?.remove(false);
+    this.itemWaveCalls.forEach((event) => event?.remove(false));
+    this.itemWaveCalls = [];
     this.timerEvent?.remove(false);
     this.countdownEvent?.remove(false);
+    this.swapDeadlineEvent?.remove(false);
+    this.penaltyEvent?.remove(false);
     this.infoText.setVisible(false);
+    this.swapPromptText.setVisible(false);
+    this.hideNextHorsePreview();
+    this.swapApproachTween?.stop();
+    this.swapApproachTween = null;
     this.timeFrame.setVisible(false);
     this.rulePanel.setVisible(false);
-    this.boostShell.setVisible(false);
-    this.boostTrack.setVisible(false);
-    this.boostFill.setVisible(false);
-    this.boostLabel.setVisible(false);
-
     this.resultScoreText.setText(String(this.scoreManager.getScore()));
     this.resultHintText.setText(
       `เก็บของสำเร็จ ${this.deliveries} ครั้ง  •  ชนสิ่งกีดขวาง ${this.crashes} ครั้ง  •  เวลาคงเหลือ ${Math.max(0, this.timeLeft)} วินาที`,
@@ -484,11 +729,20 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     this.fairBgm = null;
     this.spawnClock?.remove(false);
     this.itemClock?.remove(false);
+    this.itemWaveCalls.forEach((event) => event?.remove(false));
+    this.itemWaveCalls = [];
     this.timerEvent?.remove(false);
     this.countdownEvent?.remove(false);
-    if (this.jumpHandler) {
-      this.input.off("pointerdown", this.jumpHandler);
-      this.keyJump?.off("down", this.jumpHandler);
+    this.swapDeadlineEvent?.remove(false);
+    this.penaltyEvent?.remove(false);
+    this.hideNextHorsePreview();
+    this.previewTween?.stop();
+    this.previewTween = null;
+    this.swapApproachTween?.stop();
+    this.swapApproachTween = null;
+    if (this.actionHandler) {
+      this.input.off("pointerdown", this.actionHandler);
+      this.keyJump?.off("down", this.actionHandler);
     }
   }
 }

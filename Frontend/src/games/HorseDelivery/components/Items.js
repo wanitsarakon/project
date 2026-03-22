@@ -9,11 +9,11 @@ export default class Items extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    this.setScale(0.16);
+    this.setScale(1.3);
     this.setDepth(5);
     this.body.allowGravity = false;
-    this.body.setCircle(Math.min(this.displayWidth, this.displayHeight) * 0.42);
-    this.body.setOffset(this.displayWidth * 0.1, this.displayHeight * 0.1);
+    this.body.setCircle(Math.min(this.displayWidth, this.displayHeight) * 0.32);
+    this.body.setOffset(this.displayWidth * 0.18, this.displayHeight * 0.18);
   }
 
   preUpdate(time, delta) {
