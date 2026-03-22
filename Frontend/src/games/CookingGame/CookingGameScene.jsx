@@ -34,7 +34,7 @@ export default class CookingGameScene extends Phaser.Scene {
     this.events.once("destroy",  () => this._destroyUI());
   }
 
-  /* ─────────────── DOM OVERLAY ─────────────── */
+ /* ─────────────── DOM OVERLAY ─────────────── */
   _buildOverlay() {
     const BASE = "/cooking/";
     const I    = BASE + "images/";
@@ -67,18 +67,18 @@ export default class CookingGameScene extends Phaser.Scene {
     overlay.appendChild(this._buildResultScreen(I));
 
     // ─── Timer ───
-    const timer = this._el("div", { id: "ck-timer", class: "ck-hidden" });
-    timer.textContent = "\u0e40\u0e27\u0e25\u0e32: 45";
+    const timer = this._el("div", { id: "game-timer", class: "ck-hidden" });
+    timer.textContent = "เวลา: 45"; 
     overlay.appendChild(timer);
 
     // ─── NPC Area ───
     const npcArea = this._el("div", { id: "ck-npc-area", class: "ck-npc-area" });
     const bubble  = this._el("div", { class: "ck-speech-bubble" });
     const npcTxt  = this._el("p",   { id: "ck-npc-text" });
-    npcTxt.textContent = "\u0e23\u0e2d\u0e01\u0e48\u0e2d\u0e19\u0e19\u0e30\u0e2b\u0e25\u0e32\u0e19...";
+    npcTxt.textContent = "รอก่อนนะหลาน...";
     bubble.appendChild(npcTxt);
     const grandmaImg = this._el("img");
-    grandmaImg.src = `${I}\u0e22\u0e32\u0e22.png`;
+    grandmaImg.src = `${I}ยาย.png`;
     grandmaImg.className = "ck-grandma";
     grandmaImg.onerror = () => { grandmaImg.style.display = "none"; };
     npcArea.appendChild(bubble);
@@ -94,82 +94,59 @@ export default class CookingGameScene extends Phaser.Scene {
     const tableArea = this._el("div", { class: "ck-table-area", id: "ck-table-area" });
     overlay.appendChild(tableArea);
 
-    // ─── Bowl ───
+    // ─── Bowl Container ───
     const bowl = this._el("div", { id: "ck-bowl", class: "ck-bowl-container" });
 
-    // stir progress (hidden initially)
-    const stirProg = this._el("div", { id: "ck-stir-progress", class: "ck-hidden" });
-    stirProg.innerHTML = `<div id="ck-stir-bar-bg"><div id="ck-stir-bar"></div></div>`;
-    bowl.appendChild(stirProg);
-
-    // stir hint
-    const stirHint = this._el("div", { id: "ck-stir-hint", class: "ck-hidden ck-stir-hint" });
-    stirHint.innerHTML = `
-      <div class="ck-stir-visual">
-        <div class="ck-arrow ck-arrow-left">←</div>
-        <div class="ck-mouse-icon">🖱️</div>
-        <div class="ck-arrow ck-arrow-right">→</div>
-      </div>
-      <div class="ck-stir-msg">\u0e40\u0e25\u0e37\u0e48\u0e2d\u0e19\u0e40\u0e21\u0e32\u0e2a\u0e4c\u0e0b\u0e49\u0e32\u0e22-\u0e02\u0e27\u0e32\u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e04\u0e19\u0e43\u0e2b\u0e49\u0e40\u0e02\u0e49\u0e32\u0e01\u0e31\u0e19</div>
-    `;
-    bowl.appendChild(stirHint);
-
-    // bowl back
-    const bowlBack = this._el("img");
-    bowlBack.src = `${I}\u0e16\u0e49\u0e27\u0e22 copy.png`; bowlBack.className = "ck-bowl-back";
-    bowlBack.onerror = () => { bowlBack.style.display = "none"; };
+    const bowlBack = this._el("img", { class: "ck-bowl-back" });
+    bowlBack.src = `${I}ถ้วย copy.png`; 
     bowl.appendChild(bowlBack);
 
-    // filling assets (inside bowl visuals)
-    const fillWrapper = this._el("div", { class: "ck-fill-wrapper" });
-    const fillMap = {
-      "fill-bean":    "ถั่วเหลือง_full.png",
-      "fill-sugar":   "น้ำตาลทรายขาว.png",
-      "fill-coconut": "กะทิ_pour.png",
-      "fill-agar":    "ผงวุ้น_pour.png",
-      "fill-color":   "สีผสมอาหาร_pour.png",
-      "fill-water":   "น้ำเปล่า_pour.png",
-      "fill-salt":    "เกลือ_pour.png",
-    };
-    Object.entries(fillMap).forEach(([id, file]) => {
-      const img = this._el("img");
-      img.src = `${I}${file}`; img.id = `ck-${id}`;
-      img.className = "ck-filling-asset";
-      img.onerror = () => { img.style.display = "none"; };
-      fillWrapper.appendChild(img);
-    });
+    const fillWrapper = this._el("div", { class: "ck-fill-wrapper", id: "ck-visual-wrapper" });
     bowl.appendChild(fillWrapper);
 
-    // spatula
-    const spatula = this._el("img");
-    spatula.src = `${I}\u0e0a\u0e49\u0e2d\u0e19.png`; spatula.id = "ck-spatula";
-    spatula.className = "ck-spatula ck-hidden";
-    spatula.onerror = () => {
-      spatula.src = `${I}spatula.png`;
-      spatula.onerror = () => { spatula.style.display = "none"; };
-    };
+    const spatula = this._el("img", { id: "ck-spatula", class: "ck-spatula ck-hidden" });
+    spatula.src = `${I}ช้อน.png`;
     bowl.appendChild(spatula);
 
-    // bowl front
-    const bowlFront = this._el("img");
-    bowlFront.src = `${I}\u0e16\u0e49\u0e27\u0e22.png`; bowlFront.className = "ck-bowl-front";
-    bowlFront.onerror = () => { bowlFront.style.display = "none"; };
+    const bowlFront = this._el("img", { class: "ck-bowl-front" });
+    bowlFront.src = `${I}ถ้วย copy.png`; 
     bowl.appendChild(bowlFront);
 
-    // hint text
+    // 5. ระบบ Stir Progress (หลอดพลัง) - ย้ายมาไว้ตรงนี้และประกาศครั้งเดียว
+    const stirBar = this._el("div", { id: "ck-stir-bar", class: "ck-stir-bar" });
+    const stirProgress = this._el("div", { id: "ck-stir-progress", class: "ck-stir-progress" });
+    stirBar.appendChild(stirProgress);
+    overlay.appendChild(stirBar);
+
+    // 6. ระบบ Stir Hint (คำใบ้ลูกศรขยับได้)
+    const stirHint = this._el("div", { 
+      id: "ck-stir-hint", 
+      class: "stir-hint-wrapper ck-hidden" 
+    });
+    stirHint.innerHTML = `
+      <div class="stir-visual-container">
+        <div class="arrow-green arrow-left-dir"></div>
+        <div class="mouse-icon-center">🖱️</div>
+        <div class="arrow-green arrow-right-dir"></div>
+      </div>
+      <div class="stir-message-box">เลื่อนซ้าย-ขวา เพื่อคนให้เข้ากัน</div>
+    `;
+    overlay.appendChild(stirHint);
+
+    // 7. Bowl Hint
     const bowlHint = this._el("p", { class: "ck-bowl-hint", id: "ck-bowl-hint" });
-    bowlHint.textContent = "\u0e25\u0e32\u0e01\u0e27\u0e31\u0e15\u0e16\u0e38\u0e14\u0e34\u0e1a\u0e21\u0e32\u0e17\u0e35\u0e48\u0e19\u0e35\u0e48";
+    bowlHint.textContent = "ลากวัตถุดิบมาที่นี่";
     bowl.appendChild(bowlHint);
 
     overlay.appendChild(bowl);
 
+    // ปิดท้ายการสร้าง UI
     document.body.appendChild(overlay);
     this._ui.push(overlay);
 
     // init engine
     this._initGame(I, BASE);
   }
-
   /* ─────────────── UI BUILDERS ─────────────── */
   _buildStartScreen(I) {
     const screen = this._el("div", { id: "ck-start-screen" });
@@ -203,32 +180,38 @@ export default class CookingGameScene extends Phaser.Scene {
       background: linear-gradient(180deg, rgba(13,8,6,0.34), rgba(13,8,6,0.66));
       backdrop-filter: blur(4px);
     `;
+
     const wrapper = this._el("div", { class: "ck-banner-wrapper" });
+    
+    // รูปป้ายพื้นหลัง
     const bannerImg = this._el("img");
-    bannerImg.src = `${I}\u0e1b\u0e49\u0e32\u0e22\u0e14\u0e48\u0e32\u0e192.png`; bannerImg.className = "ck-result-banner";
+    bannerImg.src = `${I}ป้ายด่าน2.png`; 
+    bannerImg.className = "ck-result-banner";
     bannerImg.onerror = () => { bannerImg.style.display = "none"; };
     wrapper.appendChild(bannerImg);
 
     const inner = this._el("div", { class: "ck-banner-inner" });
+    
+    // 1. ส่วนแสดงคะแนน (เหลือแค่ตัวเลข)
     const scoreEl = this._el("span", { id: "ck-total-score" });
     scoreEl.textContent = "0";
+    // ปรับ style ให้คะแนนดูเด่นขึ้นถ้าต้องการ
+    scoreEl.style.fontSize = "64px"; 
     inner.appendChild(scoreEl);
 
-    const noteEl = this._el("div", { id: "ck-result-note" });
-    noteEl.textContent = "\u0e04\u0e38\u0e13\u0e22\u0e32\u0e22\u0e08\u0e30\u0e0a\u0e34\u0e21\u0e41\u0e25\u0e49\u0e27\u0e1a\u0e2d\u0e01\u0e1c\u0e25\u0e43\u0e2b\u0e49\u0e19\u0e30";
-    noteEl.style.cssText = "margin-top:10px; max-width:320px; text-align:center; color:#5f2b00; font-weight:700; line-height:1.5;";
-    inner.appendChild(noteEl);
-
+    // 2. ปุ่มกลับไปแผนที่ (ลบส่วน noteEl ออกไปแล้ว)
     const backBtn = this._el("button", { id: "ck-back-btn" });
-    backBtn.textContent = "\u0e01\u0e25\u0e31\u0e1a\u0e41\u0e1c\u0e19\u0e17\u0e35\u0e48";
+    backBtn.textContent = "กลับไปแผนที่";
     backBtn.onclick = () => {
       const score = this._gs?.score ?? 0;
       this._destroyUI();
       this.onGameEnd?.({ score });
     };
+    
     inner.appendChild(backBtn);
     wrapper.appendChild(inner);
     screen.appendChild(wrapper);
+    
     return screen;
   }
 
@@ -257,14 +240,21 @@ export default class CookingGameScene extends Phaser.Scene {
       salt: "ck-fill-salt",
     };
 
-    const INGREDIENTS = [
-      { name: "bean", cls: "ck-green-bean", file: "ถั่วเหลือง.png" },
-      { name: "salt", cls: "ck-salt", file: "เกลือ.png" },
-      { name: "coconut", cls: "ck-coconut", file: "กะทิ.png" },
-      { name: "sugar", cls: "ck-sugar", file: "น้ำตาลทรายขาว.png" },
-      { name: "agar", cls: "ck-agar", file: "ผงวุ้น.png" },
-      { name: "color", cls: "ck-color", file: "สีผสมอาหาร.png" },
-      { name: "water", cls: "ck-water", file: "น้ำเปล่า.png" },
+const INGREDIENTS = [
+      // วัตถุดิบจริง
+      { name: "bean",    cls: "ck-green-bean", file: "ถั่วเหลือง.png",    w: "150px", l: "2%",  b: "57%" },
+      { name: "sugar",   cls: "ck-sugar",      file: "น้ำตาลทรายขาว.png", w: "350px", l: "18%", b: "53%" },
+      { name: "coconut", cls: "ck-coconut",    file: "กะทิ.png",         w: "100px", l: "43%", b: "48%" },
+      { name: "agar",    cls: "ck-agar",       file: "ผงวุ้น.png",        w: "230px", l: "56%", b: "60%" },
+      { name: "color",   cls: "ck-color",      file: "สีผสมอาหาร.png",    w: "110px", l: "70%", b: "45%" },
+      { name: "water",   cls: "ck-water",      file: "น้ำเปล่า.png",       w: "110px", l: "90%", b: "65%" },
+      { name: "salt",    cls: "ck-salt",       file: "เกลือ.png",         w: "140px", l: "59%", b: "40%", tf: "translateX(-50%)" },
+
+      // วัตถุดิบหลอก
+      { name: "palm_sugar", cls: "decoy-1", file: "palm_sugar.png", w: "350px", l: "8%",  b: "40%", op: 0.9, isDecoy: true },
+      { name: "ไข่ไก่",      cls: "decoy-2", file: "ไข่ไก่.png",      w: "200px", l: "27%", b: "40%", op: 0.9, isDecoy: true },
+      { name: "น้ำเชื่อม",    cls: "decoy-3", file: "น้ำเชื่อม.png",    w: "110px", l: "70%", b: "64%", op: 0.9, isDecoy: true },
+      { name: "กลิ่นผลไม้",  cls: "decoy-4", file: "กลิ่นผลไม้.png",   w: "120px", l: "80%", b: "50%", op: 0.9, isDecoy: true },
     ];
 
     // sounds
@@ -340,7 +330,7 @@ export default class CookingGameScene extends Phaser.Scene {
     });
 
     // ─── Build ingredient images ───
-    function buildIngredients() {
+function buildIngredients() {
       if (!tableArea) return;
       tableArea.innerHTML = "";
       INGREDIENTS.forEach(ing => {
@@ -349,22 +339,38 @@ export default class CookingGameScene extends Phaser.Scene {
         img.className = `ck-ingredient ${ing.cls}`;
         img.dataset.name = ing.name;
         img.draggable = true;
+
+        // ✨ ใส่สไตล์ตามที่คุณกำหนดมาแยกแต่ละชิ้น
+        img.style.position = "absolute";
+        img.style.width    = ing.w;
+        img.style.left     = ing.l;
+        img.style.bottom   = ing.b;
+        if (ing.tf) img.style.transform = ing.tf;
+        if (ing.op) img.style.opacity   = ing.op;
+
         img.onerror = () => {
-          // fallback placeholder
           img.style.display = "none";
           const ph = document.createElement("div");
           ph.className = `ck-ingredient ${ing.cls} ck-placeholder`;
           ph.dataset.name = ing.name;
           ph.textContent = recipeLabels[ing.name] || ing.name;
+          
+          // ใส่สไตล์ให้ Placeholder ด้วยเผื่อรูปไม่มา
+          ph.style.position = "absolute";
+          ph.style.width    = ing.w;
+          ph.style.left     = ing.l;
+          ph.style.bottom   = ing.b;
+          if (ing.tf) ph.style.transform = ing.tf;
+
           ph.draggable = true;
           ph.addEventListener("dragstart", onDragStart);
           tableArea.appendChild(ph);
         };
+
         img.addEventListener("dragstart", onDragStart);
         tableArea.appendChild(img);
       });
     }
-
     // ─── Drag ───
     function onDragStart(e) {
       if (!gs.isGameActive || gs.isStirringEnabled) { e.preventDefault(); return; }
@@ -373,7 +379,7 @@ export default class CookingGameScene extends Phaser.Scene {
       window._ckDragSrc = e.target;
     }
 
-    bowl.addEventListener("dragover", e => e.preventDefault());
+   bowl.addEventListener("dragover", e => e.preventDefault());
     bowl.addEventListener("drop", e => {
       e.preventDefault();
       if (!gs.isGameActive || gs.isStirringEnabled) return;
@@ -386,37 +392,82 @@ export default class CookingGameScene extends Phaser.Scene {
       document.getElementById("ck-bowl-hint")?.classList.add("ck-hidden");
       srcEl.style.visibility = "hidden";
 
-      // pour animation
-      const srcRect  = srcEl.getBoundingClientRect();
+      // --- ส่วนที่แก้ไข: ปรับความสูงเจาะจงรายชิ้น ---
+      let offsetTop = 150; // ความสูงปกติสำหรับวัตถุดิบอื่น
+      let pourStreamOffset = 60; // ระยะริ่มของสายธารปกติ
+
+      if (name === "palm_sugar" || name === "sugar") {
+        offsetTop = 230;        // ปรับให้ลอยสูงขึ้น (เปลี่ยนเลขนี้ได้ตามต้องการ)
+        pourStreamOffset = 140; // ปรับจุดปล่อยสายธารให้ลงมาต่ำกว่าขวด/ถุงที่ยกสูงขึ้น
+      }
+      else if (name === "coconut") {
+        // ปรับค่าเฉพาะของกะทิที่นี่
+        offsetTop = 100;        // เช่น ให้ลอยต่ำกว่าน้ำตาลนิดหน่อยแต่สูงกว่าค่าปกติ
+        pourStreamOffset = 30; // ปรับจุดเริ่มเทให้ตรงปากภาชนะกะทิ
+      }
+else if (name === "water") {
+        // ปรับค่าเฉพาะของกะทิที่นี่
+        offsetTop = 100;        // เช่น ให้ลอยต่ำกว่าน้ำตาลนิดหน่อยแต่สูงกว่าค่าปกติ
+        pourStreamOffset = 30; // ปรับจุดเริ่มเทให้ตรงปากภาชนะกะทิ
+      }
+
+
+      // ---------------------------------------
+
+    const srcRect  = srcEl.getBoundingClientRect();
       const bowlRect = bowl.getBoundingClientRect();
       const wrapper  = document.createElement("div");
       wrapper.className = "ck-pouring-wrapper";
+      
+      // 1. wrapper ให้วางตำแหน่งเดิม (กึ่งกลางถ้วย) เพื่อให้เอฟเฟกต์การเทลงกลางถ้วยพอดี
       wrapper.style.cssText = `
         width:${srcRect.width}px; height:${srcRect.height}px;
         left:${bowlRect.left + bowlRect.width/2 - srcRect.width/2}px;
-        top:${bowlRect.top - 130}px;
+        top:${bowlRect.top - offsetTop}px;
       `;
       document.body.appendChild(wrapper);
 
       const img = document.createElement("img");
       img.src = `${I}${recipeLabels[name] || name}.png`;
       img.className = "ck-item-pouring";
+      
+      // 2. ขยับเฉพาะตัวรูปภาพไปทางขวา (สมมติว่าขยับไป 40px)
+      // การขยับตรงนี้จะไม่กระทบต่อตำแหน่งของสายธารที่พ่นออกมาจาก wrapper
+      img.style.marginLeft = "40px"; 
+      if (name === "กลิ่นผลไม้") {
+        // ใช้ค่าติดลบเพื่อเลื่อนไปทางซ้าย (ลองปรับ -20px ถึง -40px ตามความเหมาะสม)
+        img.style.marginLeft = "0px"; 
+      }
+      
+      // หรือจะใช้ img.style.transform = "translateX(40px)"; ก็ได้ 
+      // แต่ต้องระวังถ้าใน CSS .ck-item-pouring มีการใช้ transform (เช่นการเอียงรูป) อยู่แล้ว
+
       img.onerror = () => { img.style.display = "none"; };
       wrapper.appendChild(img);
 
       const color = getStreamColor(name);
       let pourTimer;
-      setTimeout(() => { pourTimer = startPourEffect(wrapper, name, color, 180); }, 400);
+      
+      // 3. เรียกเอฟเฟกต์ตามปกติ
+      setTimeout(() => { 
+        pourTimer = startPourEffect(wrapper, name, color, pourStreamOffset); 
+      }, 400);
+      // ปรับค่าพารามิเตอร์ตัวสุดท้ายให้สัมพันธ์กับความสูงที่เปลี่ยนไป
+  setTimeout(() => { 
+        // ตอนนี้ฟังก์ชัน startPourEffect จะเอาค่า 280 ไปใช้ตั้งค่า p.style.top แล้ว
+        pourTimer = startPourEffect(wrapper, name, color, pourStreamOffset); 
+      }, 400);
+
       setTimeout(() => {
         if (pourTimer) clearInterval(pourTimer);
         updateFillVisual(name);
       }, 1400);
+
       setTimeout(() => {
         wrapper.remove();
         if (gs.steps.length === 3 || gs.steps.length === 7) triggerStirPhase();
       }, 2500);
     });
-
     // ─── Pour Effect ───
     const isLiquid = (n) => ["coconut", "water", "color"].includes(n);
 
@@ -433,56 +484,83 @@ export default class CookingGameScene extends Phaser.Scene {
       return m[n] || "#fff";
     }
 
-    function startPourEffect(parent, name, color, fallDist) {
-      const container = document.createElement("div");
-      container.className = isLiquid(name) ? "ck-liquid-stream" : "ck-powder-stream";
-      container.style.cssText = `position:absolute; left:calc(50% - 30px); top:35%; z-index:5;`;
-      parent.appendChild(container);
-      const iv = setInterval(() => {
-        if (isLiquid(name)) {
-          const drop = document.createElement("div");
-          drop.className = "ck-drop";
-          drop.style.cssText = `background:${color}; --ty:${fallDist+25}px;`;
-          container.appendChild(drop);
-          setTimeout(() => drop.remove(), 1200);
-        } else {
-          for (let i = 0; i < 4; i++) {
-            const grain = document.createElement("div");
-            const tx = (Math.random()-.5)*60;
-            const ty = fallDist + Math.random()*40;
-            grain.className = "ck-grain";
-            grain.style.cssText = `background:${color}; --tx:${tx}px; --ty:${ty}px;`;
-            container.appendChild(grain);
-            setTimeout(() => grain.remove(), 1000);
-          }
-        }
-      }, 15);
-      return iv;
+function startPourEffect(parent, name, color, startTop) { // เปลี่ยนชื่อพารามิเตอร์ให้ไม่งง
+  const container = document.createElement("div");
+  container.className = isLiquid(name) ? "ck-liquid-stream" : "ck-powder-stream";
+  
+  // แก้ไขตรงนี้: จาก top:35% เป็นการใช้ค่า startTop ที่ส่งมา
+  container.style.cssText = `
+    position: absolute; 
+    left: calc(50% - 15px); 
+    top: ${startTop}px; 
+    z-index: 5;
+  `;
+  
+  parent.appendChild(container);
+  
+  const iv = setInterval(() => {
+    if (isLiquid(name)) {
+      const drop = document.createElement("div");
+      drop.className = "ck-drop";
+      // ปรับระยะตก (--ty) ให้พอดีกับถ้วย (เช่น 200px)
+      drop.style.cssText = `background:${color}; --ty:200px;`; 
+      container.appendChild(drop);
+      setTimeout(() => drop.remove(), 1200);
+    } else {
+      for (let i = 0; i < 4; i++) {
+        const grain = document.createElement("div");
+        const tx = (Math.random() - .5) * 60;
+        const ty = 200 + Math.random() * 40; // ระยะตกของผง
+        grain.className = "ck-grain";
+        grain.style.cssText = `background:${color}; --tx:${tx}px; --ty:${ty}px;`;
+        container.appendChild(grain);
+        setTimeout(() => grain.remove(), 1000);
+      }
     }
-
+  }, 15);
+  return iv;
+}
     // ─── Fill visual inside bowl ───
-    function updateFillVisual(name) {
-      const id = ingredientVisualMap[name];
-      if (!id) return;
-      const el = document.getElementById(id);
+   function updateFillVisual(itemKey) {
+      const el = document.getElementById(`ck-fill-${itemKey}`);
       if (!el) return;
-      el.style.opacity = "1";
-      gs.currentY -= 20;
-      if (gs.currentY < 45) gs.currentY = 45;
-      el.style.transform = `translateY(${gs.currentY}px)`;
-    }
 
+      // 1. แสดงวัตถุดิบขึ้นมาตอนเทเสร็จ
+      el.style.opacity = "1";
+      el.style.transform = "translateY(0)"; // เลื่อนลงมาที่ตำแหน่งในถ้วย
+      el.style.transition = "opacity 0.5s ease-in, transform 0.5s ease-out";
+
+      // 2. ✨ เพิ่มส่วนนี้: สั่งให้หายไปหลังจากโชว์ตัวไปแล้ว 1.5 วินาที
+      setTimeout(() => {
+        // ค่อยๆ จางหายไป
+        el.style.transition = "opacity 0.8s ease-out"; 
+        el.style.opacity = "0";
+
+        // หลังจากจางหายสนิท ให้รีเซ็ตตำแหน่งเผื่อไว้ (เลือกใส่หรือไม่ก็ได้)
+        setTimeout(() => {
+          el.style.transform = "translateY(180px)";
+        }, 800);
+      }, 1500); // 1.5 วินาที คือเวลาที่วัตถุดิบจะแช่อยู่ในถ้วยก่อนหายไป
+    }
     // ─── Stir Phase ───
-    function triggerStirPhase() {
+function triggerStirPhase() {
       gs.isStirringEnabled = true;
       gs.stirProgress = 0;
       playTone("phase");
-      const bar = document.getElementById("ck-stir-bar");
-      if (bar) bar.style.height = "0%";
-      document.getElementById("ck-stir-progress")?.classList.remove("ck-hidden");
+      
+      // แสดงหลอดพลังกลับมาใหม่
+      const barContainer = document.getElementById("ck-stir-bar");
+      if (barContainer) barContainer.style.display = "block"; 
+
+      // รีเซ็ตแถบสีข้างในให้เริ่มจาก 0
+      const progress = document.getElementById("ck-stir-progress");
+      if (progress) {
+        progress.style.height = "0%";
+      }
+
+      // แสดงพายและคำใบ้
       document.getElementById("ck-spatula")?.classList.remove("ck-hidden");
       document.getElementById("ck-stir-hint")?.classList.remove("ck-hidden");
-
       const msg = gs.steps.length === 3
         ? "ใส่ครบสามอย่างแล้ว อย่าลืมคนผสมให้เข้ากันก่อนนะหลาน!"
         : "รอบสุดท้ายแล้ว คนให้เนื้อเนียนเลยนะจ๊ะ ขนมจะได้สวยๆ";
@@ -492,84 +570,126 @@ export default class CookingGameScene extends Phaser.Scene {
       bowl.addEventListener("mousemove", handleStirring);
     }
 
-    // ─── Stirring ───
-    function handleStirring(e) {
-      if (!gs.isStirringEnabled || !gs.isGameActive) return;
-      const rect     = bowl.getBoundingClientRect();
-      const centerX  = rect.left + rect.width / 2;
-      const centerY  = rect.top  + rect.height / 2;
-      const dx       = e.clientX - centerX;
-      const dy       = e.clientY - centerY;
-      const angle    = Math.atan2(dy, dx);
-      const spatula  = document.getElementById("ck-spatula");
+function handleStirring(e) {
+  if (!gs.isStirringEnabled || !gs.isGameActive) return;
 
-      if (spatula) {
-        let mx = Math.max(60, Math.min(180, e.clientX - rect.left - 40));
-        spatula.style.left   = mx + "px";
-        spatula.style.bottom = (60 - Math.abs(130 - mx) * 0.25) + "px";
-        spatula.style.transform = `rotate(${Math.max(-25, Math.min(25, dx/4))}deg)`;
-      }
+  const rect = bowl.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  // dy ไม่ถูกใช้ในการคำนวณการเอียงของช้อนแนวตั้ง
+  const dx = e.clientX - centerX;
+  const spatula = document.getElementById("ck-spatula");
 
-      if (gs.lastAngle !== null) {
-        let delta = angle - gs.lastAngle;
-        if (delta >  Math.PI) delta -= Math.PI * 2;
-        if (delta < -Math.PI) delta += Math.PI * 2;
-        gs.stirProgress += Math.abs(delta) * 2.5;
-        if (Math.floor(gs.stirProgress) % 18 === 0) playTone("stir");
-        const bar = document.getElementById("ck-stir-bar");
-        if (bar) bar.style.height = Math.min(gs.stirProgress, 100) + "%";
-        if (gs.stirProgress >= 100) finishStirring();
-      }
-      gs.lastAngle = angle;
+  if (spatula) {
+    // 1. ตำแหน่ง X: คงเดิม (ปรับให้เมาส์อยู่กึ่งกลางด้ามช้อน)
+    let moveX = (e.clientX - rect.left) - 170; 
+    
+    // จำกัดพื้นที่ไม่ให้ช้อนทะลุขอบถ้วย (Clamping) - คงเดิม
+    moveX = Math.max(-60, Math.min(35, moveX)); 
+    spatula.style.left = moveX + "px";
+
+    // 2. ตำแหน่ง Y (Bottom): คงเดิม (ทำให้จมลงไปในถ้วย)
+    const centerPoint = -12; 
+    const curveOffset = Math.abs(centerPoint - moveX) * 0.25; 
+    // ใช้ค่า 10px เพื่อให้จมลงไปหลัง ck-bowl-front
+    spatula.style.bottom = (10 - curveOffset) + "px"; 
+
+    // --- 3. จุดสำคัญที่ปรับให้ช้อนตั้งตรงมากขึ้น ---
+    // ปรับลดองศาการเอียงสูงสุด (Tilt) จากเดิม +/-12 องศา เหลือ +/-5 องศา
+    // และปรับตัวหารให้มากขึ้น (จาก 12 เป็น 25) เพื่อให้การเอียงนุ่มนวลและช้าลง
+    const tilt = Math.max(-2, Math.min(1, dx / 25)); 
+    spatula.style.transform = `rotate(${tilt}deg)`;
+  }
+
+  // ... ส่วนการคำนวณ Progress คงเดิม ...
+  const centerY = rect.top + rect.height / 2;
+  const currentAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+
+  if (gs.lastAngle !== null) {
+    let delta = currentAngle - gs.lastAngle;
+    if (delta > Math.PI) delta -= Math.PI * 2;
+    if (delta < -Math.PI) delta += Math.PI * 2;
+    
+    gs.stirProgress += Math.abs(delta) * 2.5; 
+    
+    if (Math.floor(gs.stirProgress) % 18 === 0) playTone("stir");
+
+    const progressEl = document.getElementById("ck-stir-progress");
+    if (progressEl) {
+      progressEl.style.height = Math.min(gs.stirProgress, 100) + "%";
     }
 
-    function finishStirring() {
+    if (gs.stirProgress >= 100) finishStirring();
+  }
+  gs.lastAngle = currentAngle;
+}
+function finishStirring() {
       gs.isStirringEnabled = false;
       gs.stirProgress = 0;
       gs.lastAngle = null;
       playTone("phase");
       bowl.removeEventListener("mousemove", handleStirring);
-      document.getElementById("ck-stir-progress")?.classList.add("ck-hidden");
+
+      // --- เพิ่มส่วนนี้: สั่งให้หลอดพลัง (ตัวโครงหลัก) หายไป ---
+      const bar = document.getElementById("ck-stir-bar");
+      if (bar) bar.style.display = "none";
+      // --------------------------------------------------
+
+      // ซ่อนส่วนประกอบอื่นๆ
       document.getElementById("ck-spatula")?.classList.add("ck-hidden");
       document.getElementById("ck-stir-hint")?.classList.add("ck-hidden");
 
       if (gs.steps.length === 3) {
         if (npcBubble) npcBubble.classList.remove("ck-hidden");
-        typeEffect(npcText, "ดีมากหลาน! ผสมเข้ากันดีแล้ว ใส่ส่วนผสมที่เหลือต่อได้เลยจ่ะ", 40)
-          .then(() => setTimeout(() => { if (npcBubble) npcBubble.classList.add("ck-hidden"); }, 2000));
+        typeEffect(npcText, "เก่งมากหลาน! เนื้อเริ่มเนียนแล้ว ใส่ส่วนผสมที่เหลือต่อเลยจ่ะ", 40)
+          .then(() => {
+            setTimeout(() => { 
+              if (!gs.isFinishing) npcBubble.classList.add("ck-hidden"); 
+            }, 2500);
+          });
       } else if (gs.steps.length === 7) {
         finishGame(false);
       }
     }
 
-    // ─── Start game flow ───
-    this._startGame = async () => {
-      document.getElementById("ck-start-screen").style.display = "none";
+// ─── Start game flow ───
+this._startGame = async () => {
+  document.getElementById("ck-start-screen").style.display = "none";
 
-      gs.steps = []; gs.isFinishing = false; gs.gameTimeLeft = 45;
-      gs.currentY = 180; gs.stirProgress = 0;
-      bgm.pause(); bgm.currentTime = 0;
+  gs.steps = []; gs.isFinishing = false; gs.gameTimeLeft = 45;
+  gs.currentY = 180; gs.stirProgress = 0;
+  bgm.pause(); bgm.currentTime = 0;
 
-      document.getElementById("ck-stir-hint")?.classList.add("ck-hidden");
-      document.querySelectorAll(".ck-filling-asset").forEach(el => {
-        el.style.opacity = "0"; el.style.transform = "translateY(180px)";
-      });
-      document.querySelectorAll(".ck-ingredient").forEach(el => { el.style.visibility = "visible"; });
-      document.getElementById("ck-bowl-hint")?.classList.remove("ck-hidden");
+  document.getElementById("ck-stir-hint")?.classList.add("ck-hidden");
+  document.querySelectorAll(".ck-filling-asset").forEach(el => {
+    el.style.opacity = "0"; el.style.transform = "translateY(180px)";
+  });
+  document.querySelectorAll(".ck-ingredient").forEach(el => { el.style.visibility = "visible"; });
+  document.getElementById("ck-bowl-hint")?.classList.remove("ck-hidden");
 
-      buildIngredients();
+  buildIngredients();
 
-      if (npcBubble) npcBubble.classList.remove("ck-hidden");
-      await speak("มาหลาน... ยายจะบอกสูตรลูกชุบให้ฟังนะ ตั้งใจฟังล่ะ", 2000);
-      for (let i = 0; i < recipe.length; i++) {
-        await speak(`?????????? ${i + 1}: ??? "${recipeLabels[recipe[i]]}"`, 1000);
-      }
-      await speak("ใส่ส่วนผสมแล้ว อย่าลืมคนให้เข้ากันตามที่ยายบอกด้วยนะหลาน... เริ่มได้!", 2000);
-      if (npcBubble) npcBubble.classList.add("ck-hidden");
+  if (npcBubble) npcBubble.classList.remove("ck-hidden");
+  
+  // 1. ยายบอกเกริ่นนำ
+  await speak("มาหลาน... ยายจะบอกสูตรลูกชุบให้ฟังนะ ตั้งใจฟังล่ะ", 2000);
 
-      await startCountdown();
-      startGameplay();
-    };
+// 2. ลูปแสดงขั้นตอนทีละข้อ
+  for (let i = 0; i < recipe.length; i++) {
+    const ingredientName = recipeLabels[recipe[i]]; 
+    await speak(`ขั้นตอนที่ ${i + 1} : ใส่${ingredientName}`, 1200);
+  }
+
+  // --- เพิ่มส่วนนี้เข้าไป ---
+  await speak("ตั้งใจทำนะหลาน...เริ่มได้!", 2500);
+  // -----------------------
+
+  // ✨ บรรทัดนี้จะทำให้กล่องข้อความหายไปหลังจากพูดประโยคข้างบนจบ
+  if (npcBubble) npcBubble.classList.add("ck-hidden");
+
+  // 3. เริ่มนับถอยหลังและเข้าสู่เกม
+  await startCountdown();
+  startGameplay();
+}
 
     // ─── Countdown ───
     function startCountdown() {
@@ -600,16 +720,24 @@ export default class CookingGameScene extends Phaser.Scene {
     }
 
     // ─── Gameplay timer ───
-    function startGameplay() {
-      gs.isGameActive = true;
-      const t = document.getElementById("ck-timer");
-      if (t) { t.classList.remove("ck-hidden"); t.textContent = `\u0e40\u0e27\u0e25\u0e32: ${gs.gameTimeLeft}`; }
-      gs.gameInterval = setInterval(() => {
-        gs.gameTimeLeft--;
-        if (t) t.textContent = `\u0e40\u0e27\u0e25\u0e32: ${gs.gameTimeLeft}`;
-        if (gs.gameTimeLeft <= 0) finishGame(true);
-      }, 1000);
-    }
+function startGameplay() {
+  gs.isGameActive = true;
+  const t = document.getElementById("game-timer"); // มั่นใจว่าเป็น game-timer
+  
+  if (t) { 
+    t.classList.remove("ck-hidden"); 
+    // ใส่คำว่า เวลา: ตอนเริ่ม
+    t.textContent = `\u0e40\u0e27\u0e25\u0e32: ${gs.gameTimeLeft}`; 
+  }
+
+  gs.gameInterval = setInterval(() => {
+    gs.gameTimeLeft--;
+    // อัปเดตตัวเลขพร้อมคำว่า เวลา: ในทุกๆ วินาที
+    if (t) t.textContent = `\u0e40\u0e27\u0e25\u0e32: ${gs.gameTimeLeft}`; 
+    
+    if (gs.gameTimeLeft <= 0) finishGame(true);
+  }, 1000);
+}
 
     // ─── Finish ───
     function finishGame(isTimeout) {
@@ -709,126 +837,262 @@ export default class CookingGameScene extends Phaser.Scene {
       }
 
       /* ─── NPC ─── */
-      .ck-npc-area {
-        position: absolute; bottom: 118px; right: 26px;
-        display: flex; align-items: flex-end; gap: 10px; z-index: 5;
-        pointer-events: none;
-        flex-direction: row-reverse;
-      }
-      .ck-speech-bubble {
-        background: white; border: 2px solid #555; border-radius: 16px;
-        padding: 12px 18px; font-size: 1rem; font-weight: 700; color: #333;
-        max-width: 190px; position: relative; margin-bottom: 98px;
-        box-shadow: 0 8px 18px rgba(0,0,0,0.28);
-      }
-      .ck-speech-bubble p { margin: 0; }
-      .ck-grandma { width: 138px; height: auto; animation: ck-nudge 3s ease-in-out infinite; }
-      @keyframes ck-nudge {
-        0%,100% { transform: translateY(0); }
-        50%      { transform: translateY(-10px); }
+    .ck-npc-area { position: absolute; right: 150px; bottom: 70px; z-index: 2; }
+.ck-grandma { width: 315px; }
+.ck-speech-bubble {
+    position: absolute; bottom: 530px; right: 240px;
+    background: #ffffff; border-radius: 15px; padding: 20px 30px;
+    text-align: center; color: #4a4a4a; font-size: 1.5rem;
+    font-weight: bold; min-width: 280px; box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    z-index: 200;
+}
+.ck-speech-bubble:after {
+    content: ''; position: absolute; right: -20px; top: 50%;
+    transform: translateY(-50%);
+    border-width: 15px 0 15px 20px; border-style: solid;
+    border-color: transparent transparent transparent #ffffff;
+}/* ─── Table Area ─── */
+      .ck-table-area {
+        position: absolute; 
+        bottom: 0px; /* ปรับเป็น 0 เพื่อให้พิกัด bottom ของวัตถุดิบอ้างอิงจากล่างสุดของจอ */
+        left: 50%; 
+        transform: translateX(-50%);
+        /* ยกเลิก Flexbox เพราะเราจะใช้ Absolute แทน */
+        display: block; 
+        width: 100vw; 
+        height: 500px; /* กำหนดความสูงพื้นที่วางของให้ครอบคลุมจุดที่วาง */
+        z-index: 4; 
+        pointer-events: none; /* เพื่อให้คลิกทะลุช่องว่างได้ */
       }
 
-      /* ─── Table Area ─── */
-      .ck-table-area {
-        position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%);
-        display: flex; flex-wrap: nowrap; justify-content: center; gap: 18px;
-        max-width: 760px; z-index: 4; padding: 0 48px; width: min(78vw, 780px);
-      }
       .ck-table-decor {
         position: absolute;
-        bottom: 8px;
+        bottom: 0px;
         left: 50%;
         transform: translateX(-50%);
-        width: min(88vw, 980px);
+        width: min(100vw, 3900px);
         height: auto;
         z-index: 2;
         pointer-events: none;
         filter: drop-shadow(0 10px 20px rgba(0,0,0,0.35));
       }
+
       .ck-ingredient {
-        width: 52px; height: 52px; object-fit: contain; cursor: grab;
+        /* ใช้ absolute เพื่อให้อ้างอิง left/bottom จาก .ck-table-area */
+        position: absolute; 
+        object-fit: contain; 
+        cursor: grab;
         filter: drop-shadow(0 4px 6px rgba(0,0,0,0.4));
         transition: transform 0.15s;
+        pointer-events: auto; /* ให้ตัววัตถุดิบกลับมาคลิกได้ */
       }
-      .ck-ingredient:hover { transform: scale(1.1); }
+
+      .ck-ingredient:hover { 
+        transform: scale(1.05); /* ลด scale ลงนิดหน่อยเพราะบางชิ้นใหญ่มาก */
+        z-index: 50; /* ให้ชิ้นที่ชี้อยู่ลอยขึ้นมาข้างบน */
+      }
+
       .ck-placeholder {
-        width: 70px; height: 70px; background: rgba(200,150,50,0.8);
+        position: absolute;
+        background: rgba(200,150,50,0.8);
         border: 2px solid #ffd700; border-radius: 8px;
         display: flex; align-items: center; justify-content: center;
         font-size: 0.65rem; font-weight: 800; color: #fff;
         text-align: center; cursor: grab; padding: 4px; box-sizing: border-box;
+        pointer-events: auto;
       }
-
-      /* ─── Bowl ─── */
+/* --- Bowl Container --- */
       .ck-bowl-container {
-        position: absolute; top: 43%; left: 50%; transform: translate(-50%, -50%);
-        width: 270px; height: 228px; z-index: 4;
-      }
-      .ck-bowl-back, .ck-bowl-front {
-        position: absolute; width: 100%; bottom: 0; z-index: 2;
-      }
-      .ck-bowl-front { z-index: 6; }
-      .ck-fill-wrapper {
-        position: absolute; width: 100%; height: 100%;
-        display: flex; align-items: flex-end; justify-content: center;
-        z-index: 3; overflow: hidden; bottom: 0;
-      }
-      .ck-filling-asset {
-        position: absolute; bottom: 0; width: 80%; opacity: 0;
-        transition: opacity 0.5s, transform 0.5s;
-      }
-      .ck-spatula {
-        position: absolute; bottom: 60px; left: 104px; width: 58px;
-        z-index: 7; pointer-events: none;
-        transition: left 0.1s, bottom 0.1s, transform 0.1s;
-      }
-      .ck-bowl-hint {
-        position: absolute; bottom: 34px; width: 100%; text-align: center;
-        color: rgba(255,255,255,0.8); font-size: 0.9rem; font-weight: 700;
-        z-index: 8; pointer-events: none; text-shadow: 1px 1px 3px #000;
+        position: absolute; 
+        top: 43%; 
+        left: 50%; 
+        transform: translate(-50%, -50%);
+        width: 270px; 
+        height: 228px; 
+        z-index: 4;
       }
 
-      /* ─── Stir UI ─── */
-      #ck-stir-progress {
-        position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 10;
+      /* ถ้วยใบหลัง (อยู่หลังช้อน) */
+      .ck-bowl-back { 
+        position: absolute; 
+        width: 100%; 
+        bottom: 0; 
+        left: 0;
+        z-index: 2; 
       }
-      #ck-stir-bar-bg {
-        width: 20px; height: 120px; background: rgba(0,0,0,0.4);
-        border: 2px solid #ffd700; border-radius: 20px; overflow: hidden;
+
+      /* ไม้พาย (อยู่ระหว่างถ้วยใบหลังและใบหน้า) */
+      .ck-spatula {
+        z-index: 4; /* มากกว่า back แต่น้อยกว่า front */
+        position: absolute;
+        width: 270px; 
+        /* ปรับค่านี้ให้จมลงไปในถ้วย (เลขยิ่งน้อยยิ่งจมลึก) */
+        bottom: 10px; 
+        transform-origin: bottom center;
+        pointer-events: none;
+        transition: transform 0.1s ease-out;
       }
-      #ck-stir-bar {
-        position: absolute; bottom: 0; width: 100%; height: 0%;
-        background: linear-gradient(to top, #00ff88, #ffff00, #ff0055);
-        transition: height 0.05s; border-radius: 0 0 20px 20px;
+
+      /* ถ้วยใบหน้า (ทำหน้าที่บังโคนช้อน) */
+      .ck-bowl-front { 
+        position: absolute; 
+        width: 100%; 
+        bottom: 0; 
+        left: 0;
+        z-index: 6; 
+        pointer-events: none;
+        /* clip-path ปรับให้เป็นรูปตัว U หรือส่วนล่างของถ้วยเพื่อบังส่วนล่างของช้อน */
+        clip-path: inset(45% 0 0 0); /* วิธีที่ง่ายที่สุดคือบังครึ่งบนของรูปถ้วยใบหน้าไว้ */
       }
-      .ck-stir-hint {
-        position: absolute; top: -60px; left: 50%; transform: translateX(-50%);
-        background: rgba(0,0,0,0.7); border-radius: 10px; padding: 6px 12px;
-        color: white; font-size: 0.8rem; text-align: center; z-index: 10;
+
+      /* พื้นที่สำหรับใส่ส่วนผสม (อยู่ระหว่างถ้วยหน้า-หลัง) */
+      .ck-fill-wrapper {
+        position: absolute; 
+        width: 100%; 
+        height: 100%;
+        z-index: 3; 
+        overflow: hidden; 
+        bottom: 0;
+        display: flex; 
+        align-items: flex-end; 
+        justify-content: center;
+        /* ตัดขอบส่วนผสมไม่ให้ทะลุออกนอกก้นถ้วย */
+        clip-path: path('M 0,35 Q 135,145 270,35 L 270,270 L 0,270 Z');
+      }
+
+      .ck-bowl-hint {
+        position: absolute; 
+        bottom: 80px; 
+        width: 100%; 
+        text-align: center;
+        color: rgba(255,255,255,0.8); 
+        font-size: 0.9rem; 
+        font-weight: 700;
+        z-index: 8; 
+        pointer-events: none; 
+        text-shadow: 1px 1px 3px #000;
+      }
+
+      /* ─── Stir UI (หลอดพลังและการแจ้งเตือน) ─── */
+    /* หลอดพลังหลัก (Container) */
+/* --- หลอดพลัง (ฝั่งซ้ายของถ้วย) --- */
+      .ck-stir-bar {
+        position: absolute;
+        left: 50%;
+        margin-left: -200px; /* ดันไปทางซ้ายของกึ่งกลางถ้วย */
+        top: 30%;
+        transform: translateY(-50%);
+        width: 25px;
+        height: 180px;
+        background: rgba(0, 0, 0, 0.6);
+        border: 3px solid #fff;
+        border-radius: 15px;
+        display: none; /* เปิดด้วย JS ใน triggerStirPhase */
+        overflow: hidden;
+        z-index: 1000;
+        box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      }
+
+      .ck-stir-progress {
+        width: 100%;
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 0%;
+        background: linear-gradient(to top, #ffeb3b, #f44336);
+        transition: height 0.1s ease-out;
+      }
+
+      /* --- คำใบ้ลูกศร (อยู่ด้านบนถ้วย) --- */
+      .stir-hint-wrapper {
+        position: absolute;
+        top: 43%; /* ขยับขึ้นไปเหนือถ้วยผสม */
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        z-index: 2000;
+        pointer-events: none;
+        width: 100%;
+      }
+
+      .stir-visual-container {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        margin-bottom: 12px;
+      }
+
+      .arrow-green {
+        width: 65px;
+        height: 35px;
+        background: linear-gradient(180deg, #2ecc71 0%, #27ae60 100%);
+        filter: drop-shadow(0 4px 2px rgba(0,0,0,0.3));
+      }
+
+      .arrow-left-dir {
+        clip-path: polygon(40% 0%, 40% 25%, 100% 25%, 100% 75%, 40% 75%, 40% 100%, 0% 50%);
+        animation: arrow-push-left 1s infinite ease-in-out;
+      }
+
+      .arrow-right-dir {
+        clip-path: polygon(0% 25%, 60% 25%, 60% 0%, 100% 50%, 60% 100%, 60% 75%, 0% 75%);
+        animation: arrow-push-right 1s infinite ease-in-out;
+      }
+
+      .mouse-icon-center {
+        font-size: 2.8rem;
+        filter: drop-shadow(0 0 10px rgba(255,255,255,0.8));
+      }
+
+      .stir-message-box {
+        background: #3e2723;
+        border: 3px solid #ffd700;
+        border-radius: 50px;
+        color: #ffffff;
+        padding: 10px 40px;
+        font-size: 22px;
+        font-weight: bold;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5);
         white-space: nowrap;
       }
-      .ck-stir-visual { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
-      .ck-arrow { font-size: 1.2rem; color: #00ff88; }
-      .ck-mouse-icon { font-size: 1.3rem; }
 
-      /* ─── Pour animation ─── */
+      /* Animations */
+      @keyframes arrow-push-left {
+        0%, 100% { transform: translateX(0); opacity: 0.6; }
+        50% { transform: translateX(-15px); opacity: 1; }
+      }
+
+      @keyframes arrow-push-right {
+        0%, 100% { transform: translateX(0); opacity: 0.6; }
+        50% { transform: translateX(15px); opacity: 1; }
+      }
+
+      .ck-hidden { display: none !important; }
+      /* ─── Pour Animation (เอฟเฟกต์การเท) ─── */
       .ck-pouring-wrapper {
-        position: fixed; z-index: 500; pointer-events: none;
+        position: fixed; 
+        z-index: 500; 
+        pointer-events: none;
       }
       .ck-item-pouring {
-        width: 100%; height: 100%; object-fit: contain;
+        width: 100%; 
+        height: 100%; 
+        object-fit: contain;
         animation: ck-pour-fall 0.4s ease-in forwards;
-        animation-delay: 0s;
       }
       @keyframes ck-pour-fall {
-        0%   { transform: translateY(-20px) rotate(-15deg); opacity: 1; }
+        0%   { transform: translateY(-25px) rotate(-60deg); opacity: 1; }
         100% { transform: translateY(0px) rotate(0deg); opacity: 1; }
       }
       .ck-liquid-stream, .ck-powder-stream {
         position: absolute; width: 20px;
       }
       .ck-drop {
-        position: absolute; width: 8px; border-radius: 50%;
+        position: absolute; 
+        width: 8px; 
+        border-radius: 50%;
         animation: ck-drop-fall 1.2s ease-in forwards;
         --ty: 200px;
         height: 12px;
@@ -838,7 +1102,10 @@ export default class CookingGameScene extends Phaser.Scene {
         100% { transform: translateY(var(--ty)); opacity: 0.3; height: 30px; }
       }
       .ck-grain {
-        position: absolute; width: 4px; height: 4px; border-radius: 50%;
+        position: absolute; 
+        width: 4px; 
+        height: 4px; 
+        border-radius: 50%;
         animation: ck-grain-fall 1s ease-in forwards;
         --tx: 0px; --ty: 100px;
       }
@@ -856,17 +1123,43 @@ export default class CookingGameScene extends Phaser.Scene {
         filter: drop-shadow(0 15px 30px rgba(0,0,0,0.6));
       }
       .ck-result-banner {
-        width: 700px; max-width: 90vw; height: auto;
+        width: 650px; max-width: 90vw; height: auto;
         filter: drop-shadow(0 15px 40px rgba(0,0,0,0.7));
       }
       .ck-banner-inner {
-        position: absolute; display: flex; flex-direction: column;
-        align-items: center; justify-content: center;
-        top: 50%; left: 50%; transform: translate(-50%, -50%);
+        position: absolute; 
+        display: flex; 
+        flex-direction: column;
+        align-items: center; 
+        justify-content: center;
+        
+        /* --- ปรับจาก 50% เป็น 60% หรือ 65% เพื่อเลื่อนลงมา --- */
+        top: 62%; 
+        
+        left: 50%; 
+        transform: translate(-50%, -50%);
+        
+        /* หรือจะใช้ gap เพื่อเพิ่มระยะห่างระหว่างคะแนนกับปุ่มก็ได้ */
+        gap: 10px; 
       }
-
-      #ck-btn-start, #ck-back-btn {
-        margin-top: 100px;
+#game-timer {
+        position: fixed; 
+        top: 20px; 
+        left: 20px; 
+        font-size: 40px;
+        font-weight: bold; 
+        color: #fff; 
+        background: rgba(0, 0, 0, 0.6);
+        padding: 10px 20px; 
+        border-radius: 10px; 
+        border: 3px solid #FFD700; 
+        z-index: 500;
+        font-family: "Prompt", sans-serif;
+    }
+     #ck-btn-start {
+        /* ปรับเลขให้น้อยลงเพื่อดันขึ้น (เช่น จาก 100px เหลือ 40px หรือ 20px) */
+        margin-top: 30px; 
+        
         padding: 15px 40px; font-size: 1.6rem; font-family: 'Sarabun', sans-serif;
         font-weight: 800; color: white;
         background: linear-gradient(180deg,#ffcc00,#ff8800 50%,#ff4400);
@@ -874,12 +1167,31 @@ export default class CookingGameScene extends Phaser.Scene {
         box-shadow: 0 8px 0 #992200, 0 15px 20px rgba(0,0,0,0.5);
         text-shadow: 2px 2px 4px rgba(0,0,0,0.5); outline: none;
       }
+        #ck-back-btn { 
+        /* ปรับแยกอิสระ ไม่กระทบกับปุ่มเริ่มเกม */
+        margin-top: 20px; 
+        
+        font-size: 1.2rem; padding: 12px 32px;
+        /* ... properties อื่นๆ เหมือนปุ่มเริ่มเกม ... */
+        font-family: 'Sarabun', sans-serif;
+        font-weight: 800; color: white;
+        background: linear-gradient(180deg,#ffcc00,#ff8800 50%,#ff4400);
+        border: 4px solid #fff; border-radius: 50px; cursor: pointer;
+        box-shadow: 0 8px 0 #992200, 0 15px 20px rgba(0,0,0,0.5);
+      }
       #ck-back-btn { margin-top: 20px; font-size: 1.2rem; padding: 12px 32px; }
 
-      #ck-total-score {
-        font-size: 7rem; font-family: 'Sarabun', sans-serif; font-weight: 900;
+     #ck-total-score {
+        font-size: 7rem; 
+        font-family: 'Sarabun', sans-serif; 
+        font-weight: 900;
+        
+        /* --- เพิ่มบรรทัดนี้เพื่อดันคะแนนลงมา --- */
+        margin-top: 40px; /* ยิ่งตัวเลขมาก คะแนนยิ่งลงมาต่ำ */
+        
         background: linear-gradient(180deg,#fff 30%,#ffd700 60%,#ff8c00 100%);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        -webkit-background-clip: text; 
+        -webkit-text-fill-color: transparent;
         filter: drop-shadow(6px 6px 0 #632b00);
         animation: ck-score-pop 0.6s cubic-bezier(0.175,0.885,0.32,1.275) forwards;
       }
