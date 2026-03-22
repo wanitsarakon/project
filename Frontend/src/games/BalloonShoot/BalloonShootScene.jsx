@@ -55,7 +55,7 @@ export default class BalloonShootScene extends Phaser.Scene {
   }
 
   /* ─────────────── DOM OVERLAY ─────────────── */
-  _buildOverlay() {
+_buildOverlay() {
     const overlay = this._el("div", {
       id: "bs-overlay",
       style: `
@@ -64,6 +64,37 @@ export default class BalloonShootScene extends Phaser.Scene {
         overflow: hidden; user-select: none;
       `
     });
+
+    // --- 1. ป้ายชื่อเกมที่แกว่งได้ ---
+    const topSign = this._el("img", { id: "bs-top-logo", class: "bs-swinging" });
+    topSign.src = "/assets/balloonshoot/image/top_sign.png";
+    topSign.style.cssText = `
+      position:absolute; top: -100px; left:50%;
+      width:min(70vw,450px); height:auto; z-index:250; 
+      pointer-events:none; filter:drop-shadow(0 8px 18px rgba(0,0,0,0.35));
+    `;
+    overlay.appendChild(topSign);
+
+    // --- 2. ป้ายวิธีเล่น (แสดงค้างไว้ตลอดเกม) ---
+    const instruction = this._el("div", { id: "bs-instruction-stay" });
+    instruction.style.cssText = `
+      position:absolute; top: 748px; left:54%; transform:translateX(-50%);
+      width: min(90vw, 550px); z-index: 240; /* ให้อยู่ต่ำกว่าป้ายชื่อเกมนิดหน่อย */
+      pointer-events:none;
+    `;
+    instruction.innerHTML = `
+      <div style="
+        display: inline-block; padding: 12px 25px;
+        background: linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(50,20,0,0.85) 100%);
+        border: 2px solid #ffcc00; border-radius: 50px;
+        box-shadow: 0 0 20px rgba(255, 204, 0, 0.4);
+        color: #fff7de; font-size: 1.1rem; font-weight: 600;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+      ">
+        🎯 กด <span style="background:#fff; color:#ff4400; padding:2px 10px; border-radius:8px; font-weight:900; box-shadow:0 4px 0 #cc3300; display:inline-block; transform:translateY(-2px); margin:0 5px;">Spacebar</span> ค้างเพื่อชาร์จแรงยิง แล้วปล่อยเพื่อยิงลูกโป่ง
+      </div>
+    `;
+    overlay.appendChild(instruction);
 
     // inject CSS
     const style = this._el("style");
@@ -80,14 +111,6 @@ export default class BalloonShootScene extends Phaser.Scene {
     // Power Bar
     overlay.appendChild(this._buildPowerBar());
 
-    // Instruction
-    const inst = this._el("div", {
-      id: "bs-instruction",
-      class: "bs-ui-hidden",
-      style: "position:absolute;bottom:30px;width:100%;text-align:center;color:rgba(255,255,255,0.9);font-weight:300;text-shadow:0 2px 10px rgba(0,0,0,0.5);pointer-events:none;"
-    });
-    inst.innerHTML = "กด <strong>Spacebar</strong> ค้างเพื่อชาร์จแรงยิง แล้วปล่อยเพื่อยิงลูกโป่ง";
-    overlay.appendChild(inst);
 
     // Countdown Overlay
     const countdownOv = this._el("div", { id: "bs-countdown-overlay" });
@@ -124,17 +147,28 @@ export default class BalloonShootScene extends Phaser.Scene {
     layer.appendChild(timeBox);
     return layer;
   }
-
-  _statBox(innerHTML) {
+_statBox(innerHTML) {
     const box = this._el("div");
     box.style.cssText = `
-      min-width:236px; min-height:86px;
-      background:url('${HUD_SIGN_IMAGE}') center/100% 100% no-repeat;
-      padding:18px 26px 12px; box-sizing:border-box;
-      color:#fff; font-weight:800; font-size:1.06rem;
-      text-shadow:2px 2px 4px rgba(0,0,0,0.8); white-space:nowrap;
-      box-shadow:0 10px 20px rgba(0,0,0,0.24);
-      display:flex; align-items:center; justify-content:center;
+      /* --- ปรับขนาดแผ่นป้ายตรงนี้ --- */
+      min-width: 100px;  /* เพิ่มจาก 236px เป็น 300px หรือตามต้องการ */
+      min-height: 70px; /* เพิ่มจาก 86px เป็น 110px */
+      
+      background: url('${HUD_SIGN_IMAGE}') center/100% 100% no-repeat;
+      padding: 20px 30px 15px; /* ปรับ Padding ให้ข้อความอยู่กลางป้ายพอดี */
+      box-sizing: border-box;
+      
+      /* --- ปรับขนาดตัวอักษรหลัก (คำว่า คะแนน:, เวลา:) --- */
+      color: #fff; 
+      font-weight: 800; 
+      font-size: 1.4rem; /* เพิ่มจาก 1.06rem เป็น 1.4rem */
+      
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.8); 
+      white-space: nowrap;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.24);
+      display: flex; 
+      align-items: center; 
+      justify-content: center;
     `;
     box.innerHTML = innerHTML;
     return box;
@@ -143,7 +177,7 @@ export default class BalloonShootScene extends Phaser.Scene {
   _buildPowerBar() {
     const wrap = this._el("div", { id: "bs-power-bar", class: "bs-ui-hidden" });
     wrap.style.cssText = `
-      position:absolute; left:28px; bottom:132px; width:22px; height:265px;
+      position:absolute; left:60px; bottom:300px; width:22px; height:265px;
       background:rgba(0,0,0,0.3); border:3px solid #ffd700;
       box-shadow:0 0 10px rgba(212,175,55,0.6); border-radius:30px; z-index:10;
       overflow:visible;
@@ -166,7 +200,7 @@ export default class BalloonShootScene extends Phaser.Scene {
     wrap.appendChild(label);
     return wrap;
   }
-
+JavaScript
   _buildStartScreen() {
     const screen = this._el("div", { id: "bs-start-screen" });
     screen.style.cssText = `
@@ -175,40 +209,32 @@ export default class BalloonShootScene extends Phaser.Scene {
     `;
 
     const inner = this._el("div");
-    inner.style.cssText = "position:relative;width:min(92vw,760px);text-align:center;";
-    inner.style.cssText = "position:relative;width:min(92vw,720px);text-align:center;";
+    inner.style.cssText = `
+      position:relative; 
+      width:min(92vw, 720px); 
+      text-align:center;
+      
+      /* ปรับตรงนี้: จากเดิม 50% เป็น 55% หรือมากกว่าเพื่อขยับไปทางขวา */
+      left: 28%; 
+      transform: translateX(-50%);
+    `;
 
+    // 1. รูปซุ้มป้ายหลัก
     const board = this._el("img");
     board.src = "/assets/balloonshoot/image/start_sign.png";
     board.style.cssText = `
-      width:min(92vw,720px); height:auto;
-      filter:drop-shadow(0 14px 28px rgba(0,0,0,0.55));
-      pointer-events:none;
+      width: 100%; height: auto; object-fit: contain; 
+      filter: drop-shadow(0 14px 28px rgba(0,0,0,0.55)); pointer-events: none;
     `;
 
-    const title = this._el("img");
-    title.src = "/assets/balloonshoot/image/top_sign.png";
-    title.style.cssText = `
-      position:absolute; top:18px; left:50%; transform:translateX(-50%);
-      width:min(48vw,286px); height:auto; pointer-events:none;
-      filter:drop-shadow(0 8px 18px rgba(0,0,0,0.35));
-    `;
-
-    const sub = this._el("div");
-    sub.style.cssText = `
-      position:absolute; top:126px; left:50%; transform:translateX(-50%);
-      width:min(70vw,450px); color:#fff7de; font-size:1.02rem; font-weight:700;
-      line-height:1.5; text-shadow:0 2px 8px rgba(0,0,0,0.8);
-    `;
-    sub.innerHTML = "ยิงลูกโป่งให้ได้คะแนนสูงที่สุดภายในเวลาที่กำหนด<br/>ชาร์จแรงยิงด้วยปุ่ม <strong>Space</strong> แล้วปล่อยให้จังหวะแม่นที่สุด";
-
+    // 2. ปุ่มเริ่มเกม (จะขยับตาม inner ไปทางขวาโดยอัตโนมัติ)
     const btn = this._el("button");
     btn.style.cssText = `
-      position:absolute; left:50%; bottom:62px; transform:translateX(-50%);
-      min-width:220px; padding:13px 38px; font-size:1.48rem; font-family:'Kanit',sans-serif; font-weight:bold;
+      position:absolute; left:50%; bottom: 140px; transform:translateX(-50%);
+      min-width:220px; padding:13px 38px; font-size:1.5rem; font-family:'Kanit',sans-serif; font-weight:bold;
       color:#fff; background:linear-gradient(180deg,#ffcc00,#ff8800 50%,#ff4400);
       border:4px solid #fff; border-radius:50px; cursor:pointer;
-      box-shadow:0 8px 0 #992200,0 15px 20px rgba(0,0,0,0.5);
+      box-shadow:0 8px 0 #992200, 0 15px 20px rgba(0,0,0,0.5);
       text-shadow:2px 2px 4px rgba(0,0,0,0.5); outline:none;
     `;
     btn.textContent = "เริ่มเกม";
@@ -216,12 +242,11 @@ export default class BalloonShootScene extends Phaser.Scene {
 
     inner.appendChild(board);
     inner.appendChild(btn);
-    inner.appendChild(title);
-    inner.appendChild(sub);
+    
     screen.appendChild(inner);
     return screen;
+  
   }
-
   _buildScoreScreen() {
     const screen = this._el("div", { id: "bs-score-screen" });
     screen.style.cssText = `
@@ -231,11 +256,17 @@ export default class BalloonShootScene extends Phaser.Scene {
     `;
 
     const card = this._el("div");
-    card.style.cssText = `
-      position:relative; width:min(92vw,760px); text-align:center;
+   card.style.cssText = `
+      position:relative; 
+      width:min(92vw,760px); 
+      text-align:center;
       display:flex; justify-content:center; align-items:center; flex-direction:column;
-    `;
 
+      /* ปรับตรงนี้: จาก 50% เป็น 60% เพื่อขยับป้ายสรุปทั้งหมดไปทางขวา */
+      left: 28%; 
+      transform: translateX(-50%);
+    `;
+    // 1. รูปป้ายผลลัพธ์
     const board = this._el("img");
     board.src = "/assets/balloonshoot/image/result_sign.png";
     board.style.cssText = `
@@ -244,14 +275,13 @@ export default class BalloonShootScene extends Phaser.Scene {
       pointer-events:none;
     `;
 
-    const label = this._el("div");
-    label.style.cssText = "position:absolute; top:102px; left:50%; transform:translateX(-50%); font-size:1.34rem; color:#ffd700; margin-bottom:8px; text-shadow:0 2px 8px rgba(0,0,0,0.85);";
-    label.textContent = "คะแนนรวมของคุณ";
-
+    // 2. ตัวเลขคะแนน (ปรับตำแหน่งให้ขึ้นมาแทนที่ข้อความที่ลบไป)
     const score = this._el("div", { id: "bs-total-score" });
     score.style.cssText = `
-      position:absolute; top:142px; left:50%; transform:translateX(-50%);
-      font-size:4.6rem; font-weight:900;
+      position:absolute; 
+      top:160px; /* ปรับขึ้นจาก 142px เพื่อให้สมดุล */
+      left:46%; transform:translateX(-50%);
+      font-size:5rem; font-weight:900;
       background:linear-gradient(180deg,#fff 30%,#ffd700 60%,#ff8c00);
       -webkit-background-clip:text; -webkit-text-fill-color:transparent;
       filter:drop-shadow(4px 4px 0 #632b00);
@@ -259,9 +289,10 @@ export default class BalloonShootScene extends Phaser.Scene {
     `;
     score.textContent = "0";
 
+    // 3. ปุ่มกลับไปแผนที่
     const backBtn = this._el("button");
     backBtn.style.cssText = `
-      position:absolute; left:50%; bottom:58px; transform:translateX(-50%);
+      position:absolute; left:52%; bottom:100px; transform:translateX(-50%);
       padding:12px 30px; font-size:1.12rem;
       font-family:'Kanit',sans-serif; font-weight:bold; color:#fff;
       background:linear-gradient(180deg,#ffcc00,#ff8800); border:3px solid #fff;
@@ -275,14 +306,14 @@ export default class BalloonShootScene extends Phaser.Scene {
       this.onGameEnd?.({ score: finalScore });
     };
 
+    // ใส่เฉพาะส่วนประกอบที่ต้องการ
     card.appendChild(board);
-    card.appendChild(label);
     card.appendChild(score);
     card.appendChild(backBtn);
+    
     screen.appendChild(card);
     return screen;
   }
-
   /* ─────────────── GAME ENGINE ─────────────── */
   _initGame(canvas) {
     const self = this;
@@ -357,7 +388,7 @@ export default class BalloonShootScene extends Phaser.Scene {
       auntieStunTimer:0, auntieSpeech:"", doubleScoreTimer:0,
       stormWarningTimer:0, lightningStrike:null, lightningFlash:0,
       isCountingDown:false, difficultyMultiplier:1,
-      handX:0, handAutoDir:1, handSpeed:3.5, handTilt:0,
+      handX:0, handAutoDir:1, handSpeed:10, handTilt:0,
       isReloading:false, balloons:[],
       actualBalloonWidth:0, actualBalloonHeight:0,
       mainTimerInterval: null,
@@ -584,7 +615,7 @@ export default class BalloonShootScene extends Phaser.Scene {
         gs.difficultyMultiplier = Math.min(2.2, 1 + (gs.totalScore/1500)*0.05 + gs.comboCount*0.015);
         gs.flagWave += 0.1;
         gs.shieldRotation += (gs.timeLeft<=30 ? 0.08 : 0.04) * gs.difficultyMultiplier;
-        gs.balloonOffset   += (gs.timeLeft<=30 ? 6.5 : 4.0) * gs.difficultyMultiplier * gs.balloonDirection;
+        gs.balloonOffset   += (gs.timeLeft<=30 ? 12 : 8.0) * gs.difficultyMultiplier * gs.balloonDirection;
         if (Math.abs(gs.balloonOffset) > 85) gs.balloonDirection *= -1;
 
         if (gs.timeLeft <= 30) {
@@ -890,7 +921,7 @@ export default class BalloonShootScene extends Phaser.Scene {
       if (e.code==="Space" && gs.gameActive && gs.isCharging) {
         const hx=getStartX()+gs.handX, hy=getStartY()-130;
         const angle = -Math.PI/2 + gs.handTilt;
-        const speed = gs.power*0.25 + 2.5;
+        const speed = gs.power*0.5+ 10;
         gs.darts.push({ x:hx, y:hy, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed, active:true });
         gs.isReloading=true; gs.isCharging=false;
         gs.wind = Math.random()*5-2.5;
@@ -915,7 +946,7 @@ export default class BalloonShootScene extends Phaser.Scene {
   }
 
   /* ─────────────── CSS ─────────────── */
-  _getCSS() {
+_getCSS() {
     return `
       #bs-canvas { display:block; width:100vw; height:100vh; }
       .bs-ui-hidden { display:none !important; }
@@ -937,15 +968,28 @@ export default class BalloonShootScene extends Phaser.Scene {
         0%   { transform:scale(0.5) translateY(50px); opacity:0; }
         80%  { transform:scale(1.1) translateY(50px); }
         100% { transform:scale(1)   translateY(50px); opacity:1; }
+      } /* <-- ต้องปิดปีกกาตรงนี้ให้ครบ */
+
+      /* --- ส่วนที่เพิ่มใหม่เพื่อให้ป้ายแกว่ง --- */
+      @keyframes bs-swing {
+        0%   { transform: translateX(-50%) rotate(-5deg); }
+        50%  { transform: translateX(-50%) rotate(5deg); }
+        100% { transform: translateX(-50%) rotate(-5deg); }
+      }
+
+      .bs-swinging {
+        transform-origin: top center;
+        animation: bs-swing 3s ease-in-out infinite;
       }
     `;
   }
 
   /* ─────────────── HELPERS ─────────────── */
-  _el(tag, attrs = {}) {
+_el(tag, attrs = {}) {
     const el = document.createElement(tag);
     Object.entries(attrs).forEach(([k, v]) => {
       if (k === "style") el.style.cssText = v;
+      else if (k === "class") el.className = v; // <--- เพิ่มบรรทัดนี้ เพื่อให้ใส่คลาสได้
       else el.setAttribute(k, v);
     });
     return el;
