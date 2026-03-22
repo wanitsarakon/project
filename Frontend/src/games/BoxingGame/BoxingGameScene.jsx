@@ -85,7 +85,7 @@ export default class BoxingGameScene extends Phaser.Scene {
     hud.style.cssText = `
       display: flex; justify-content: space-between; width: 100%;
       max-width: 1100px; padding: 12px 42px; box-sizing: border-box;
-      pointer-events: none; margin-top: -16px;
+      pointer-events: none; margin-top: -12px;
     `;
     hud.appendChild(this._hudBox('<span id="bg-score" style="color:#2e7d32;">คะแนน: 0</span>'));
     hud.appendChild(this._hudBox('<span id="bg-timer" style="color:#d32f2f;">เวลา: 20</span>'));
@@ -93,18 +93,24 @@ export default class BoxingGameScene extends Phaser.Scene {
 
     // Progress Bar
     const prog = this._el("div");
-    prog.style.cssText = `
-      width: 100%; max-width: 700px; position: relative;
-      margin-top: -8px; margin-bottom: 16px; text-align: center; z-index: 5;
-    `;
-    prog.innerHTML = `
-      <div style="width:100%;height:22px;background:#4e342e;border:2px solid #ffca28;border-radius:12px;overflow:hidden;">
-        <div id="bg-progress-fill" style="height:100%;width:0%;background:linear-gradient(180deg,rgba(255,255,255,0.4) 0%,#4caf50 20%,#2e7d32 80%,#1b5e20 100%);transition:width 0.4s;border-radius:12px 0 0 12px;"></div>
-      </div>
-      <div style="position:absolute;top:-30px;left:0;width:100%;text-align:center;font-size:1.3rem;font-weight:700;color:#ffd700;text-shadow:2px 2px 0 #3e2723,-1px -1px 0 #3e2723;">
-        จำได้แล้ว <span id="bg-placed-count" style="color:#ffca28;font-size:1.5rem;">0</span> / 5
-      </div>
-    `;
+   prog.style.cssText = `
+  width: 100%; 
+  max-width: 700px; 
+  position: relative;
+  margin-top: 20px;     /* ปรับเพิ่มระยะห่างจากป้ายคะแนนด้านบน */
+  margin-bottom: 30px; 
+  text-align: center; 
+  z-index: 5;
+`;
+prog.innerHTML = `
+  <div style="width:100%;height:22px;background:#4e342e;border:2px solid #ffca28;border-radius:12px;overflow:hidden;">
+    <div id="bg-progress-fill" style="height:100%;width:0%;background:linear-gradient(180deg,rgba(255,255,255,0.4) 0%,#4caf50 20%,#2e7d32 80%,#1b5e20 100%);transition:width 0.4s;border-radius:12px 0 0 12px;"></div>
+  </div>
+  
+  <div style="position:absolute; top:-46px; left:0; width:100%; text-align:center; font-size:1.8rem; font-weight:700; color:#ffd700; text-shadow:2px 2px 0 #3e2723,-1px -1px 0 #3e2723;">
+    จำได้แล้ว <span id="bg-placed-count" style="color:#ffca28;font-size:1.5rem;">0</span> / 5
+  </div>
+`;
     main.appendChild(prog);
 
     // Instruction
@@ -150,13 +156,13 @@ export default class BoxingGameScene extends Phaser.Scene {
     const box = this._el("div");
     box.style.cssText = `
       background-image: url('${HUD_SIGN_IMAGE}');
-      background-size: 100% 100%; width: 248px; height: 108px;
+      background-size: 100% 100%; width: 200px; height: 80px;
       display: flex; justify-content: center; align-items: center;
       filter: drop-shadow(0 8px 15px rgba(0,0,0,0.4));
     `;
     const val = this._el("div");
     val.style.cssText = `
-      font-size: 1.24rem; font-weight: 800; margin-top: 4px;
+      font-size: 1.50rem; font-weight: 800; margin-top: 4px;
       background: linear-gradient(180deg,#fff 0%,#ffd700 50%,#f39c12 100%);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       filter: drop-shadow(2px 2px 0 #3e2723) drop-shadow(-1px -1px 0 #3e2723);
@@ -184,38 +190,6 @@ export default class BoxingGameScene extends Phaser.Scene {
       position: relative;
     `;
 
-    // NPC พูด
-    const npcWrap = this._el("div");
-    npcWrap.style.cssText = `
-      position: absolute; left: calc(50% + 62px); bottom: -12px; z-index: 5;
-    `;
-    const npcImg = this._el("img");
-    npcImg.src = "/assets/boxing/images/npc.png";
-    npcImg.style.cssText = "width: 208px; height: auto; filter: drop-shadow(10px 10px 15px rgba(0,0,0,0.5)); animation: bg-nudge 3s ease-in-out infinite;";
-    npcImg.onerror = () => { npcImg.style.display = "none"; };
-    npcWrap.appendChild(npcImg);
-    board.appendChild(npcWrap);
-
-    // Speech bubble
-    const speech = this._el("div", { id: "bg-npc-speech" });
-    speech.style.cssText = `
-      position: absolute; top: 24px; left: 50%; transform: translateX(-50%);
-      background: white; border: 2px solid #333; border-radius: 12px;
-      padding: 10px 16px; font-size: 0.92rem; font-weight: 700;
-      color: #c0392b; max-width: 286px; text-align: center; z-index: 6;
-    `;
-    speech.textContent = "";
-    board.appendChild(speech);
-
-    const helper = this._el("div");
-    helper.style.cssText = `
-      position: absolute; top: 114px; left: 50%; transform: translateX(-50%);
-      width: min(72%, 388px); text-align: center; color: #fff5da;
-      font-size: 0.96rem; font-weight: 700; line-height: 1.5;
-      text-shadow: 0 2px 8px rgba(0,0,0,0.8); z-index: 6;
-    `;
-    helper.innerHTML = "จดจำท่ามวยและชื่อให้แม่น จากนั้นลากป้ายชื่อไปวางบนเงาที่ถูกต้องให้ครบก่อนหมดเวลา";
-    board.appendChild(helper);
 
     const btn = this._el("button");
     btn.style.cssText = `
@@ -252,28 +226,11 @@ export default class BoxingGameScene extends Phaser.Scene {
       display: flex; justify-content: center; align-items: center; flex-direction: column;
       filter: drop-shadow(0 15px 40px rgba(0,0,0,0.7)); position: relative;
     `;
-    const scoreFrame = this._el("img");
-    scoreFrame.src = "/assets/boxing/images/score_frame.png";
-    scoreFrame.style.cssText = `
-      position: absolute; top: 112px; left: 50%; transform: translateX(-50%);
-      width: min(44vw, 268px); height: auto; pointer-events:none;
-      filter: drop-shadow(0 8px 18px rgba(0,0,0,0.35));
-    `;
-    board.appendChild(scoreFrame);
-
-    const summary = this._el("div");
-    summary.style.cssText = `
-      position: absolute; top: 88px; left: 50%; transform: translateX(-50%);
-      color: #fff0d2; font-size: 1.08rem; font-weight: 700;
-      text-shadow: 0 2px 8px rgba(0,0,0,0.8);
-    `;
-    summary.textContent = "คะแนนรวมจากท่าที่วางถูกต้องทั้งหมด";
-    board.appendChild(summary);
 
     const scoreEl = this._el("div", { id: "bg-final-score" });
     scoreEl.style.cssText = `
-      position: absolute; top: 150px; left: 50%; transform: translateX(-50%);
-      font-size: 6.4rem; font-family: 'Sarabun', sans-serif; font-weight: 900;
+      position: absolute; top: 150px; left: 48%; transform: translateX(-40%);
+      font-size: 5.4rem; font-family: 'Sarabun', sans-serif; font-weight: 900;
       background: linear-gradient(180deg,#fff 30%,#ffd700 60%,#ff8c00 100%);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       filter: drop-shadow(6px 6px 0 #632b00);
@@ -284,7 +241,7 @@ export default class BoxingGameScene extends Phaser.Scene {
 
     const backBtn = this._el("button");
     backBtn.style.cssText = `
-      position: absolute; bottom: 28px; left: 50%; transform: translateX(-50%);
+      position: absolute; bottom: 45px; left: 52%; transform: translateX(-50%);
       padding: 12px 30px; font-size: 1.04rem; font-family: 'Sarabun', sans-serif;
       font-weight: 800; color: white;
       background: linear-gradient(180deg,#ffcc00,#ff8800); border: 3px solid #fff;
@@ -364,17 +321,6 @@ export default class BoxingGameScene extends Phaser.Scene {
         osc.stop(now + cfg.dur + 0.02);
       } catch {}
     };
-
-    // ─── Typewriter ───
-    const introText = "สวัสดีขอรับ! จำท่ามวยและชื่อท่าให้แม่นภายใน 20 วินาที แล้วลากป้ายชื่อไปวางบนเงาให้ถูกต้องนะ!";
-    function typeWriter(text, el, speed, playSound = false) {
-      if (!el) return;
-      el.textContent = "";
-      if (playSound) playClean(npcAudio);
-      let i = 0;
-      const tick = () => { if (i < text.length) { el.textContent += text[i++]; setTimeout(tick, speed); } };
-      tick();
-    }
 
     // ─── Helpers ───
     const getBoard = () => document.getElementById("bg-board");
@@ -527,8 +473,14 @@ export default class BoxingGameScene extends Phaser.Scene {
 
     // ─── Mid-game shuffle ───
     async function triggerMidGameShuffle() {
-      const inst = getInst();
-      if (inst) { inst.textContent = "⚠️ ระวัง! ท่ามวยสลับตำแหน่ง!"; inst.style.filter = "drop-shadow(0 0 10px #ff0000)"; }
+  const inst = getInst();
+  if (inst) { 
+    inst.textContent = "⚠️ ระวัง! ท่ามวยสลับตำแหน่ง!"; 
+    // ตกแต่งสีข้อความ
+    inst.style.color = "#ff3d00"; // สีแดงส้มเตือนภัย
+    inst.style.fontSize = "2rem"; // ขยายขนาด
+    inst.style.filter = "drop-shadow(0 0 15px #ff0000) drop-shadow(2px 2px 0 #000)"; 
+  }
       playTone("alert");
       const board = getBoard();
       if (!board) return;
@@ -589,12 +541,35 @@ export default class BoxingGameScene extends Phaser.Scene {
       startGameplay();
     }
 
-    // ─── Gameplay Phase ───
+// ─── Gameplay Phase ───
     function startGameplay() {
       gs.isPlaying = true;
       gs.playTime  = 15;
       const inst = getInst();
-      if (inst) { inst.textContent = "ระวังป้ายหลอก ลากป้ายที่ถูกต้องไปวางบนรูปเงาให้ครบ"; inst.style.color = ""; }
+      if (inst) { 
+        inst.textContent = "ระวังป้ายหลอก ลากป้ายที่ถูกต้องไปวางบนรูปเงาให้ครบ"; 
+        
+        // ตกแต่งสีและสไตล์ข้อความ
+        inst.style.cssText = `
+          font-size: 1.6rem;
+          font-weight: 800;
+          /* ใช้สีส้มเหลืองนีออน */
+          color: #ffca28; 
+          text-align: center;
+          margin-bottom: 20px;
+          /* เพิ่มขอบสีดำและเงาเรืองแสงสีส้ม */
+          text-shadow: 
+            2px 2px 0 #000,
+            -1px -1px 0 #000,
+            1px -1px 0 #000,
+            -1px 1px 0 #000,
+            0 0 15px rgba(255, 87, 34, 0.7);
+          font-family: 'Sarabun', sans-serif;
+          /* เพิ่มอนิเมชั่นขยับเล็กน้อยให้ดูน่าสนใจ */
+          animation: bg-pulse 1.5s infinite;
+        `;
+      }
+      
       const deck = getDeck();
       if (!deck) return;
       deck.style.display = "flex"; deck.innerHTML = "";
