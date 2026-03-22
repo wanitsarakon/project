@@ -104,7 +104,7 @@ export default function GameContainer({
     return () => {
       window.clearInterval(retryTimer);
     };
-  });
+  }, []);
 
   /* =========================
      START MINI GAME
@@ -123,6 +123,24 @@ export default function GameContainer({
 
     const roundId =
       currentRoundIdRef.current ?? null;
+
+    game.scene.scenes.forEach((scene) => {
+      const key = scene?.scene?.key;
+      if (!key || key === gameKey) return;
+
+      try {
+        if (typeof scene._removeOverlay === "function") {
+          scene._removeOverlay();
+        }
+        if (typeof scene.shutdown === "function" && key !== "FestivalMapScene") {
+          scene.shutdown();
+        }
+      } catch (err) {
+        console.warn("Scene cleanup before start failed:", key, err);
+      }
+
+      game.scene.stop(key);
+    });
 
     const backToMap = () => {
 

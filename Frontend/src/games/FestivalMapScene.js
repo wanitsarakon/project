@@ -5,19 +5,19 @@ const BOOTH_Y = 585;
 const WORLD_MARGIN = 220;
 const STALL_WIDTH = 430;
 const STALL_HEIGHT = 430;
-const FESTIVAL_STALL_BG = "/assets/พื้นหลังซุ้ม.PNG";
+const FESTIVAL_STALL_BG = "/assets/festival-stall-bg.png";
 
 export const FESTIVAL_BOOTHS = [
-  { key: "fish", subtitle: "ช้อนปลาไวให้ได้มากที่สุด", scene: "FishScoopingScene", texture: "/assets/ซุ้มเกมตักปลา.png", accent: 0x57d2ff, trim: 0x0e778b, awningAlt: 0xfff4d8 },
-  { key: "horse", subtitle: "ควบม้าฝ่าด่านเก็บของให้ไว", scene: "HorseDeliveryScene", texture: "/assets/ซุ้มเกมขี่ม้า.png", accent: 0xffc75c, trim: 0x9e5a12, awningAlt: 0xfff2d2 },
-  { key: "boxing", subtitle: "จับจังหวะแล้วตอบให้ถูก", scene: "BoxingGameScene", texture: "/assets/ซุ้มท่ามวย.png", accent: 0xff8f84, trim: 0xc24736, awningAlt: 0xffece9 },
-  { key: "cooking", subtitle: "ทำตามสูตรให้ครบทุกขั้นตอน", scene: "CookingGameScene", texture: "/assets/ซุ้มเกมสอนทำลูกชุบ.png", accent: 0xffc772, trim: 0xd06f1c, awningAlt: 0xfff1d8 },
-  { key: "balloon", subtitle: "เล็งดี ยิงไว ทำคอมโบให้ต่อเนื่อง", scene: "BalloonShootScene", texture: "/assets/ซุ้มเกมปาโป่ง.png", accent: 0xff78cf, trim: 0xc33479, awningAlt: 0xffedf9 },
-  { key: "doll", subtitle: "เล็งเป้าให้แม่น คว้ารางวัลกลับบ้าน", scene: "DollGameScene", texture: "/assets/ซุ้มตุ๊กตา.png", accent: 0x9fc6ff, trim: 0x4167c4, awningAlt: 0xedf4ff },
-  { key: "flower", subtitle: "ร้อยพวงมาลัยตามใจลูกค้า", scene: "FlowerGameScene", texture: "/assets/ซุ้มเกมร้อยมาลัย.png", accent: 0xffa9c6, trim: 0xc4507d, awningAlt: 0xffeef4 },
-  { key: "haunted", subtitle: "ช่วยวิญญาณให้พบของที่ตามหา", scene: "HauntedHouseScene", texture: "/assets/ซุ้มบ้านผีสิง.png", accent: 0xbda7ff, trim: 0x6241bd, awningAlt: 0xf2eeff },
-  { key: "tug", subtitle: "ดวลแรงใจให้ทีมเป็นผู้ชนะ", scene: "TugOfWarScene", texture: "/assets/ซู้มชักาเย่อ.png", accent: 0x8cf2b0, trim: 0x199653, awningAlt: 0xeaffef },
-  { key: "worship", subtitle: "พิธีปิดท้าย เสี่ยงเซียมซีรับพรกลับบ้าน", scene: "WorshipBoothScene", texture: "/assets/ซุ้มเกมไหว้พระ.png", accent: 0xffec9e, trim: 0xb78019, awningAlt: 0xfff8e1 },
+  { key: "fish", label: "เกมตักปลา", subtitle: "ช้อนปลาไวให้ได้มากที่สุด", scene: "FishScoopingScene", texture: "/assets/booth-fish.png", accent: 0x57d2ff, trim: 0x0e778b, awningAlt: 0xfff4d8 },
+  { key: "horse", label: "เกมขี่ม้าส่งเมือง", subtitle: "ควบม้าฝ่าด่านเก็บของให้ไว", scene: "HorseDeliveryScene", texture: "/assets/booth-horse.png", accent: 0xffc75c, trim: 0x9e5a12, awningAlt: 0xfff2d2 },
+  { key: "boxing", label: "เกมท่ามวย", subtitle: "จับจังหวะแล้วตอบให้ถูก", scene: "BoxingGameScene", texture: "/assets/booth-boxing.png", accent: 0xff8f84, trim: 0xc24736, awningAlt: 0xffece9 },
+  { key: "cooking", label: "เกมสอนทำลูกชุบ", subtitle: "ทำตามสูตรให้ครบทุกขั้นตอน", scene: "CookingGameScene", texture: "/assets/booth-flower.png", accent: 0xffc772, trim: 0xd06f1c, awningAlt: 0xfff1d8 },
+  { key: "balloon", label: "เกมปาโป่ง", subtitle: "เล็งดี ยิงไว ทำคอมโบให้ต่อเนื่อง", scene: "BalloonShootScene", texture: "/assets/booth-balloon.png", accent: 0xff78cf, trim: 0xc33479, awningAlt: 0xffedf9 },
+  { key: "doll", label: "เกมยิงตุ๊กตา", subtitle: "เล็งเป้าให้แม่น คว้ารางวัลกลับบ้าน", scene: "DollGameScene", texture: "/assets/booth-doll.png", accent: 0x9fc6ff, trim: 0x4167c4, awningAlt: 0xedf4ff },
+  { key: "flower", label: "เกมร้อยมาลัย", subtitle: "ร้อยพวงมาลัยตามใจลูกค้า", scene: "FlowerGameScene", texture: "/assets/booth-cooking.png", accent: 0xffa9c6, trim: 0xc4507d, awningAlt: 0xffeef4 },
+  { key: "haunted", label: "เกมบ้านผีสิง", subtitle: "ช่วยวิญญาณให้พบของที่ตามหา", scene: "HauntedHouseScene", texture: "/assets/booth-haunted.png", accent: 0xbda7ff, trim: 0x6241bd, awningAlt: 0xf2eeff },
+  { key: "tug", label: "เกมชักเย่อ", subtitle: "ดวลแรงใจให้ทีมเป็นผู้ชนะ", scene: "TugOfWarScene", texture: "/assets/booth-tug.png", accent: 0x8cf2b0, trim: 0x199653, awningAlt: 0xeaffef },
+  { key: "worship", label: "เกมไหว้พระ", subtitle: "พิธีปิดท้าย เสี่ยงเซียมซีรับพรกลับบ้าน", scene: "WorshipBoothScene", texture: "/assets/booth-worship.png", accent: 0xffec9e, trim: 0xb78019, awningAlt: 0xfff8e1 },
 ];
 
 const BOOTH_THUMBNAIL_LAYOUT = {

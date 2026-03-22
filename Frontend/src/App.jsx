@@ -42,7 +42,7 @@ export default function App() {
 
   useEffect(() => {
     if (!bgmRef.current) {
-      const audio = new Audio("/assets/03. งานวัด - เพื่อน.mp3");
+      const audio = new Audio("/assets/festival-bgm.mp3");
       audio.loop = true;
       audio.volume = 0.32;
       bgmRef.current = audio;

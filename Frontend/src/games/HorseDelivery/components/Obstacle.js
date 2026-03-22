@@ -7,13 +7,19 @@ export default class Obstacle extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    this.setScale(0.56);
+    this.setScale(0.46);
     this.setOrigin(0.5, 1);
     this.setDepth(5);
     this.body.allowGravity = false;
     this.setImmovable(true);
-    this.body.setSize(this.displayWidth * 0.52, this.displayHeight * 0.58, true);
-    this.body.setOffset(this.displayWidth * 0.23, this.displayHeight * 0.28);
+    this.body.setSize(this.displayWidth * 0.62, this.displayHeight * 0.56, true);
+    this.body.setOffset(this.displayWidth * 0.19, this.displayHeight * 0.27);
+    this.visualCollisionInsets = {
+      left: this.displayWidth * 0.18,
+      right: this.displayWidth * 0.16,
+      top: this.displayHeight * 0.24,
+      bottom: this.displayHeight * 0.16,
+    };
   }
 
   preUpdate(time, delta) {

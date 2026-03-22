@@ -22,6 +22,27 @@ const HUD_SIGN_IMAGE = "/assets/เเผ่นป้ายเวลากับ
 const GAME_TIME = 60;
 const MAX_FISH = 10;
 const HOLD_LIMIT_MS = 1000;
+const INITIAL_FISH_TYPES = ["red", "silver", "red", "silver", "gold", "red", "silver", "gold"];
+const FISH_DEFS = {
+  red: {
+    texture: "fish-red",
+    label: "ปลาแดง",
+    score: 1,
+    toastColor: "#ffc7a0",
+  },
+  silver: {
+    texture: "fish-silver",
+    label: "ปลาเงิน",
+    score: 2,
+    toastColor: "#dff4ff",
+  },
+  gold: {
+    texture: "fish-gold",
+    label: "ปลาทอง",
+    score: 3,
+    toastColor: "#ffe57a",
+  },
+};
 
 export default class FishScoopingScene extends Phaser.Scene {
   constructor() {
@@ -42,8 +63,9 @@ export default class FishScoopingScene extends Phaser.Scene {
     this.phase = "intro";
     this.score = 0;
     this.timeLeft = GAME_TIME;
+    this.redCaught = 0;
+    this.silverCaught = 0;
     this.goldCaught = 0;
-    this.normalCaught = 0;
     this.ended = false;
   }
 
@@ -75,9 +97,9 @@ export default class FishScoopingScene extends Phaser.Scene {
 
     this.waterZone = {
       cx: width * 0.51,
-      cy: height * 0.815,
-      rx: pondSize * 0.29,
-      ry: pondSize * 0.205,
+      cy: height * 0.585,
+      rx: pondSize * 0.385,
+      ry: pondSize * 0.225,
     };
 
     this.bucket = this.physics.add.image(width * 0.11, height * 0.865, "bucket")
@@ -130,13 +152,47 @@ export default class FishScoopingScene extends Phaser.Scene {
 
     this.hud.score = createPanel(width * 0.15, 58, "คะแนน", "#fff7cc");
     this.hud.timer = createPanel(width * 0.85, 58, "เวลา", "#ffd86a");
-    this.hud.note = this.add.text(width / 2, 92, "ลากช้อนให้ถึงตัวปลาแล้วคลิกตัก รีบเอาไปลงถังภายใน 1 วินาที", {
+
+    this.hud.note = this.add.text(width / 2, 92, "ลากช้อนให้ครอบปลาแล้วคลิกตัก จากนั้นรีบปล่อยลงถังให้ทัน", {
       fontFamily: "Kanit",
       fontSize: "18px",
       color: "#fffaf0",
       backgroundColor: "rgba(63,38,12,0.55)",
       padding: { left: 14, right: 14, top: 6, bottom: 6 },
     }).setOrigin(0.5).setDepth(10);
+
+    const ruleWidth = 336;
+    const ruleHeight = 124;
+    const ruleX = width - (ruleWidth / 2) - 24;
+    const ruleY = 112;
+    const ruleBg = this.add.graphics().setDepth(10).setScrollFactor(0);
+    ruleBg.fillStyle(0x4a2b0b, 0.8);
+    ruleBg.lineStyle(3, 0xf3c977, 0.96);
+    ruleBg.fillRoundedRect(ruleX - (ruleWidth / 2), ruleY, ruleWidth, ruleHeight, 18);
+    ruleBg.strokeRoundedRect(ruleX - (ruleWidth / 2), ruleY, ruleWidth, ruleHeight, 18);
+
+    const ruleTitle = this.add.text(ruleX, ruleY + 12, "กติกา", {
+      fontFamily: "Kanit",
+      fontSize: "20px",
+      fontStyle: "bold",
+      color: "#ffe7ab",
+      stroke: "#2b1703",
+      strokeThickness: 4,
+    }).setOrigin(0.5, 0).setDepth(11);
+
+    const ruleText = this.add.text(ruleX - 145, ruleY + 40, [
+      "ลากช้อนให้ครอบปลาแล้วคลิกตัก",
+      "รีบปล่อยปลาลงถังภายใน 1 วินาที",
+      "ปลาแดง +1  ปลาเงิน +2  ปลาทอง +3",
+    ].join("\n"), {
+      fontFamily: "Kanit",
+      fontSize: "17px",
+      color: "#fff8e7",
+      lineSpacing: 4,
+      wordWrap: { width: 290 },
+    }).setOrigin(0, 0).setDepth(11);
+
+    this.hud.rulePanel = this.add.container(0, 0, [ruleBg, ruleTitle, ruleText]).setScrollFactor(0);
 
     this.updateHud();
   }
@@ -146,15 +202,20 @@ export default class FishScoopingScene extends Phaser.Scene {
     this.startOverlay = this.add.container(0, 0).setDepth(30);
     const dim = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.55);
     const panel = this.add.image(width / 2, height / 2, "fish-start").setDisplaySize(700, 467);
-    const copy = this.add.text(width / 2, height / 2 + 72, "คลิกเมื่อตาข่ายครอบตัวปลา แล้วรีบวิ่งมาปล่อยลงถัง ถ้าช้าเกิน 1 วินาทีปลาจะหลุด", {
-      fontFamily: "Kanit",
-      fontSize: "20px",
-      align: "center",
-      color: "#fff7e0",
-      stroke: "#4a2100",
-      strokeThickness: 5,
-      wordWrap: { width: 480 },
-    }).setOrigin(0.5);
+    const copy = this.add.text(
+      width / 2,
+      height / 2 + 72,
+      "ลากช้อนให้ครอบปลาแล้วคลิกตัก รีบเอาปลาไปลงถังภายใน 1 วินาที\nปลาแดง +1  ปลาเงิน +2  ปลาทอง +3",
+      {
+        fontFamily: "Kanit",
+        fontSize: "20px",
+        align: "center",
+        color: "#fff7e0",
+        stroke: "#4a2100",
+        strokeThickness: 5,
+        wordWrap: { width: 500 },
+      },
+    ).setOrigin(0.5);
     const btn = this.add.text(width / 2, height / 2 + 152, "เริ่มเกม", {
       fontFamily: "Kanit",
       fontSize: "28px",
@@ -182,11 +243,12 @@ export default class FishScoopingScene extends Phaser.Scene {
       stroke: "#fff1bb",
       strokeThickness: 6,
     }).setOrigin(0.5);
-    this.resultMetaText = this.add.text(width / 2, height / 2 + 92, "", {
+    this.resultMetaText = this.add.text(width / 2, height / 2 + 96, "", {
       fontFamily: "Kanit",
       fontSize: "20px",
       color: "#6b2500",
       align: "center",
+      lineSpacing: 6,
     }).setOrigin(0.5);
     const btn = this.add.text(width / 2, height / 2 + 168, "กลับแผนที่", {
       fontFamily: "Kanit",
@@ -197,13 +259,16 @@ export default class FishScoopingScene extends Phaser.Scene {
       stroke: "#522000",
       strokeThickness: 4,
     }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
     btn.on("pointerdown", () => {
       this.onGameEnd?.({
         score: this.score,
         roundId: this.roundId,
         meta: {
-          normalCaught: this.normalCaught,
+          redCaught: this.redCaught,
+          silverCaught: this.silverCaught,
           goldCaught: this.goldCaught,
+          normalCaught: this.redCaught + this.silverCaught,
           timeLeft: this.timeLeft,
         },
       });
@@ -212,21 +277,22 @@ export default class FishScoopingScene extends Phaser.Scene {
     this.resultOverlay.add([dim, panel, this.resultScoreText, this.resultMetaText, btn]);
   }
 
-  spawnInitialFish() {
-    const normalFishTextures = ["fish-red", "fish-silver"];
+  spawnFish(type) {
+    const point = this.randomPointInWater();
+    const fish = new Fish(this, point.x, point.y, FISH_DEFS[type].texture, type);
+    this.fishes.add(fish);
+    return fish;
+  }
 
-    for (let i = 0; i < 8; i += 1) {
-      const isGold = i >= 6;
-      const point = this.randomPointInWater();
-      const fish = new Fish(
-        this,
-        point.x,
-        point.y,
-        isGold ? "fish-gold" : Phaser.Utils.Array.GetRandom(normalFishTextures),
-        isGold ? "gold" : "normal",
-      );
-      this.fishes.add(fish);
-    }
+  spawnInitialFish() {
+    INITIAL_FISH_TYPES.forEach((type) => this.spawnFish(type));
+  }
+
+  getRandomFishType() {
+    const roll = Math.random();
+    if (roll < 0.44) return "red";
+    if (roll < 0.8) return "silver";
+    return "gold";
   }
 
   randomPointInWater() {
@@ -279,6 +345,7 @@ export default class FishScoopingScene extends Phaser.Scene {
       loop: true,
       volume: 0.16,
     });
+
     if (!this.fairBgm.isPlaying) {
       this.fairBgm.play();
     }
@@ -289,17 +356,7 @@ export default class FishScoopingScene extends Phaser.Scene {
       callback: () => {
         if (this.phase !== "playing") return;
         if (this.fishes.countActive(true) >= MAX_FISH) return;
-        const normalFishTextures = ["fish-red", "fish-silver"];
-        const isGold = Math.random() < 0.28;
-        const point = this.randomPointInWater();
-        const fish = new Fish(
-          this,
-          point.x,
-          point.y,
-          isGold ? "fish-gold" : Phaser.Utils.Array.GetRandom(normalFishTextures),
-          isGold ? "gold" : "normal",
-        );
-        this.fishes.add(fish);
+        this.spawnFish(this.getRandomFishType());
       },
     });
 
@@ -318,11 +375,11 @@ export default class FishScoopingScene extends Phaser.Scene {
 
   tryCatchFish() {
     let nearestFish = null;
-    let nearestDistance = 9999;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    const netCenter = this.spoon.getNetCenter();
 
     this.fishes.children.each((fish) => {
       if (!fish?.active || fish.isCaught) return;
-      const netCenter = this.spoon.getNetCenter();
       const distance = Phaser.Math.Distance.Between(netCenter.x, netCenter.y, fish.x, fish.y);
       if (distance < 68 && distance < nearestDistance) {
         nearestFish = fish;
@@ -331,7 +388,7 @@ export default class FishScoopingScene extends Phaser.Scene {
     });
 
     if (!nearestFish) {
-      this.showToast("ต้องเอาช้อนให้ถึงตัวปลาก่อนค่อยคลิกตัก", "#ffd2a0");
+      this.showToast("ต้องเอาช้อนให้ครอบตัวปลาก่อนค่อยคลิกตัก", "#ffd2a0");
       return;
     }
 
@@ -352,47 +409,50 @@ export default class FishScoopingScene extends Phaser.Scene {
       this.spoon.releaseFish();
       fish.releaseBackToWater(this.waterZone);
       this.cameras.main.shake(120, 0.0022);
-      this.showToast("ช้าเกินไป ปลาหลุดแล้ว!", "#ffd2a0");
+      this.showToast("ช้าเกินไป ปลาเลยดิ้นหลุดแล้ว!", "#ffd2a0");
     });
   }
 
-  update() {
+  update(_, delta) {
     const pointer = this.input.activePointer;
     this.spoon?.update(pointer, this.phase === "playing");
 
-    if (this.phase === "playing") {
-      const netCenter = this.spoon?.getNetCenter?.() ?? null;
-      this.fishes.children.each((fish) => {
-        if (!fish?.active) return;
-        fish.update(this.waterZone, netCenter);
-      });
+    if (this.phase !== "playing") return;
 
-      if (this.spoon?.holdingFish) {
-        const fish = this.spoon.holdingFish;
-        const dist = Phaser.Math.Distance.Between(
-          fish.x,
-          fish.y,
-          this.bucket.x,
-          this.bucket.y,
-        );
+    const netCenter = this.spoon?.getNetCenter?.() ?? null;
+    this.fishes.children.each((fish) => {
+      if (!fish?.active) return;
+      fish.update(this.waterZone, netCenter, delta);
+    });
 
-        if (dist < 128) {
-          this.registerCatch(fish);
-        }
-      }
+    if (!this.spoon?.holdingFish) return;
+
+    const fish = this.spoon.holdingFish;
+    const dist = Phaser.Math.Distance.Between(
+      fish.x,
+      fish.y,
+      this.bucket.x,
+      this.bucket.y,
+    );
+
+    if (dist < 128) {
+      this.registerCatch(fish);
     }
   }
 
   registerCatch(fish) {
+    const fishDef = FISH_DEFS[fish.type] ?? FISH_DEFS.red;
     const points = fish.score;
+
     this.score += points;
     if (fish.type === "gold") this.goldCaught += 1;
-    else this.normalCaught += 1;
+    if (fish.type === "silver") this.silverCaught += 1;
+    if (fish.type === "red") this.redCaught += 1;
 
     this.escapeTimer?.remove(false);
     this.escapeTimer = null;
     this.updateHud();
-    this.showToast(points > 1 ? "+2 ปลาทอง!" : "+1 ได้ปลาแล้ว", points > 1 ? "#ffd95e" : "#d4ffd3");
+    this.showToast(`+${points} คะแนน ${fishDef.label}`, fishDef.toastColor);
 
     fish.destroy();
     this.spoon.releaseFish();
@@ -462,7 +522,7 @@ export default class FishScoopingScene extends Phaser.Scene {
 
     this.resultScoreText.setText(String(this.score));
     this.resultMetaText.setText(
-      `ปลาปกติ ${this.normalCaught} ตัว  •  ปลาทอง ${this.goldCaught} ตัว  •  เวลาที่เหลือ ${Math.max(0, this.timeLeft)} วินาที`,
+      `ปลาแดง ${this.redCaught} ตัว  •  ปลาเงิน ${this.silverCaught} ตัว  •  ปลาทอง ${this.goldCaught} ตัว\nเวลาที่เหลือ ${Math.max(0, this.timeLeft)} วินาที`,
     );
     this.resultOverlay.setVisible(true);
   }
@@ -475,5 +535,6 @@ export default class FishScoopingScene extends Phaser.Scene {
     this.gameTimer?.remove(false);
     this.countdownTimer?.remove(false);
     this.escapeTimer?.remove(false);
+    this.toastTween?.stop();
   }
 }
