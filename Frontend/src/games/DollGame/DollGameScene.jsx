@@ -163,7 +163,7 @@ export default class DollGameScene extends Phaser.Scene {
         }
         .dg-header {
           position: absolute;
-          top: -24px;
+          top: -75px;
           left: 50%;
           width: min(46vw, 398px);
           transform: translateX(-50%) rotate(-1.8deg);
@@ -204,11 +204,13 @@ export default class DollGameScene extends Phaser.Scene {
           font-weight: 900;
           text-shadow: 2px 2px 0 #333;
         }
-        .dg-stat span {
+          .dg-stat span {
           color: #f1c40f;
-          min-width: 30px;
           text-align: center;
-        }
+  font-size: 20px;      /* เพิ่มขนาดตัวเลขให้ใหญ่ขึ้นชัดเจน */
+  min-width: 40px;
+  margin-left: -10px;     /* เว้นระยะจากเครื่องหมาย : นิดหน่อย */
+}
         .dg-stat-ornate {
           width: 152px;
           height: 64px;
@@ -230,8 +232,8 @@ export default class DollGameScene extends Phaser.Scene {
           pointer-events: auto;
         }
         .dg-card {
-          width: min(66vw, 500px);
-          height: min(50vw, 328px);
+          width: min(66vw, 600px);
+          height: min(50vw, 428px);
           padding: 78px 30px 28px;
           box-sizing: border-box;
           text-align: center;
@@ -275,7 +277,7 @@ export default class DollGameScene extends Phaser.Scene {
           line-height: 1.48;
         }
         .dg-button {
-          margin-top: 22px;
+          margin-top: 160px;
           padding: 13px 34px;
           font-size: clamp(19px, 2.3vw, 26px);
           font-family: "Kanit", sans-serif;
@@ -323,6 +325,27 @@ export default class DollGameScene extends Phaser.Scene {
           font-weight: 700;
           text-shadow: 2px 2px 4px #000;
         }
+          /* เพิ่มไว้ต่อจาก .dg-final-score หรือส่วนไหนก็ได้ใน <style> */
+.dg-instructions-bottom {
+  position: absolute;
+  bottom: 25px;            /* ระยะจากขอบล่าง */
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ffffff;
+  font-size: 18px;         /* ขนาดตัวอักษร */
+  font-weight: 500;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9);
+  pointer-events: none;    /* เพื่อให้คลิกผ่านไปยิงเกมได้ */
+  z-index: 15;             /* ให้อยู่เหนือ Canvas */
+  background: rgba(0, 0, 0, 0.4);
+  padding: 6px 20px;
+  border-radius: 25px;
+  white-space: nowrap;
+  font-family: "Kanit", sans-serif;
+}
+.dg-instructions-bottom b {
+  color: #f1c40f;          /* เน้นสีเหลืองตรงคำว่า Spacebar */
+}
         .dg-screen-smoke {
           position: absolute;
           inset: 0;
@@ -339,9 +362,9 @@ export default class DollGameScene extends Phaser.Scene {
           mix-blend-mode: screen;
         }
         .dg-final-score {
-          margin-top: 18px;
-          font-size: clamp(56px, 9vw, 108px);
-          font-weight: 900;
+          margin-top: 140px;
+          font-size: 100px; /* เพิ่มขนาดตามต้องการ เช่น 100px หรือ 120px */
+  font-weight: 900;
           line-height: 1;
           background: linear-gradient(180deg, #fff 30%, #ffd700 60%, #ff8c00 100%);
           -webkit-background-clip: text;
@@ -349,6 +372,19 @@ export default class DollGameScene extends Phaser.Scene {
           filter: drop-shadow(5px 5px 0 #632b00) drop-shadow(0 0 15px rgba(255,140,0,0.5));
           animation: dg-score-pop 0.5s cubic-bezier(0.175,0.885,0.32,1.275) forwards;
         }
+      #dg-finish-btn {
+  /* เดิมอาจจะเป็น padding: 15px 45px; ให้ลดตัวเลขลง */
+  padding: 8px 24px;         /* ตัวเลขแรกคือความสูง ตัวเลขหลังคือความกว้าง */
+  
+  /* ลดขนาดตัวอักษรบนปุ่ม */
+  font-size: clamp(16px, 2vw, 24px); 
+  
+  /* ถ้าต้องการให้ปุ่มดูเพรียวขึ้น */
+  min-width: 100px; 
+  
+  /* ส่วนนี้คือที่คุณต้องการ "ดันขึ้นไป" จากรอบที่แล้ว */
+  margin-top: 20px;         
+}
         .dg-hidden { display: none !important; }
         @keyframes dg-sway {
           0% { transform: translateX(-50%) rotate(-3deg); }
@@ -362,7 +398,11 @@ export default class DollGameScene extends Phaser.Scene {
         @media (max-width: 700px) {
           .dg-header { top: -10px; width: min(62vw, 312px); }
           .dg-score-legend { top: 82px; width: 104px; }
-          .dg-stat { width: 126px; height: 50px; font-size: 15px; }
+          .dg-stat {
+  width: 180px;         /* เพิ่มความกว้างของป้ายจากเดิม 150px */
+  height: 70px;         /* เพิ่มความสูงของป้ายจากเดิม 58px */
+  font-size: 22px;      /* เพิ่มขนาดตัวหนังสือคำว่า คะแนน:, เวลา: */
+  gap: 8px;}
           .dg-card { width: min(82vw, 470px); height: min(58vw, 312px); padding: 70px 24px 24px; }
         }
       </style>
@@ -372,31 +412,31 @@ export default class DollGameScene extends Phaser.Scene {
         <img class="dg-header" src="${IMAGE_PATHS.header}" alt="Doll header" />
         <img class="dg-score-legend" src="${IMAGE_PATHS.scoreLegend}" alt="Score legend" />
         <div id="dg-screen-smoke" class="dg-screen-smoke"></div>
-        <div class="dg-stats-left">
-          <div class="dg-stat">\u0e04\u0e30\u0e41\u0e19\u0e19 <span id="dg-score">0</span></div>
-        </div>
-        <div class="dg-stats-right">
-          <div class="dg-stat dg-stat-ornate dg-time-board">\u0e40\u0e27\u0e25\u0e32 <span id="dg-time">60</span></div>
-          <div class="dg-stat dg-stat-ornate dg-ammo-board">\u0e01\u0e23\u0e30\u0e2a\u0e38\u0e19 <span id="dg-ammo">10</span></div>
-        </div>
+<div class="dg-stats-left">
+  <div class="dg-stat">คะแนน: <span id="dg-score">0</span></div> 
+</div>
+<div class="dg-stats-right">
+  <div class="dg-stat dg-stat-ornate dg-time-board">เวลา: <span id="dg-time">60</span></div>
+  <div class="dg-stat dg-stat-ornate dg-time-board">กระสุน: <span id="dg-ammo">10</span></div>
+</div>
         <div id="dg-combo" class="dg-combo"></div>
         <div id="dg-countdown" class="dg-countdown dg-hidden"></div>
-        <div id="dg-start" class="dg-overlay">
-          <div class="dg-card dg-start-card">
-            <div class="dg-sub dg-start-copy">\u0e22\u0e34\u0e07\u0e40\u0e1b\u0e49\u0e32\u0e15\u0e38\u0e4a\u0e01\u0e15\u0e32\u0e43\u0e2b\u0e49\u0e41\u0e21\u0e48\u0e19\u0e17\u0e35\u0e48\u0e2a\u0e38\u0e14\u0e43\u0e19 60 \u0e27\u0e34\u0e19\u0e32\u0e17\u0e35<br/>\u0e01\u0e14 Space \u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e40\u0e15\u0e34\u0e21\u0e01\u0e23\u0e30\u0e2a\u0e38\u0e19\u0e43\u0e2b\u0e21\u0e48</div>
-            <button id="dg-start-btn" class="dg-button">\u0e40\u0e23\u0e34\u0e48\u0e21\u0e40\u0e01\u0e21</button>
-          </div>
-        </div>
-        <div id="dg-end" class="dg-overlay dg-hidden">
-          <div class="dg-card dg-end-card">
-            <div class="dg-sub">\u0e04\u0e30\u0e41\u0e19\u0e19\u0e23\u0e27\u0e21\u0e02\u0e2d\u0e07\u0e04\u0e38\u0e13</div>
-            <div id="dg-final-score" class="dg-final-score">0</div>
-            <button id="dg-finish-btn" class="dg-button">\u0e01\u0e25\u0e31\u0e1a\u0e41\u0e1c\u0e19\u0e17\u0e35\u0e48</button>
-          </div>
-        </div>
-        <div class="dg-instructions">\u0e04\u0e25\u0e34\u0e01\u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e22\u0e34\u0e07\u0e40\u0e1b\u0e49\u0e32 \u0e41\u0e25\u0e30\u0e01\u0e14 Space \u0e40\u0e1e\u0e37\u0e48\u0e2d\u0e23\u0e35\u0e42\u0e2b\u0e25\u0e14\u0e01\u0e23\u0e30\u0e2a\u0e38\u0e19</div>
+        <div class="dg-instructions-bottom">
+  คลิกเพื่อยิง | กด <b>Spacebar</b> เพื่อรีโหลดกระสุน
+</div>
+       <div id="dg-start" class="dg-overlay">
+  <div class="dg-card dg-start-card">
+    <button id="dg-start-btn" class="dg-button">เริ่มเกม</button>
+  </div>
+</div>
+     <div id="dg-end" class="dg-overlay dg-hidden">
+      <div class="dg-card dg-end-card">
+        <div id="dg-final-score" class="dg-final-score">0</div>
+        <button id="dg-finish-btn" class="dg-button">กลับแผนที่</button>
       </div>
-    `;
+    </div>
+    </div>
+`;
 
     container.appendChild(this.root);
 
@@ -599,7 +639,7 @@ export default class DollGameScene extends Phaser.Scene {
     if (!gs || !this.canvas) return;
 
     gs.targets = [];
-    const shelfY = [this.canvas.height * 0.37, this.canvas.height * 0.61];
+    const shelfY = [this.canvas.height * 0.34, this.canvas.height * 0.58];
     shelfY.forEach((baseY) => {
       const startX = this.canvas.width * 0.26;
       const spacing = this.canvas.width * 0.042;
