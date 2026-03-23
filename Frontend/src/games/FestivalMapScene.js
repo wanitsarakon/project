@@ -9,7 +9,7 @@ const FESTIVAL_STALL_BG = "/assets/festival-stall-bg.png";
 
 export const FESTIVAL_BOOTHS = [
   { key: "fish", label: "เกมตักปลา", subtitle: "ช้อนปลาไวให้ได้มากที่สุด", scene: "FishScoopingScene", texture: "/assets/booth-fish.png", accent: 0x57d2ff, trim: 0x0e778b, awningAlt: 0xfff4d8 },
-  { key: "horse", label: "เกมขี่ม้าส่งเมือง", subtitle: "ควบม้าฝ่าด่านเก็บของให้ไว", scene: "HorseDeliveryScene", texture: "/assets/booth-horse.png", accent: 0xffc75c, trim: 0x9e5a12, awningAlt: 0xfff2d2 },
+  { key: "horse", label: "เกมม้าก้านกล้วยส่งของ", subtitle: "วิ่งฝ่างานวัดกลางคืน เก็บของส่งให้ไว", scene: "HorseDeliveryScene", texture: "/assets/booth-horse.png", accent: 0xffc75c, trim: 0x9e5a12, awningAlt: 0xfff2d2 },
   { key: "boxing", label: "เกมท่ามวย", subtitle: "จับจังหวะแล้วตอบให้ถูก", scene: "BoxingGameScene", texture: "/assets/booth-boxing.png", accent: 0xff8f84, trim: 0xc24736, awningAlt: 0xffece9 },
   { key: "cooking", label: "เกมสอนทำลูกชุบ", subtitle: "ทำตามสูตรให้ครบทุกขั้นตอน", scene: "CookingGameScene", texture: "/assets/booth-cooking.png", accent: 0xffc772, trim: 0xd06f1c, awningAlt: 0xfff1d8 },
   { key: "balloon", label: "เกมปาโป่ง", subtitle: "เล็งดี ยิงไว ทำคอมโบให้ต่อเนื่อง", scene: "BalloonShootScene", texture: "/assets/booth-balloon.png", accent: 0xff78cf, trim: 0xc33479, awningAlt: 0xffedf9 },
@@ -332,10 +332,12 @@ export default class FestivalMapScene extends Phaser.Scene {
       decor.push(this.add.circle(8, 106, 8, 0xffca5f, 1));
       decor.push(this.add.circle(34, 97, 9, 0xff6f61, 1));
     } else if (booth.key === "horse") {
-      for (let i = 0; i < 4; i += 1) {
-        decor.push(this.add.circle(-44 + i * 28, -2 - (i % 2) * 12, 10, palette[i % palette.length], 0.95));
-        decor.push(this.add.line(-44 + i * 28, 12, 0, 0, 0, 28, 0x8a5a1b, 0.85).setLineWidth(2));
-      }
+      decor.push(this.add.circle(-46, -2, 12, 0xffb9df, 0.98));
+      decor.push(this.add.circle(-20, 4, 12, 0x94e4ff, 0.98));
+      decor.push(this.add.circle(12, 0, 12, 0xffdb83, 0.98));
+      decor.push(this.add.circle(42, 6, 12, 0xb7ff9c, 0.98));
+      decor.push(this.add.rectangle(-2, 100, 120, 16, 0xffd59a, 0.94).setStrokeStyle(2, 0x8a5a1b, 0.8));
+      decor.push(this.add.line(-58, 100, 0, 0, 116, 0, 0x8a5a1b, 0.85).setLineWidth(2));
     } else if (booth.key === "boxing") {
       for (let i = 0; i < 5; i += 1) {
         const d = this.add.circle(-54 + i * 27, 92, 10, i % 2 === 0 ? 0xffd168 : 0xff876b, 1);

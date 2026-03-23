@@ -2,37 +2,36 @@ import Phaser from "phaser";
 
 const FISH_TRAITS = {
   red: {
-    scale: 0.29,
+    scale: 0.19,
     score: 1,
-    cruiseSpeed: [156, 198],
+    cruiseSpeed: [120, 160], // ช้าลงเล็กน้อยเพื่อให้ดูใจเย็น
     fleeBoost: [220, 276],
     fleeRadius: 172,
-    steerEase: 0.075,
-    routeMs: [920, 1480],
-    swimBobSpeed: [0.0048, 0.0062],
+    steerEase: 0.04, // ลดจาก 0.075 เพื่อให้การเลี้ยวสมูทขึ้น
+    routeMs: [1500, 2500], // อยู่ในเส้นทางเดิมนานขึ้น
+    swimBobSpeed: [0.003, 0.005],
   },
   silver: {
-    scale: 0.3,
+    scale: 0.17,
     score: 2,
-    cruiseSpeed: [178, 226],
+    cruiseSpeed: [160, 210],
     fleeBoost: [250, 318],
     fleeRadius: 194,
-    steerEase: 0.09,
-    routeMs: [820, 1320],
-    swimBobSpeed: [0.0054, 0.0069],
+    steerEase: 0.06, // การตอบสนองปานกลาง
+    routeMs: [1000, 2000],
+    swimBobSpeed: [0.005, 0.007],
   },
   gold: {
-    scale: 0.33,
+    scale: 0.15,
     score: 3,
-    cruiseSpeed: [202, 252],
-    fleeBoost: [292, 362],
+    cruiseSpeed: [240, 300],
+    fleeBoost: [100, 150], // ลดจาก [300, 380] เพื่อไม่ให้ความเร็วพุ่งกระโดด
     fleeRadius: 214,
-    steerEase: 0.108,
-    routeMs: [720, 1180],
-    swimBobSpeed: [0.0058, 0.0075],
+    steerEase: 0.08,
+    routeMs: [600, 1200],
+    swimBobSpeed: [0.007, 0.01],
   },
 };
-
 function randomPointInEllipse(bounds) {
   const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
   const radius = Math.sqrt(Math.random());
@@ -46,11 +45,16 @@ function keepInsideEllipse(sprite, bounds) {
   const dx = sprite.x - bounds.cx;
   const dy = sprite.y - bounds.cy;
   const norm = ((dx * dx) / (bounds.rx * bounds.rx)) + ((dy * dy) / (bounds.ry * bounds.ry));
-  if (norm <= 1) return;
+
+  if (norm <= 1.02) return; // ยอมให้เหลื่อมได้นิดหน่อยเพื่อความสมูท
 
   const angle = Math.atan2(dy, dx);
-  sprite.x = bounds.cx + Math.cos(angle) * (bounds.rx - 10);
-  sprite.y = bounds.cy + Math.sin(angle) * (bounds.ry - 10);
+  // แทนที่จะกระชากกลับ ให้ใช้การขยับทีละนิด (Damping)
+  const targetX = bounds.cx + Math.cos(angle) * (bounds.rx - 2);
+  const targetY = bounds.cy + Math.sin(angle) * (bounds.ry - 2);
+
+  sprite.x = Phaser.Math.Linear(sprite.x, targetX, 0.1);
+  sprite.y = Phaser.Math.Linear(sprite.y, targetY, 0.1);
 }
 
 export default class Fish extends Phaser.Physics.Arcade.Sprite {
@@ -171,66 +175,107 @@ export default class Fish extends Phaser.Physics.Arcade.Sprite {
     );
   }
 
-  fleeFromThreat(bounds, threat, distanceFromThreat) {
+// ในไฟล์ Fish.js
+// ในไฟล์ Fish.js
+fleeFromThreat(bounds, threat, distanceFromThreat) {
     const proximity = Phaser.Math.Clamp(1 - (distanceFromThreat / this.fleeRadius), 0, 1);
+
+    // 1. คำนวณมุมหนี (หันหลังให้ช้อน)
     const fleeAngle = Phaser.Math.Angle.Between(threat.x, threat.y, this.x, this.y);
+
+    // 2. คำนวณมุมกลับเข้าหาจุดศูนย์กลาง (Home) เพื่อเลี้ยวหลบขอบอัตโนมัติ
     const homeAngle = Phaser.Math.Angle.Between(this.x, this.y, bounds.cx, bounds.cy);
-    const edgePressure = Phaser.Math.Clamp((this.getNormalizedRadius(bounds) - 0.72) / 0.28, 0, 1);
-    const wobble = Math.sin(this.motionClock * 1.65) * 0.16;
-    const angle = Phaser.Math.Angle.RotateTo(fleeAngle + wobble, homeAngle, edgePressure * 0.58);
-    const speed = this.baseSpeed + this.fleeBoost * (0.9 + proximity * 0.95);
+    const norm = this.getNormalizedRadius(bounds);
 
-    this.targetVelocity.setToPolar(angle, speed);
-    this.fleeTimer = Math.max(this.fleeTimer, 320 + (proximity * 320));
-    this.routeTimer = Math.max(this.routeTimer, 240);
-  }
+    // ยิ่งใกล้ขอบ ยิ่งให้น้ำหนักการเลี้ยวกลับเข้ากลางอ่างมากขึ้น (ป้องกันการพุ่งชนขอบ)
+    const edgeAvoidance = Phaser.Math.Clamp((norm - 0.6) / 0.4, 0, 1);
+    const finalAngle = Phaser.Math.Angle.RotateTo(fleeAngle, homeAngle, edgeAvoidance * 0.7);
 
-  update(bounds, threat = null, delta = 16.67) {
+    // 3. ปรับความเร็ว: เน้นว่ายเร็วขึ้นแบบต่อเนื่อง ไม่ใช้แรงพุ่ง (No Burst)
+    // ใช้ค่า baseSpeed คูณกับตัวคูณความเร็ว แทนการบวก fleeBoost เข้าไปตรงๆ
+    const fleeSpeedMultiplier = 1.4 + (proximity * 0.6); // เร็วขึ้นประมาณ 1.4 - 2.0 เท่าของความเร็วปกติ
+    let speed = this.baseSpeed * fleeSpeedMultiplier;
+
+    // 4. ระบบเบรกหน้าขอบ: ถ้าใกล้ขอบอ่างมาก ให้ลดความเร็วลงเพื่อไม่ให้ชนแรง
+    if (norm > 0.85) {
+        speed *= 0.7;
+    }
+
+    this.targetVelocity.setToPolar(finalAngle, speed);
+
+    // ให้ปลาคงสถานะว่ายเร็วไว้สักพัก
+    this.fleeTimer = Math.max(this.fleeTimer, 300 + (proximity * 300));
+}
+// ในไฟล์ Fish.js -> update()
+// ในไฟล์ Fish.js -> ฟังก์ชัน update()
+update(bounds, threat = null, delta = 16.67) {
     if (this.isCaught || !this.body || !bounds) return;
 
     const dt = Math.min(delta || 16.67, 40);
-    const steering = 1 - Math.pow(1 - this.traits.steerEase, dt / 16.67);
-    this.motionClock += dt * this.swimBobSpeed;
+    const steerEase = this.fleeTimer > 0 ? this.traits.steerEase * 1.2 : this.traits.steerEase;
+    const steering = 1 - Math.pow(1 - steerEase, dt / 16.67);
 
+    this.motionClock += dt * this.swimBobSpeed;
+    const swimCycle = Math.sin(this.motionClock * 2.5);
+    const velocityMultiplier = Phaser.Math.Linear(0.85, 1.15, (swimCycle + 1) / 2);
+
+    // เช็คการหนีช้อน (ลดความแรงลงตามที่คุยกันก่อนหน้า)
     if (threat) {
-      const distanceFromThreat = Phaser.Math.Distance.Between(this.x, this.y, threat.x, threat.y);
-      if (distanceFromThreat < this.fleeRadius) {
-        this.fleeFromThreat(bounds, threat, distanceFromThreat);
-      }
+        const dist = Phaser.Math.Distance.Between(this.x, this.y, threat.x, threat.y);
+        if (dist < this.fleeRadius) {
+            this.fleeFromThreat(bounds, threat, dist);
+        }
     }
 
     if (this.fleeTimer > 0) {
-      this.fleeTimer = Math.max(0, this.fleeTimer - dt);
+        this.fleeTimer = Math.max(0, this.fleeTimer - dt);
     } else {
-      this.routeTimer -= dt;
-      if (this.routeTimer <= 0) {
-        this.chooseCruiseRoute(bounds);
-      }
-      this.setCruiseVelocity(bounds);
+        this.routeTimer -= dt;
+        if (this.routeTimer <= 0) {
+            this.chooseCruiseRoute(bounds);
+        }
+        this.setCruiseVelocity(bounds);
     }
 
+    // --- ส่วนที่แก้ไข: การจัดการขอบบน/ล่าง แบบนุ่มนวล ---
     const norm = this.getNormalizedRadius(bounds);
-    if (norm >= 0.94) {
-      const recoverAngle = Phaser.Math.Angle.Between(this.x, this.y, bounds.cx, bounds.cy);
-      const redirectAngle = Phaser.Math.Angle.RotateTo(
-        Math.atan2(this.targetVelocity.y, this.targetVelocity.x),
-        recoverAngle,
-        0.8,
-      );
-      this.targetVelocity.setToPolar(redirectAngle, Math.max(this.baseSpeed + 46, this.cruiseSpeed));
+
+    // ตรวจสอบว่าปลาอยู่โซนขอบ (บนหรือล่าง)
+    // โดยเช็คจากค่า Y ว่าห่างจากจุดศูนย์กลางเกิน 80% ของรัศมีแนวตั้งหรือไม่
+    const distY = Math.abs(this.y - bounds.cy);
+    const isAtVerticalEdge = distY > (bounds.ry * 0.8);
+
+    if (norm >= 0.82 || isAtVerticalEdge) {
+        // 1. คำนวณมุมที่มุ่งหน้ากลับเข้าหาจุดศูนย์กลางอ่าง
+        const angleToCenter = Phaser.Math.Angle.Between(this.x, this.y, bounds.cx, bounds.cy);
+        const currentAngle = Math.atan2(this.targetVelocity.y, this.targetVelocity.x);
+
+        // 2. ใช้ความเร็วปกติ (baseSpeed) และค่อยๆ เลี้ยวกลับ (RotateTo ด้วยค่าที่น้อยลง)
+        // 0.08 คือความเร็วในการเลี้ยว ยิ่งน้อยยิ่งโค้งกว้างและดูไม่เด้ง
+        const redirectAngle = Phaser.Math.Angle.RotateTo(currentAngle, angleToCenter, 0.08);
+
+        // 3. บังคับใช้ความเร็วปกติที่ช้าลงเล็กน้อย (0.9 ของ baseSpeed) เพื่อความละมุน
+        const slowReturnSpeed = this.baseSpeed * 0.9;
+        this.targetVelocity.setToPolar(redirectAngle, slowReturnSpeed);
+
+        // รีเซ็ต fleeTimer เพื่อให้ปลาเลิกตกใจและกลับมาว่ายปกติ
+        if (this.fleeTimer > 0) this.fleeTimer *= 0.5;
     }
 
-    this.body.velocity.x = Phaser.Math.Linear(this.body.velocity.x, this.targetVelocity.x, steering);
-    this.body.velocity.y = Phaser.Math.Linear(this.body.velocity.y, this.targetVelocity.y, steering);
+    const finalTargetX = this.targetVelocity.x * velocityMultiplier;
+    const finalTargetY = this.targetVelocity.y * velocityMultiplier;
+
+    this.body.velocity.x = Phaser.Math.Linear(this.body.velocity.x, finalTargetX, steering);
+    this.body.velocity.y = Phaser.Math.Linear(this.body.velocity.y, finalTargetY, steering);
 
     keepInsideEllipse(this, bounds);
 
+    // การเอียงตัว (Rotation)
     const speed = Math.hypot(this.body.velocity.x, this.body.velocity.y);
-    if (speed > 6) {
-      const tilt = Phaser.Math.Clamp(this.body.velocity.y / 900, -0.32, 0.32)
-        + (Math.sin(this.motionClock) * 0.035);
-      this.rotation = Phaser.Math.Linear(this.rotation, tilt, 0.16);
-      this.setFlipX(this.body.velocity.x > 0);
+    if (speed > 5) {
+        const headingTilt = Phaser.Math.Clamp(this.body.velocity.y / 900, -0.2, 0.2);
+        this.rotation = Phaser.Math.Linear(this.rotation, headingTilt + (swimCycle * 0.05), 0.1);
+        this.setFlipX(this.body.velocity.x > 0);
     }
-  }
+}
 }

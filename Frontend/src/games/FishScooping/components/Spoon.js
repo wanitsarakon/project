@@ -57,12 +57,14 @@ export default class Spoon extends Phaser.Physics.Arcade.Image {
     }
   }
 
-  getNetCenter() {
-    return {
-      x: this.x,
-      y: this.y,
-    };
-  }
+ // Spoon.js
+getNetCenter() {
+  // ฟังก์ชันนี้จะคืนค่าตำแหน่ง X, Y ของใจกลางตาข่ายช้อนจริงๆ
+  return {
+    x: this.x + (this.displayWidth * (NET_ORIGIN.x - this.originX)),
+    y: this.y + (this.displayHeight * (NET_ORIGIN.y - this.originY)),
+  };
+}
 
   catchFish(fish) {
     if (this.holdingFish) return;

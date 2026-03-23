@@ -1,21 +1,19 @@
 import Phaser from "phaser";
 
 export default class Horse extends Phaser.Physics.Arcade.Sprite {
-  constructor(scene, x, y, textureKey = "horse-1") {
-    super(scene, x, y, textureKey);
+  constructor(scene, x, y) {
+    super(scene, x, y, "horse-run", 0);
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
-    this.baseScale = 0.53;
+    this.baseScale = 0.82;
     this.setScale(this.baseScale);
     this.setOrigin(0.5, 1);
     this.setDepth(6);
     this.setCollideWorldBounds(true);
-    this.updateCollisionInsets();
 
     this.body.setGravityY(780);
-    this.refreshHitbox();
 
     this.jumpCooldownMs = 360;
     this.lastJumpAt = -this.jumpCooldownMs;
@@ -23,34 +21,33 @@ export default class Horse extends Phaser.Physics.Arcade.Sprite {
     this.doubleTapWindowMs = 320;
     this.doubleJumpUsed = false;
     this.groundTolerance = 6;
+    this.hitUntil = 0;
+
+    this.refreshHitbox();
+    this.playRun();
   }
 
   refreshHitbox() {
     if (!this.body) return;
-    this.body.setSize(this.displayWidth * 0.46, this.displayHeight * 0.27, true);
-    this.body.setOffset(this.displayWidth * 0.28, this.displayHeight * 0.5);
+    this.body.setSize(this.displayWidth * 0.34, this.displayHeight * 0.2, true);
+    this.body.setOffset(this.displayWidth * 0.34, this.displayHeight * 0.69);
     this.updateCollisionInsets();
   }
 
   updateCollisionInsets() {
     this.visualCollisionInsets = {
-      left: this.displayWidth * 0.24,
-      right: this.displayWidth * 0.18,
-      top: this.displayHeight * 0.38,
-      bottom: this.displayHeight * 0.2,
+      left: this.displayWidth * 0.26,
+      right: this.displayWidth * 0.2,
+      top: this.displayHeight * 0.34,
+      bottom: this.displayHeight * 0.18,
     };
 
     this.airborneVisualCollisionInsets = {
-      left: this.displayWidth * 0.3,
-      right: this.displayWidth * 0.24,
-      top: this.displayHeight * 0.54,
-      bottom: this.displayHeight * 0.32,
+      left: this.displayWidth * 0.28,
+      right: this.displayWidth * 0.22,
+      top: this.displayHeight * 0.46,
+      bottom: this.displayHeight * 0.24,
     };
-  }
-
-  setHorseTexture(textureKey) {
-    this.setTexture(textureKey);
-    this.refreshHitbox();
   }
 
   isGrounded(restY = null) {
@@ -72,6 +69,7 @@ export default class Horse extends Phaser.Physics.Arcade.Sprite {
       this.lastTapAt = now;
       this.doubleJumpUsed = false;
       this.setVelocityY(-840);
+      this.playJump();
       return;
     }
 
@@ -79,30 +77,61 @@ export default class Horse extends Phaser.Physics.Arcade.Sprite {
       this.doubleJumpUsed = true;
       this.lastJumpAt = now;
       this.setVelocityY(-960);
+      this.playJump();
     }
 
     this.lastTapAt = now;
   }
 
-  getBoostRatio() {
-    const now = this.scene?.time?.now ?? 0;
-    return Phaser.Math.Clamp((now - this.lastJumpAt) / this.jumpCooldownMs, 0, 1);
+  triggerHit(durationMs = 460) {
+    this.hitUntil = (this.scene?.time?.now ?? 0) + durationMs;
+    this.playHit();
+  }
+
+  playRun() {
+    if (this.anims.currentAnim?.key === "horse-run-loop") return;
+    this.play("horse-run-loop", true);
+    this.refreshHitbox();
+  }
+
+  playJump() {
+    this.play("horse-jump-once", true);
+    this.refreshHitbox();
+  }
+
+  playHit() {
+    this.play("horse-hit-once", true);
+    this.refreshHitbox();
   }
 
   update(restY = null) {
     if (!this.body) return;
+
+    const now = this.scene?.time?.now ?? 0;
     const onGround = this.isGrounded(restY);
+    const isHit = now < this.hitUntil;
+
     if (onGround) {
       this.doubleJumpUsed = false;
       if (typeof restY === "number" && this.y >= restY - this.groundTolerance) {
         this.setY(restY);
         this.body.setVelocityY(0);
       }
-      const phase = Math.sin((this.scene?.time?.now ?? 0) / 240);
-      this.rotation = phase * 0.0022;
+
+      if (!isHit) {
+        this.playRun();
+      }
+
+      const phase = Math.sin(now / 240);
+      this.rotation = phase * (isHit ? 0.01 : 0.0022);
       this.setScale(this.baseScale);
       return;
     }
+
+    if (!isHit) {
+      this.playJump();
+    }
+
     this.setScale(this.baseScale);
     this.rotation = Phaser.Math.Clamp(this.body.velocity.y / 1600, -0.12, 0.22);
   }

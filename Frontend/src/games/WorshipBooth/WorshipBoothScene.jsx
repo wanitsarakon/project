@@ -539,6 +539,13 @@ export default class WorshipBoothScene extends Phaser.Scene {
           padding: 28px;
         }
 
+        .wb-card {
+          background: transparent;
+          border: none;
+          box-shadow: none;
+          padding: 0;
+        }
+
         .wb-card h2,
         .wb-result h2 {
           margin: 0;
@@ -555,10 +562,11 @@ export default class WorshipBoothScene extends Phaser.Scene {
         }
 
         .wb-startimg {
-          width: min(100%, 700px);
+          width: min(100%, 760px);
           aspect-ratio: 16 / 9;
-          margin: 0 auto 18px;
+          margin: 0 auto 22px;
           background: url('${START_IMAGE}') center/contain no-repeat;
+          filter: drop-shadow(0 16px 32px rgba(0, 0, 0, 0.38));
         }
 
         .wb-mainbtn,
@@ -572,9 +580,19 @@ export default class WorshipBoothScene extends Phaser.Scene {
 
         .wb-mainbtn {
           margin-top: 18px;
-          padding: 14px 30px;
-          background: linear-gradient(180deg, #d67422, #954117);
-          color: #fff9e8;
+          padding: 15px 40px;
+          font-size: clamp(20px, 2vw, 30px);
+          color: #ffffff;
+          background: linear-gradient(180deg, #ffcc00 0%, #ff8800 50%, #ff4400 100%);
+          border: 4px solid #fff;
+          box-shadow: 0 8px 0 #992200, 0 15px 20px rgba(0, 0, 0, 0.5);
+          text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+          transition: transform 0.18s ease, filter 0.18s ease;
+        }
+
+        .wb-mainbtn:hover {
+          transform: translateY(-3px) scale(1.05);
+          filter: brightness(1.02);
         }
 
         .wb-subbtn {
@@ -761,9 +779,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
         <div id="wb-intro" class="wb-overlay">
           <div class="wb-card">
             <div class="wb-startimg"></div>
-            <h2>ซุ้มไหว้พระขอพร</h2>
-            <p>ทำพิธีเพียงรอบเดียวตามลำดับ ธูป → เทียน → ดอกบัว เมื่อครบแล้วจึงไหว้พระขอพรและเสี่ยงเซียมซีรับพรกลับบ้านอย่างเป็นมงคล ด่านนี้ไม่นับคะแนนรวม</p>
-            <button id="wb-start-btn" class="wb-mainbtn">เริ่มพิธี</button>
+            <button id="wb-start-btn" class="wb-mainbtn">เริ่มเกม</button>
           </div>
         </div>
 

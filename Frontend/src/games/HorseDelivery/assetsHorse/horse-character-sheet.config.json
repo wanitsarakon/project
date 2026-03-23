@@ -1,0 +1,61 @@
+{
+  "notes": [
+    "Save the character reference image from chat as Frontend/src/games/HorseDelivery/assetsHorse/horse-character-reference.png before running the crop script.",
+    "These crop boxes are an initial layout based on the 1536x1024 reference image shown in chat. Expect to fine-tune x/y/w/h by a few pixels after the first export.",
+    "The source image is still concept art with a painted background, so this config normalizes frame positions but does not magically create production-quality transparency."
+  ],
+  "sourceImage": "src/games/HorseDelivery/assetsHorse/horse-character-reference.png",
+  "sourceSize": {
+    "width": 1536,
+    "height": 1024
+  },
+  "output": {
+    "directory": "src/games/HorseDelivery/assetsHorse/generated",
+    "frameWidth": 288,
+    "frameHeight": 272
+  },
+  "animations": [
+    {
+      "key": "horse-run",
+      "sheetName": "horse-run-sheet.png",
+      "fps": 12,
+      "loop": true,
+      "anchorY": 0.92,
+      "frames": [
+        { "x": 28, "y": 96, "width": 304, "height": 254 },
+        { "x": 246, "y": 96, "width": 304, "height": 254 },
+        { "x": 474, "y": 96, "width": 304, "height": 254 },
+        { "x": 702, "y": 96, "width": 308, "height": 254 },
+        { "x": 930, "y": 96, "width": 308, "height": 254 },
+        { "x": 1154, "y": 96, "width": 314, "height": 254 }
+      ]
+    },
+    {
+      "key": "horse-jump",
+      "sheetName": "horse-jump-sheet.png",
+      "fps": 10,
+      "loop": false,
+      "anchorY": 0.92,
+      "frames": [
+        { "x": 18, "y": 434, "width": 316, "height": 268 },
+        { "x": 246, "y": 434, "width": 316, "height": 268 },
+        { "x": 474, "y": 432, "width": 320, "height": 268 },
+        { "x": 700, "y": 432, "width": 324, "height": 268 },
+        { "x": 928, "y": 432, "width": 312, "height": 268 },
+        { "x": 1118, "y": 426, "width": 362, "height": 276 }
+      ]
+    },
+    {
+      "key": "horse-hit",
+      "sheetName": "horse-hit-sheet.png",
+      "fps": 8,
+      "loop": false,
+      "anchorY": 0.96,
+      "frames": [
+        { "x": 338, "y": 770, "width": 392, "height": 238, "offsetX": -4 },
+        { "x": 586, "y": 766, "width": 376, "height": 244 },
+        { "x": 834, "y": 768, "width": 352, "height": 240 }
+      ]
+    }
+  ]
+}

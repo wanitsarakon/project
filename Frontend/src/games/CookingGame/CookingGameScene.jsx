@@ -164,7 +164,7 @@ export default class CookingGameScene extends Phaser.Scene {
 
     const inner = this._el("div", { class: "ck-banner-inner" });
     const btn = this._el("button", { id: "ck-btn-start" });
-    btn.textContent = "\u0e40\u0e23\u0e34\u0e48\u0e21\u0e17\u0e33\u0e02\u0e19\u0e21";
+    btn.textContent = "\u0e40\u0e23\u0e34\u0e48\u0e21\u0e40\u0e01\u0e21";
     btn.onclick = () => this._startGame();
     inner.appendChild(btn);
     wrapper.appendChild(inner);
