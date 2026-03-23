@@ -50,6 +50,7 @@ func isValidPlayerName(value string) bool {
 }
 
 func NewRoomController(db *sql.DB, hub *ws.Hub) *RoomController {
+	ensureRoomSchema(db)
 	ensureProgressSchema(db)
 	return &RoomController{DB: db, Hub: hub}
 }
@@ -61,11 +62,12 @@ func NewRoomController(db *sql.DB, hub *ws.Hub) *RoomController {
 func (rc *RoomController) CreateRoom(c *gin.Context) {
 
 	var req struct {
-		Name       string   `json:"name"`
-		Mode       string   `json:"mode"`
-		HostName   string   `json:"host_name"`
-		MaxPlayers int      `json:"max_players"`
-		Prizes     []string `json:"prizes"`
+		Name           string   `json:"name"`
+		Mode           string   `json:"mode"`
+		HostName       string   `json:"host_name"`
+		MaxPlayers     int      `json:"max_players"`
+		Prizes         []string `json:"prizes"`
+		SelectedBooths []string `json:"selected_booths"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil || req.HostName == "" {
@@ -100,6 +102,18 @@ func (rc *RoomController) CreateRoom(c *gin.Context) {
 		return
 	}
 
+	selectedBooths, ok := normalizeSelectedGameSequence(req.SelectedBooths)
+	if !ok {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid selected booths"})
+		return
+	}
+
+	selectedBoothsJSON, err := json.Marshal(selectedBooths)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "encode selected booths failed"})
+		return
+	}
+
 	code := generateRoomCode()
 
 	tx, err := rc.DB.Begin()
@@ -114,10 +128,10 @@ func (rc *RoomController) CreateRoom(c *gin.Context) {
 
 	err = tx.QueryRow(`
 	INSERT INTO rooms
-	(code,name,mode,prize,max_players,status)
-	VALUES ($1,$2,$3,$4,$5,'waiting')
+	(code,name,mode,prize,max_players,selected_booths,status)
+	VALUES ($1,$2,$3,$4,$5,$6,'waiting')
 	RETURNING id
-	`, code, req.Name, req.Mode, prizeJSON, req.MaxPlayers).Scan(&roomID)
+	`, code, req.Name, req.Mode, prizeJSON, req.MaxPlayers, string(selectedBoothsJSON)).Scan(&roomID)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "create room failed"})
@@ -152,9 +166,10 @@ func (rc *RoomController) CreateRoom(c *gin.Context) {
 	rc.broadcastGlobal()
 
 	c.JSON(http.StatusOK, gin.H{
-		"room_code": code,
-		"mode":      req.Mode,
-		"prizes":    normalizePrizeList(req.Prizes),
+		"room_code":       code,
+		"mode":            req.Mode,
+		"prizes":          normalizePrizeList(req.Prizes),
+		"selected_booths": selectedBooths,
 		"player": gin.H{
 			"id":      hostID,
 			"name":    req.HostName,
@@ -347,12 +362,12 @@ func (rc *RoomController) GetRoom(c *gin.Context) {
 	code := c.Param("code")
 
 	var roomName, mode, status string
-	var prizeText sql.NullString
+	var prizeText, selectedBoothsText sql.NullString
 	if err := rc.DB.QueryRow(`
-	SELECT name,mode,status,prize
+	SELECT name,mode,status,prize,selected_booths
 	FROM rooms
 	WHERE code=$1
-	`, code).Scan(&roomName, &mode, &status, &prizeText); err != nil {
+	`, code).Scan(&roomName, &mode, &status, &prizeText, &selectedBoothsText); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "room not found"})
 		return
 	}
@@ -394,11 +409,12 @@ func (rc *RoomController) GetRoom(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"name":    roomName,
-		"mode":    mode,
-		"status":  status,
-		"prizes":  decodePrizeList(prizeText.String),
-		"players": players,
+		"name":            roomName,
+		"mode":            mode,
+		"status":          status,
+		"prizes":          decodePrizeList(prizeText.String),
+		"selected_booths": decodeSelectedGameSequence(selectedBoothsText.String),
+		"players":         players,
 	})
 }
 
@@ -544,12 +560,6 @@ func (rc *RoomController) CompleteGame(c *gin.Context) {
 		return
 	}
 
-	gameOrder := gameSequenceIndex(gameKey)
-	if gameOrder == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid game"})
-		return
-	}
-
 	tx, err := rc.DB.Begin()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
@@ -559,13 +569,21 @@ func (rc *RoomController) CompleteGame(c *gin.Context) {
 
 	var roomID int
 	var roomStatus string
+	var selectedBoothsText sql.NullString
 	if err := tx.QueryRow(`
-		SELECT id, status
+		SELECT id, status, selected_booths
 		FROM rooms
 		WHERE code=$1
 		FOR UPDATE
-	`, code).Scan(&roomID, &roomStatus); err != nil {
+	`, code).Scan(&roomID, &roomStatus, &selectedBoothsText); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "room not found"})
+		return
+	}
+
+	roomSequence := decodeSelectedGameSequence(selectedBoothsText.String)
+	gameOrder := gameSequenceIndexForSequence(roomSequence, gameKey)
+	if gameOrder == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid game"})
 		return
 	}
 
@@ -624,7 +642,7 @@ func (rc *RoomController) CompleteGame(c *gin.Context) {
 	}
 
 	effectiveScore := maxInt(req.Score, 0)
-	if gameKey == "WorshipBoothScene" {
+	if gameKey == WorshipGameKey {
 		effectiveScore = 0
 	}
 
@@ -650,8 +668,8 @@ func (rc *RoomController) CompleteGame(c *gin.Context) {
 	}
 
 	nextGameKey := ""
-	if gameOrder < len(GameSequence) {
-		nextGameKey = GameSequence[gameOrder]
+	if gameOrder < len(roomSequence) {
+		nextGameKey = roomSequence[gameOrder]
 		_, err = tx.Exec(`
 			INSERT INTO player_game_progress
 				(room_id, player_id, game_key, game_order, status)
@@ -671,7 +689,7 @@ func (rc *RoomController) CompleteGame(c *gin.Context) {
 		WHERE room_id=$1 AND player_id=$2 AND status='completed'
 	`, roomID, req.PlayerID).Scan(&completedCount)
 
-	allCompleted, err := roomAllPlayersCompletedTx(tx, roomID)
+	allCompleted, err := roomAllPlayersCompletedTx(tx, roomID, len(roomSequence))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "completion check failed"})
 		return
@@ -693,7 +711,7 @@ func (rc *RoomController) CompleteGame(c *gin.Context) {
 		"player_id":     req.PlayerID,
 		"game_key":      gameKey,
 		"completed":     completedCount,
-		"total_games":   len(GameSequence),
+		"total_games":   len(roomSequence),
 		"next_game_key": nextGameKey,
 		"all_completed": allCompleted,
 	})
@@ -701,7 +719,7 @@ func (rc *RoomController) CompleteGame(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"ok":            true,
 		"completed":     completedCount,
-		"total_games":   len(GameSequence),
+		"total_games":   len(roomSequence),
 		"next_game_key": nextGameKey,
 		"all_completed": allCompleted,
 	})
@@ -768,7 +786,13 @@ func (rc *RoomController) FinalizeGame(c *gin.Context) {
 		return
 	}
 
-	allCompleted, err := roomAllPlayersCompletedTx(tx, roomID)
+	roomSequence, err := loadRoomGameSequenceTx(tx, roomID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "load room sequence failed"})
+		return
+	}
+
+	allCompleted, err := roomAllPlayersCompletedTx(tx, roomID, len(roomSequence))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "completion check failed"})
 		return
@@ -829,18 +853,21 @@ func (rc *RoomController) StartGame(c *gin.Context) {
 	var roomID int
 	var status string
 	var roomMode string
+	var selectedBoothsText sql.NullString
 
 	err = tx.QueryRow(`
-	SELECT id,status,mode
+	SELECT id,status,mode,selected_booths
 	FROM rooms
 	WHERE code=$1
 	FOR UPDATE
-	`, code).Scan(&roomID, &status, &roomMode)
+	`, code).Scan(&roomID, &status, &roomMode, &selectedBoothsText)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "room not found"})
 		return
 	}
+
+	roomSequence := decodeSelectedGameSequence(selectedBoothsText.String)
 
 	if status != "waiting" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "room already started"})
@@ -937,7 +964,7 @@ func (rc *RoomController) StartGame(c *gin.Context) {
 	WHERE id=$1
 	`, roomID)
 
-	if len(GameSequence) > 0 {
+	if len(roomSequence) > 0 {
 		if _, err := tx.Exec(`
 			INSERT INTO player_game_progress
 				(room_id, player_id, game_key, game_order, status)
@@ -945,7 +972,7 @@ func (rc *RoomController) StartGame(c *gin.Context) {
 			FROM players p
 			WHERE p.room_id=$1 AND p.is_host=false
 			ON CONFLICT (room_id, player_id, game_key) DO NOTHING
-		`, roomID, GameSequence[0]); err != nil {
+		`, roomID, roomSequence[0]); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "init player progress failed"})
 			return
 		}
@@ -1191,6 +1218,17 @@ func normalizePrizeList(prizes []string) []string {
 	return normalized
 }
 
+func ensureRoomSchema(db *sql.DB) {
+	if db == nil {
+		return
+	}
+
+	_, _ = db.Exec(`
+		ALTER TABLE rooms
+		ADD COLUMN IF NOT EXISTS selected_booths TEXT
+	`)
+}
+
 func ensureProgressSchema(db *sql.DB) {
 	if db == nil {
 		return
@@ -1219,14 +1257,16 @@ func ensureProgressSchema(db *sql.DB) {
 func buildRoomProgress(db *sql.DB, code string, currentPlayerID int) (gin.H, error) {
 	var roomID int
 	var roomName, mode, status string
-	var prizeText sql.NullString
+	var prizeText, selectedBoothsText sql.NullString
 	if err := db.QueryRow(`
-		SELECT id, name, mode, status, prize
+		SELECT id, name, mode, status, prize, selected_booths
 		FROM rooms
 		WHERE code=$1
-	`, code).Scan(&roomID, &roomName, &mode, &status, &prizeText); err != nil {
+	`, code).Scan(&roomID, &roomName, &mode, &status, &prizeText, &selectedBoothsText); err != nil {
 		return nil, err
 	}
+
+	roomSequence := decodeSelectedGameSequence(selectedBoothsText.String)
 
 	rows, err := db.Query(`
 		SELECT p.id, p.name, p.is_host, p.connected, p.team, p.total_score, pg.game_key, pg.status, pg.score
@@ -1278,7 +1318,7 @@ func buildRoomProgress(db *sql.DB, code string, currentPlayerID int) (gin.H, err
 				Connected:      connected,
 				Team:           team.String,
 				TotalScore:     totalScore,
-				TotalGames:     len(GameSequence),
+				TotalGames:     len(roomSequence),
 				UnlockedGames:  make([]string, 0),
 				CompletedGames: make([]string, 0),
 			}
@@ -1351,7 +1391,7 @@ func buildRoomProgress(db *sql.DB, code string, currentPlayerID int) (gin.H, err
 		"mode":           mode,
 		"status":         status,
 		"prizes":         decodePrizeList(prizeText.String),
-		"sequence":       GameSequence,
+		"sequence":       roomSequence,
 		"players":        players,
 		"me":             me,
 		"all_completed":  allCompleted,
@@ -1360,7 +1400,7 @@ func buildRoomProgress(db *sql.DB, code string, currentPlayerID int) (gin.H, err
 	}, nil
 }
 
-func roomAllPlayersCompletedTx(tx *sql.Tx, roomID int) (bool, error) {
+func roomAllPlayersCompletedTx(tx *sql.Tx, roomID int, totalGames int) (bool, error) {
 	rows, err := tx.Query(`
 		SELECT p.id,
 		       COALESCE(COUNT(pg.id) FILTER (WHERE pg.status='completed'), 0) AS completed_count
@@ -1383,21 +1423,12 @@ func roomAllPlayersCompletedTx(tx *sql.Tx, roomID int) (bool, error) {
 			return false, err
 		}
 		playerCount += 1
-		if completedCount < len(GameSequence) {
+		if completedCount < totalGames {
 			return false, nil
 		}
 	}
 
-	return playerCount > 0, nil
-}
-
-func gameSequenceIndex(gameKey string) int {
-	for idx, key := range GameSequence {
-		if key == gameKey {
-			return idx + 1
-		}
-	}
-	return 0
+	return playerCount > 0 && totalGames > 0, nil
 }
 
 func maxInt(value, minValue int) int {

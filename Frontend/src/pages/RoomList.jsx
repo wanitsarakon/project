@@ -134,17 +134,26 @@ export default function RoomList({
     try {
       const res = await fetch(`${API_BASE}/rooms/${roomCode}`);
       if (!res.ok) {
-        return false;
+        return {
+          hasDuplicate: false,
+          roomData: null,
+        };
       }
 
       const data = await res.json().catch(() => ({}));
       const players = Array.isArray(data?.players) ? data.players : [];
       const requestedNameKey = getComparableName(requestedName);
 
-      return players.some((entry) => getComparableName(entry?.name) === requestedNameKey);
+      return {
+        hasDuplicate: players.some((entry) => getComparableName(entry?.name) === requestedNameKey),
+        roomData: data,
+      };
     } catch (err) {
       console.error("roomHasDuplicateName error:", err);
-      return false;
+      return {
+        hasDuplicate: false,
+        roomData: null,
+      };
     }
   }, [getComparableName]);
 
@@ -181,7 +190,9 @@ export default function RoomList({
 
     const cleanName = validation.normalizedName;
 
-    if (await roomHasDuplicateName(room.code, cleanName)) {
+    const { hasDuplicate, roomData } = await roomHasDuplicateName(room.code, cleanName);
+
+    if (hasDuplicate) {
       openDuplicateDialog(room, cleanName, DUPLICATE_NAME_MESSAGE);
       return;
     }
@@ -219,11 +230,19 @@ export default function RoomList({
         setDuplicateDialog(createEmptyDuplicateDialog());
       });
 
-      onJoin?.(room.code, {
-        id: backendPlayer.id,
-        name: backendPlayer.name,
-        isHost: backendPlayer.is_host === true,
-      });
+      onJoin?.(
+        room.code,
+        {
+          id: backendPlayer.id,
+          name: backendPlayer.name,
+          isHost: backendPlayer.is_host === true,
+        },
+        {
+          selectedBooths: Array.isArray(roomData?.selected_booths)
+            ? roomData.selected_booths
+            : [],
+        },
+      );
     } catch (err) {
       console.error("joinRoom error:", err);
       alert(`เข้าห้องไม่สำเร็จ\n${err?.message || ""}`);

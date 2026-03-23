@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import GameContainer from "./games/GameContainer";
-import { FESTIVAL_BOOTHS } from "./games/FestivalMapScene";
+import { FESTIVAL_BOOTHS } from "./games/festivalBooths";
 
 import Home from "./pages/Home";
 import Host from "./pages/Host";
@@ -109,14 +109,14 @@ export default function App() {
     setView("home");
   };
 
-  const goLobby = (roomCode, player) => {
+  const goLobby = (roomCode, player, roomMeta = null) => {
 
     if (!roomCode || !player) {
       console.error("❌ Invalid lobby data", { roomCode, player });
       return;
     }
 
-    setSession({ roomCode, player });
+    setSession({ roomCode, player, roomMeta });
     setSummary(null);
     setMiniGameActive(false);
     setView("lobby");
@@ -175,8 +175,8 @@ export default function App() {
     return (
       <Host
         host={session.player}
-        onCreateRoom={(roomCode, playerFromBackend) =>
-          goLobby(roomCode, playerFromBackend)
+        onCreateRoom={(roomCode, playerFromBackend, roomMeta) =>
+          goLobby(roomCode, playerFromBackend, roomMeta)
         }
         onBack={goHome}
       />
@@ -195,8 +195,8 @@ export default function App() {
     return (
       <RoomList
         player={session.player}
-        onJoin={(roomCode, playerFromBackend) =>
-          goLobby(roomCode, playerFromBackend)
+        onJoin={(roomCode, playerFromBackend, roomMeta) =>
+          goLobby(roomCode, playerFromBackend, roomMeta)
         }
         onBack={goHome}
       />
@@ -219,6 +219,7 @@ export default function App() {
       <Lobby
         roomCode={session.roomCode}
         player={session.player}
+        initialSelectedBooths={session.roomMeta?.selectedBooths ?? []}
         onLeave={leaveRoom}
         onStartGame={() => setView("festival-map")}
       />
@@ -241,6 +242,7 @@ export default function App() {
       <FestivalMap
         roomCode={session.roomCode}
         player={session.player}
+        initialSelectedBooths={session.roomMeta?.selectedBooths ?? []}
         onLeave={leaveRoom}
         onShowSummary={(data) => {
           setMiniGameActive(false);
@@ -293,6 +295,7 @@ function MiniGamePreview({ sceneKey }) {
       wsRef={{ current: null }}
       allowRoundEvents={false}
       mapData={{
+        sequence: FESTIVAL_BOOTHS.map((booth) => booth.scene),
         boothStates: Object.fromEntries(FESTIVAL_BOOTHS.map((booth) => [booth.scene, "unlocked"])),
       }}
       onGameEnd={() => {}}
@@ -313,6 +316,7 @@ function FestivalMapPreview() {
       wsRef={{ current: null }}
       allowRoundEvents={false}
       mapData={{
+        sequence: FESTIVAL_BOOTHS.map((booth) => booth.scene),
         boothStates: previewBoothStates,
       }}
       onGameEnd={() => {}}

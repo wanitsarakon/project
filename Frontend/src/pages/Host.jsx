@@ -1,11 +1,21 @@
 import React, {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
 
+import {
+  FESTIVAL_BOOTHS,
+  FESTIVAL_WORSHIP_SCENE,
+  getSelectableFestivalBooths,
+  normalizeFestivalBoothSequence,
+} from "../games/festivalBooths";
+
 const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:18082";
+const SELECTABLE_BOOTHS = getSelectableFestivalBooths();
+const DEFAULT_SELECTED_BOOTHS = SELECTABLE_BOOTHS.map((booth) => booth.scene);
 
 function toFriendlyError(err) {
   const message = String(err?.message || "");
@@ -30,6 +40,7 @@ export default function Host({
   const [isPrivate, setIsPrivate] = useState(false);
   const [password, setPassword] = useState("");
   const [prizes, setPrizes] = useState([]);
+  const [selectedBooths, setSelectedBooths] = useState(DEFAULT_SELECTED_BOOTHS);
 
   const passwordRef = useRef(null);
   const mountedRef = useRef(false);
@@ -57,6 +68,32 @@ export default function Host({
     if (mountedRef.current) fn();
   }, []);
 
+  const selectedBoothSequence = useMemo(
+    () => (selectedBooths.length > 0
+      ? normalizeFestivalBoothSequence(selectedBooths)
+      : [FESTIVAL_WORSHIP_SCENE]),
+    [selectedBooths],
+  );
+
+  const selectedBoothCards = useMemo(() => {
+    const sceneSet = new Set(selectedBoothSequence);
+    return FESTIVAL_BOOTHS.filter((booth) => sceneSet.has(booth.scene));
+  }, [selectedBoothSequence]);
+
+  const toggleBooth = useCallback((sceneKey) => {
+    setSelectedBooths((prev) => (
+      prev.includes(sceneKey)
+        ? prev.filter((item) => item !== sceneKey)
+        : [...prev, sceneKey]
+    ));
+    setError(null);
+  }, []);
+
+  const selectAllBooths = useCallback(() => {
+    setSelectedBooths(DEFAULT_SELECTED_BOOTHS);
+    setError(null);
+  }, []);
+
   const createRoom = useCallback(async () => {
     if (loading || roomCode || creatingRef.current) return;
 
@@ -68,6 +105,11 @@ export default function Host({
 
     if (typeof maxPlayers !== "number" || maxPlayers < 1 || maxPlayers > 100) {
       setError("จำนวนผู้เล่นต้องอยู่ระหว่าง 1 ถึง 100 คน");
+      return;
+    }
+
+    if (selectedBooths.length === 0) {
+      setError("กรุณาเลือกอย่างน้อย 1 ซุ้มก่อนสร้างห้อง");
       return;
     }
 
@@ -92,6 +134,7 @@ export default function Host({
           max_players: maxPlayers,
           prizes: prizes.map((item) => normalize(item)).filter(Boolean),
           room_password: isPrivate ? cleanPassword : null,
+          selected_booths: selectedBoothSequence,
         }),
       });
 
@@ -124,12 +167,16 @@ export default function Host({
     prizes,
     roomCode,
     safeSet,
+    selectedBoothSequence,
+    selectedBooths.length,
   ]);
 
   const enterLobby = useCallback(() => {
     if (!roomCode || !createdPlayer || loading) return;
-    onCreateRoom?.(roomCode, createdPlayer);
-  }, [createdPlayer, loading, onCreateRoom, roomCode]);
+    onCreateRoom?.(roomCode, createdPlayer, {
+      selectedBooths: selectedBoothSequence,
+    });
+  }, [createdPlayer, loading, onCreateRoom, roomCode, selectedBoothSequence]);
 
   return (
     <div className="home-root home-root-entry">
@@ -140,7 +187,7 @@ export default function Host({
         <div className="festival-page-card host-page-card">
           <div className="festival-page-kicker">Host Setup</div>
           <h1 className="festival-page-title">สร้างห้องแข่งขัน</h1>
-          <p className="festival-page-subtitle">ตั้งค่าห้องสำหรับเริ่มเกมงานวัดของคุณ</p>
+          <p className="festival-page-subtitle">ตั้งค่าห้องและเลือกซุ้มที่จะใช้ในการแข่งขันรอบนี้</p>
 
           <div className="host-page-content">
             <div className="festival-info-chip">
@@ -188,6 +235,99 @@ export default function Host({
                     }}
                     disabled={loading}
                   />
+                </div>
+
+                <div className="festival-section">
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 12,
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <div>
+                      <div className="festival-section-label">เลือกซุ้มเกมรอบนี้</div>
+                      <div className="festival-helper-text">
+                        ซุ้มไหว้พระขอพรจะถูกปิดท้ายให้อัตโนมัติเสมอ
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="festival-mini-btn add"
+                      onClick={selectAllBooths}
+                      disabled={loading}
+                    >
+                      เลือกทุกซุ้ม
+                    </button>
+                  </div>
+
+                  <div className="festival-choice-row" style={{ marginTop: 12, flexWrap: "wrap" }}>
+                    {SELECTABLE_BOOTHS.map((booth) => {
+                      const isActive = selectedBooths.includes(booth.scene);
+                      return (
+                        <button
+                          key={booth.scene}
+                          type="button"
+                          className={`festival-choice-pill ${isActive ? "active" : ""}`}
+                          onClick={() => !loading && toggleBooth(booth.scene)}
+                          disabled={loading}
+                          style={{
+                            minWidth: 132,
+                            justifyContent: "center",
+                            opacity: isActive ? 1 : 0.72,
+                          }}
+                        >
+                          {booth.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div
+                    style={{
+                      marginTop: 12,
+                      padding: "12px 14px",
+                      borderRadius: 18,
+                      border: "2px solid rgba(255, 214, 132, 0.28)",
+                      background: "rgba(73, 35, 14, 0.34)",
+                    }}
+                  >
+                    <div className="festival-section-label" style={{ marginBottom: 8 }}>
+                      ลำดับซุ้มที่จะเล่น
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: 8,
+                      }}
+                    >
+                      {selectedBoothCards.map((booth, index) => (
+                        <div
+                          key={booth.scene}
+                          style={{
+                            padding: "8px 12px",
+                            borderRadius: 999,
+                            background: booth.scene === FESTIVAL_WORSHIP_SCENE
+                              ? "rgba(255, 235, 172, 0.18)"
+                              : "rgba(255,255,255,0.08)",
+                            border: booth.scene === FESTIVAL_WORSHIP_SCENE
+                              ? "1px solid rgba(255, 224, 126, 0.56)"
+                              : "1px solid rgba(255,255,255,0.12)",
+                            color: "#fff1c9",
+                            fontSize: 14,
+                            fontWeight: 700,
+                          }}
+                        >
+                          {index + 1}. {booth.label}
+                          {booth.scene === FESTIVAL_WORSHIP_SCENE ? " (ปิดท้ายเสมอ)" : ""}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="festival-section">
@@ -276,6 +416,9 @@ export default function Host({
               <div className="festival-created-box">
                 <div className="festival-section-label">เลขที่ห้อง</div>
                 <div className="festival-room-code">{roomCode}</div>
+                <div className="festival-helper-text" style={{ marginBottom: 14 }}>
+                  รอบนี้จะใช้ทั้งหมด {selectedBoothSequence.length} ซุ้ม
+                </div>
                 <button type="button" className="festival-primary-btn" onClick={enterLobby}>
                   เข้าสู่ Lobby
                 </button>

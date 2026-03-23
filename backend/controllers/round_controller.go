@@ -1,8 +1,8 @@
 package controllers
 
 import (
-	"encoding/json"
 	"database/sql"
+	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -28,19 +28,6 @@ func NewRoundController(db *sql.DB, hub *ws.Hub) *RoundController {
    GAME SEQUENCE
    ⚠️ ต้องตรงกับ frontend gameKey
 ========================= */
-var GameSequence = []string{
-	"FishScoopingScene",
-	"HorseDeliveryScene",
-	"BoxingGameScene",
-	"CookingGameScene",
-	"BalloonShootScene",
-	"DollGameScene",
-	"FlowerGameScene",
-	"HauntedHouseScene",
-	"TugOfWarScene",
-	"WorshipBoothScene",
-}
-
 /* =========================
    START ROUND (HOST ONLY)
 ========================= */
@@ -58,15 +45,18 @@ func (rc *RoundController) StartRound(c *gin.Context) {
 	/* ===== LOCK ROOM ===== */
 	var roomID int
 	var roomStatus string
+	var selectedBoothsText sql.NullString
 	if err := tx.QueryRow(`
-		SELECT id, status
+		SELECT id, status, selected_booths
 		FROM rooms
 		WHERE code=$1
 		FOR UPDATE
-	`, code).Scan(&roomID, &roomStatus); err != nil {
+	`, code).Scan(&roomID, &roomStatus, &selectedBoothsText); err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "room not found"})
 		return
 	}
+
+	roomSequence := decodeSelectedGameSequence(selectedBoothsText.String)
 
 	if roomStatus != "playing" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "room not started"})
@@ -105,12 +95,12 @@ func (rc *RoundController) StartRound(c *gin.Context) {
 		WHERE room_id=$1
 	`, roomID).Scan(&nextRound)
 
-	if nextRound > len(GameSequence) {
+	if nextRound > len(roomSequence) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "no more rounds"})
 		return
 	}
 
-	gameKey := GameSequence[nextRound-1]
+	gameKey := roomSequence[nextRound-1]
 
 	/* ===== CREATE ROUND ===== */
 	var roundID int
@@ -140,7 +130,7 @@ func (rc *RoundController) StartRound(c *gin.Context) {
 			"round_id":     roundID,
 			"game_key":     gameKey,
 			"duration":     60,
-			"total_rounds": len(GameSequence),
+			"total_rounds": len(roomSequence),
 		}),
 	}
 
@@ -200,17 +190,20 @@ func (rc *RoundController) SubmitScore(c *gin.Context) {
 	defer tx.Rollback()
 
 	var status, gameKey, roomCode string
+	var selectedBoothsText sql.NullString
 	var roomID, roundIndex int
 	if err := tx.QueryRow(`
-		SELECT r.status, r.game_key, rooms.code, rooms.id, r.round_index
+		SELECT r.status, r.game_key, rooms.code, rooms.id, r.round_index, rooms.selected_booths
 		FROM rounds r
 		JOIN rooms ON rooms.id=r.room_id
 		WHERE r.id=$1
 		FOR UPDATE
-	`, roundID).Scan(&status, &gameKey, &roomCode, &roomID, &roundIndex); err != nil {
+	`, roundID).Scan(&status, &gameKey, &roomCode, &roomID, &roundIndex, &selectedBoothsText); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "round not found"})
 		return
 	}
+
+	roomSequence := decodeSelectedGameSequence(selectedBoothsText.String)
 
 	if status != "playing" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "round finished"})
@@ -277,7 +270,7 @@ func (rc *RoundController) SubmitScore(c *gin.Context) {
 			WHERE id=$1
 		`, roundID); err == nil {
 			roundEnded = true
-			if roundIndex >= len(GameSequence) {
+			if roundIndex >= len(roomSequence) {
 				gameFinished = true
 				_, _ = tx.Exec(`
 					UPDATE rooms
@@ -336,15 +329,18 @@ func (rc *RoundController) EndRound(c *gin.Context) {
 	var roomCode string
 	var roundIndex int
 	var roomID int
+	var selectedBoothsText sql.NullString
 	if err := rc.DB.QueryRow(`
-		SELECT rooms.code, rounds.round_index, rooms.id
+		SELECT rooms.code, rounds.round_index, rooms.id, rooms.selected_booths
 		FROM rounds
 		JOIN rooms ON rooms.id=rounds.room_id
 		WHERE rounds.id=$1 AND rounds.status='playing'
-	`, roundID).Scan(&roomCode, &roundIndex, &roomID); err != nil {
+	`, roundID).Scan(&roomCode, &roundIndex, &roomID, &selectedBoothsText); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "round not active"})
 		return
 	}
+
+	roomSequence := decodeSelectedGameSequence(selectedBoothsText.String)
 
 	_, _ = rc.DB.Exec(`
 		UPDATE rounds
@@ -352,7 +348,7 @@ func (rc *RoundController) EndRound(c *gin.Context) {
 		WHERE id=$1
 	`, roundID)
 
-	gameFinished := roundIndex >= len(GameSequence)
+	gameFinished := roundIndex >= len(roomSequence)
 	if gameFinished {
 		_, _ = rc.DB.Exec(`
 			UPDATE rooms

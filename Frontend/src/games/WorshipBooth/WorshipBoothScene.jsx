@@ -69,6 +69,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
       mistakes: 0,
       blessing: "",
       fortune: "",
+      blessingAccepted: false,
     };
 
     this.buildDom();
@@ -412,12 +413,13 @@ export default class WorshipBoothScene extends Phaser.Scene {
 
         .wb-can-wrap {
           position: absolute;
-          right: 8.5%;
-          bottom: 56px;
+          left: calc(50% + 200px);
+          bottom: 118px;
+          z-index: 2;
         }
 
         .wb-can {
-          width: 156px;
+          width: 132px;
           display: block;
           filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.22));
         }
@@ -662,6 +664,34 @@ export default class WorshipBoothScene extends Phaser.Scene {
           font-size: 15px;
         }
 
+        .wb-result-actions {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 14px;
+          flex-wrap: wrap;
+          margin-top: 14px;
+        }
+
+        .wb-receive {
+          margin-top: 0;
+          background: linear-gradient(180deg, #ffd24d 0%, #ff9a16 52%, #d95a00 100%);
+          box-shadow: 0 8px 0 #9a3b00, 0 15px 20px rgba(0, 0, 0, 0.28);
+        }
+
+        .wb-receive[disabled] {
+          cursor: default;
+          filter: grayscale(0.24);
+          opacity: 0.65;
+          transform: none;
+        }
+
+        .wb-finish-ready {
+          color: #8a5019;
+          font-size: 15px;
+          font-weight: 800;
+        }
+
         @media (max-width: 980px) {
           .wb-wrap {
             grid-template-columns: 1fr;
@@ -686,7 +716,8 @@ export default class WorshipBoothScene extends Phaser.Scene {
           }
 
           .wb-can-wrap {
-            right: 8%;
+            left: calc(50% + 130px);
+            bottom: 104px;
           }
         }
 
@@ -701,10 +732,9 @@ export default class WorshipBoothScene extends Phaser.Scene {
           .wb-altar-table { height: 214px; }
           .wb-buddha { width: min(72vw, 350px); }
           .wb-can-wrap {
-            position: static;
-            display: flex;
-            justify-content: center;
-            margin-top: 12px;
+            left: auto;
+            right: 10%;
+            bottom: 82px;
           }
           .wb-pray {
             position: static;
@@ -797,7 +827,11 @@ export default class WorshipBoothScene extends Phaser.Scene {
               <label for="wb-wish-text">เขียนคำอธิษฐานหรือพรที่อยากขอไว้เป็นสิริมงคล</label>
               <textarea id="wb-wish-text" placeholder="เช่น ขอให้สุขภาพแข็งแรง การงานราบรื่น และมีแต่เรื่องดี ๆ เข้ามา"></textarea>
             </div>
-            <button id="wb-finish-btn" class="wb-mainbtn">กลับแผนที่</button>
+            <div id="wb-finish-note" class="wb-finish-ready">พิมพ์คำขอพรให้เรียบร้อย แล้วกดรับพรก่อนกลับหน้าแผนที่</div>
+            <div class="wb-result-actions">
+              <button id="wb-receive-btn" class="wb-mainbtn wb-receive" disabled>รับพร</button>
+              <button id="wb-finish-btn" class="wb-mainbtn" style="display:none">กลับแผนที่</button>
+            </div>
           </div>
         </div>
       </div>
@@ -822,6 +856,9 @@ export default class WorshipBoothScene extends Phaser.Scene {
     this.finalFortuneEl = this.root.querySelector("#wb-final-fortune");
     this.finalMetaEl = this.root.querySelector("#wb-final-meta");
     this.wishInputEl = this.root.querySelector("#wb-wish-text");
+    this.receiveBtn = this.root.querySelector("#wb-receive-btn");
+    this.finishBtn = this.root.querySelector("#wb-finish-btn");
+    this.finishNoteEl = this.root.querySelector("#wb-finish-note");
 
     STEPS.forEach((step) => {
       const button = document.createElement("button");
@@ -837,7 +874,8 @@ export default class WorshipBoothScene extends Phaser.Scene {
 
     this.root.querySelector("#wb-start-btn")?.addEventListener("click", () => this.startCountdown());
     this.prayBtn?.addEventListener("click", () => this.finishRitual());
-    this.root.querySelector("#wb-finish-btn")?.addEventListener("click", () => {
+    this.receiveBtn?.addEventListener("click", () => this.acceptBlessing());
+    this.finishBtn?.addEventListener("click", () => {
       this.onGameEnd?.({
         score: 0,
         meta: {
@@ -846,8 +884,15 @@ export default class WorshipBoothScene extends Phaser.Scene {
           blessing: this.state.blessing,
           fortune: this.state.fortune,
           wishText: this.wishInputEl?.value?.trim() ?? "",
+          blessingAccepted: this.state.blessingAccepted,
         },
       });
+    });
+    this.wishInputEl?.addEventListener("input", () => {
+      if (this.state?.phase === "result") {
+        this.state.blessingAccepted = false;
+      }
+      this.renderState();
     });
   }
 
@@ -962,6 +1007,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
     this.stopTimer();
     this.calmBgm?.stop();
     this.state.phase = "result";
+    this.state.blessingAccepted = false;
     this.state.blessing = BLESSINGS[Math.floor(Math.random() * BLESSINGS.length)];
     this.state.fortune = FORTUNES[Math.floor(Math.random() * FORTUNES.length)];
 
@@ -976,6 +1022,15 @@ export default class WorshipBoothScene extends Phaser.Scene {
     this.renderState();
   }
 
+  acceptBlessing() {
+    if (this.state.phase !== "result") return;
+    const wishText = this.wishInputEl?.value?.trim() ?? "";
+    if (!wishText) return;
+
+    this.state.blessingAccepted = true;
+    this.renderState();
+  }
+
   renderState() {
     if (this.timerEl) this.timerEl.textContent = String(this.state.timer);
     if (this.progressEl) this.progressEl.textContent = `${this.state.completed ? 1 : 0} / 1`;
@@ -987,7 +1042,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
         this.state.phase === "ready"
           ? "พร้อมขอพร"
           : this.state.phase === "result"
-            ? "รับพรแล้ว"
+            ? this.state.blessingAccepted ? "รับพรแล้ว" : "กำลังขอพร"
             : this.state.phase === "playing"
               ? "กำลังทำพิธี"
               : "รอเริ่ม";
@@ -1004,6 +1059,22 @@ export default class WorshipBoothScene extends Phaser.Scene {
 
     if (this.prayBtn) {
       this.prayBtn.disabled = this.state.phase !== "ready";
+    }
+
+    if (this.receiveBtn) {
+      const canAccept = this.state.phase === "result" && !this.state.blessingAccepted && Boolean(this.wishInputEl?.value?.trim());
+      this.receiveBtn.disabled = !canAccept;
+      this.receiveBtn.textContent = this.state.blessingAccepted ? "รับพรแล้ว" : "รับพร";
+    }
+
+    if (this.finishBtn) {
+      this.finishBtn.style.display = this.state.blessingAccepted ? "inline-flex" : "none";
+    }
+
+    if (this.finishNoteEl) {
+      this.finishNoteEl.textContent = this.state.blessingAccepted
+        ? "รับพรเรียบร้อยแล้ว สามารถกลับหน้าแผนที่ได้"
+        : "พิมพ์คำขอพรให้เรียบร้อย แล้วกดรับพรก่อนกลับหน้าแผนที่";
     }
   }
 

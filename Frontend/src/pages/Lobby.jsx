@@ -1,10 +1,12 @@
 import React, {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
 
+import { getFestivalBoothsBySceneKeys } from "../games/festivalBooths";
 import { createRoomSocket } from "../websocket/wsClient";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:18082";
@@ -17,6 +19,7 @@ function isTransientFetchError(err) {
 export default function Lobby({
   roomCode,
   player,
+  initialSelectedBooths = [],
   onLeave,
   onStartGame,
 }) {
@@ -29,6 +32,7 @@ export default function Lobby({
     name: "",
     mode: "solo",
     prizes: [],
+    selectedBooths: initialSelectedBooths,
     status: "waiting",
   });
   const [prizeDraft, setPrizeDraft] = useState([]);
@@ -62,12 +66,15 @@ export default function Lobby({
             totalScore: entry?.score ?? 0,
           })),
         );
-        setRoomMeta({
+        setRoomMeta((prev) => ({
           name: data?.name ?? "Thai Festival Room",
           mode: data?.mode ?? "solo",
           prizes: nextPrizes,
+          selectedBooths: Array.isArray(data?.selected_booths) && data.selected_booths.length > 0
+            ? data.selected_booths
+            : prev.selectedBooths,
           status: data?.status ?? "waiting",
-        });
+        }));
         setPrizeDraft(nextPrizes);
       });
     } catch (err) {
@@ -109,6 +116,19 @@ export default function Lobby({
       wsRef.current = null;
     };
   }, [loadRoom]);
+
+  useEffect(() => {
+    if (!Array.isArray(initialSelectedBooths) || initialSelectedBooths.length === 0) return;
+
+    setRoomMeta((prev) => (
+      prev.selectedBooths.length > 0
+        ? prev
+        : {
+            ...prev,
+            selectedBooths: initialSelectedBooths,
+          }
+    ));
+  }, [initialSelectedBooths]);
 
   useEffect(() => {
     if (!roomCode) return undefined;
@@ -231,6 +251,15 @@ export default function Lobby({
     setPrizeDraft((prev) => [...prev, ""]);
   }, []);
 
+  const selectedBoothCards = useMemo(
+    () => (
+      roomMeta.selectedBooths.length > 0
+        ? getFestivalBoothsBySceneKeys(roomMeta.selectedBooths)
+        : []
+    ),
+    [roomMeta.selectedBooths],
+  );
+
   return (
     <div className="home-root home-root-entry">
       <section className="festival-page-shell">
@@ -254,6 +283,39 @@ export default function Lobby({
               <div className="festival-section-label">โหมด</div>
               <div>{roomMeta.mode === "team" ? "ทีม" : "เดี่ยว"}</div>
             </div>
+          </div>
+
+          <div className="festival-section">
+            <div className="festival-section-label">ซุ้มที่ Host เลือกสำหรับรอบนี้</div>
+
+            {selectedBoothCards.length > 0 ? (
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 10,
+                }}
+              >
+                {selectedBoothCards.map((booth, index) => (
+                  <div
+                    key={booth.scene}
+                    className="festival-info-box"
+                    style={{
+                      minWidth: 148,
+                      padding: "10px 14px",
+                      borderRadius: 18,
+                    }}
+                  >
+                    <div className="festival-section-label" style={{ marginBottom: 4 }}>
+                      ซุ้ม {index + 1}
+                    </div>
+                    <div>{booth.label}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="festival-helper-text">กำลังโหลดข้อมูลซุ้มที่ host เลือก...</div>
+            )}
           </div>
 
           <div className="festival-section">

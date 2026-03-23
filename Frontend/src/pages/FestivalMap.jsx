@@ -1,11 +1,15 @@
 ﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import GameContainer from "../games/GameContainer";
-import { FESTIVAL_BOOTHS } from "../games/FestivalMapScene";
+import {
+  FESTIVAL_BOOTHS,
+  getDefaultFestivalBoothSequence,
+  normalizeFestivalBoothSequence,
+} from "../games/festivalBooths";
 import { createRoomSocket } from "../websocket/wsClient";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:18082";
-const TOTAL_GAMES = FESTIVAL_BOOTHS.length;
+const BOOTH_LABELS = new Map(FESTIVAL_BOOTHS.map((booth) => [booth.scene, booth.label]));
 
 function isTransientFetchError(err) {
   const message = String(err?.message || "");
@@ -15,6 +19,10 @@ function isTransientFetchError(err) {
 function fmtTeamName(team) {
   if (!team) return "ยังไม่จัดทีม";
   return `ทีม ${team}`;
+}
+
+function fmtBoothLabel(sceneKey) {
+  return BOOTH_LABELS.get(sceneKey) || sceneKey || "-";
 }
 
 function BottomPrizeBar({ prizes }) {
@@ -68,6 +76,7 @@ function PlayerBottomHud({
   roomMeta,
   meProgress,
   completedGames,
+  totalGames,
   currentScore,
   myTeamScore,
   teamMembers,
@@ -127,12 +136,12 @@ function PlayerBottomHud({
           <div style={{ fontSize: 12, color: "#ffd88c", marginBottom: 4 }}>คะแนนปัจจุบัน</div>
           <div style={{ fontSize: 22, fontWeight: 800, lineHeight: 1 }}>{currentScore}</div>
           <div style={{ color: "#ffe7b5", marginTop: 6, fontSize: 15 }}>
-            เล่นแล้ว {completedGames.length} / {TOTAL_GAMES} เกม
+            เล่นแล้ว {completedGames.length} / {totalGames} เกม
           </div>
           <div style={{ color: "#ffd88c", marginTop: 2, fontSize: 14 }}>
             {meProgress?.done
               ? "เล่นครบทุกซุ้มแล้ว รอ Host สรุปผล"
-              : `ซุ้มถัดไป: ${meProgress?.next_game_key || "-"}`}
+              : `ซุ้มถัดไป: ${fmtBoothLabel(meProgress?.next_game_key)}`}
           </div>
         </div>
 
@@ -195,7 +204,17 @@ function PlayerBottomHud({
   );
 }
 
-function HostMonitor({ roomMeta, playerStatuses, completedPlayers, progressData, teamStandings, onFinalize, finalizing, onLeave }) {
+function HostMonitor({
+  roomMeta,
+  playerStatuses,
+  completedPlayers,
+  progressData,
+  teamStandings,
+  totalGames,
+  onFinalize,
+  finalizing,
+  onLeave,
+}) {
   return (
     <div
       style={{
@@ -306,7 +325,8 @@ function HostMonitor({ roomMeta, playerStatuses, completedPlayers, progressData,
             <div style={{ fontSize: 14, color: "#ffd88c", marginBottom: 10 }}>ข้อมูลห้อง</div>
             <div style={{ marginBottom: 6 }}>ชื่อห้อง: {roomMeta.name || "Thai Festival Room"}</div>
             <div style={{ marginBottom: 6 }}>โหมด: {roomMeta.mode === "team" ? "ทีม" : "เดี่ยว"}</div>
-            <div>ของรางวัล: {roomMeta.prizes?.length || 0} รายการ</div>
+            <div style={{ marginBottom: 6 }}>ของรางวัล: {roomMeta.prizes?.length || 0} รายการ</div>
+            <div>ซุ้มที่ใช้: {totalGames} ซุ้ม</div>
           </div>
 
           <div
@@ -396,13 +416,13 @@ function HostMonitor({ roomMeta, playerStatuses, completedPlayers, progressData,
                 สถานะ: {entry.connected ? "ออนไลน์" : "ออฟไลน์"}
               </div>
               <div style={{ color: "#ffe7b8", marginTop: 4 }}>
-                ความคืบหน้า {entry.completed} / {TOTAL_GAMES}
+                ความคืบหน้า {entry.completed} / {totalGames}
               </div>
               <div style={{ color: "#ffe7b8", marginTop: 4 }}>
                 คะแนนรวม {entry.total_score ?? 0}
               </div>
               <div style={{ color: "#ffd88c", marginTop: 8 }}>
-                {entry.done ? "เล่นครบทุกเกมแล้ว" : `ซุ้มถัดไป: ${entry.next_game_key || "-"}`}
+                {entry.done ? "เล่นครบทุกเกมแล้ว" : `ซุ้มถัดไป: ${fmtBoothLabel(entry.next_game_key)}`}
               </div>
             </div>
           ))}
@@ -416,6 +436,7 @@ export default function FestivalMap({
   roomCode,
   player,
   mode = "solo",
+  initialSelectedBooths = [],
   onLeave,
   onShowSummary,
   onMiniGameChange,
@@ -427,6 +448,9 @@ export default function FestivalMap({
     prizes: [],
     name: "",
     status: "playing",
+    selectedBooths: initialSelectedBooths.length > 0
+      ? normalizeFestivalBoothSequence(initialSelectedBooths)
+      : FESTIVAL_BOOTHS.map((booth) => booth.scene),
   });
   const [scores, setScores] = useState({});
   const [teamMembers, setTeamMembers] = useState([]);
@@ -455,6 +479,19 @@ export default function FestivalMap({
   useEffect(() => () => {
     onMiniGameChange?.(false);
   }, [onMiniGameChange]);
+
+  useEffect(() => {
+    if (!Array.isArray(initialSelectedBooths) || initialSelectedBooths.length === 0) return;
+
+    setRoomMeta((prev) => (
+      prev.selectedBooths.length > 0
+        ? prev
+        : {
+            ...prev,
+            selectedBooths: normalizeFestivalBoothSequence(initialSelectedBooths),
+          }
+    ));
+  }, [initialSelectedBooths]);
 
   const loadSummary = useCallback(async () => {
     if (!roomCode || summaryShownRef.current) return;
@@ -491,12 +528,15 @@ export default function FestivalMap({
 
       safeSet(() => {
         setScores(nextScores);
-        setRoomMeta({
+        setRoomMeta((prev) => ({
           mode: data?.mode ?? mode,
           prizes: Array.isArray(data?.prizes) ? data.prizes : [],
           name: data?.name ?? "Thai Festival Room",
           status: data?.status ?? "playing",
-        });
+          selectedBooths: Array.isArray(data?.selected_booths) && data.selected_booths.length > 0
+            ? normalizeFestivalBoothSequence(data.selected_booths)
+            : prev.selectedBooths,
+        }));
       });
 
       if ((data?.mode ?? mode) === "team" && player?.id) {
@@ -538,7 +578,10 @@ export default function FestivalMap({
       if (!res.ok) return;
 
       const data = await res.json();
-      safeSet(() => setProgressData(data));
+      safeSet(() => setProgressData({
+        ...data,
+        sequence: normalizeFestivalBoothSequence(data?.sequence),
+      }));
 
       if ((data?.status ?? roomMeta.status) === "finished") {
         loadSummary();
@@ -625,20 +668,30 @@ export default function FestivalMap({
   const unlockedGames = Array.isArray(meProgress?.unlocked_games)
     ? meProgress.unlocked_games
     : [];
+  const selectedSequence = useMemo(() => {
+    if (Array.isArray(progressData?.sequence) && progressData.sequence.length > 0) {
+      return normalizeFestivalBoothSequence(progressData.sequence);
+    }
+    if (Array.isArray(roomMeta.selectedBooths) && roomMeta.selectedBooths.length > 0) {
+      return normalizeFestivalBoothSequence(roomMeta.selectedBooths);
+    }
+    return getDefaultFestivalBoothSequence();
+  }, [progressData?.sequence, roomMeta.selectedBooths]);
+  const totalGames = selectedSequence.length;
 
   const boothStates = useMemo(() => {
     const nextStates = {};
-    FESTIVAL_BOOTHS.forEach((booth) => {
-      if (completedGames.includes(booth.scene)) {
-        nextStates[booth.scene] = "completed";
-      } else if (unlockedGames.includes(booth.scene)) {
-        nextStates[booth.scene] = "unlocked";
+    selectedSequence.forEach((sceneKey) => {
+      if (completedGames.includes(sceneKey)) {
+        nextStates[sceneKey] = "completed";
+      } else if (unlockedGames.includes(sceneKey)) {
+        nextStates[sceneKey] = "unlocked";
       } else {
-        nextStates[booth.scene] = "locked";
+        nextStates[sceneKey] = "locked";
       }
     });
     return nextStates;
-  }, [completedGames, unlockedGames]);
+  }, [completedGames, selectedSequence, unlockedGames]);
 
   const playerStatuses = Array.isArray(progressData?.players)
     ? progressData.players.filter((entry) => entry?.is_host !== true)
@@ -754,6 +807,7 @@ export default function FestivalMap({
         completedPlayers={completedPlayers}
         progressData={progressData}
         teamStandings={teamStandings}
+        totalGames={totalGames}
         onFinalize={finalizeGame}
         finalizing={finalizing}
         onLeave={onLeave}
@@ -777,7 +831,7 @@ export default function FestivalMap({
         player={player}
         wsRef={wsRef}
         allowRoundEvents={false}
-        mapData={{ boothStates }}
+        mapData={{ boothStates, sequence: selectedSequence }}
         onGameStart={setActiveMiniGame}
         onGameEnd={submitBoothResult}
       />
@@ -822,7 +876,7 @@ export default function FestivalMap({
                 whiteSpace: "nowrap",
               }}
             >
-              ความคืบหน้า {completedGames.length} / {TOTAL_GAMES}
+              ความคืบหน้า {completedGames.length} / {totalGames}
             </div>
           </div>
 
@@ -831,6 +885,7 @@ export default function FestivalMap({
             roomMeta={roomMeta}
             meProgress={meProgress}
             completedGames={completedGames}
+            totalGames={totalGames}
             currentScore={scores[player?.id] || 0}
             myTeamScore={myTeamScore}
             teamMembers={teamMembers}

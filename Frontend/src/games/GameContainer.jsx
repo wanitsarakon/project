@@ -69,6 +69,7 @@ export default function GameContainer({
           player,
           currentRound: currentRoundIdRef.current,
           onEnterGame: startMiniGame,
+          sequence: mapDataRef.current?.sequence ?? [],
           boothStates: mapDataRef.current?.boothStates ?? {},
         });
       },
@@ -161,6 +162,7 @@ export default function GameContainer({
         player,
         currentRound: roundId,
         onEnterGame: startMiniGame,
+        sequence: mapDataRef.current?.sequence ?? [],
         boothStates: mapDataRef.current?.boothStates ?? {},
       });
 
@@ -357,6 +359,7 @@ export default function GameContainer({
 
       currentRound: currentRoundIdRef.current,
       onEnterGame: startMiniGame,
+      sequence: mapDataRef.current?.sequence ?? [],
       boothStates: mapDataRef.current?.boothStates ?? {},
 
     });

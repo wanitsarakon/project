@@ -57,13 +57,13 @@ func TestBuildRoomProgressTracksUnlockedCompletedAndCounts(t *testing.T) {
 	defer cleanup()
 
 	mock.ExpectQuery(queryPattern(`
-		SELECT id, name, mode, status, prize
+		SELECT id, name, mode, status, prize, selected_booths
 		FROM rooms
 		WHERE code=$1
 	`)).
 		WithArgs("654321").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "mode", "status", "prize"}).
-			AddRow(12, "Night Fair", "team", "playing", `["Large Doll","Memorial Coin"]`))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "name", "mode", "status", "prize", "selected_booths"}).
+			AddRow(12, "Night Fair", "team", "playing", `["Large Doll","Memorial Coin"]`, `["FishScoopingScene","HorseDeliveryScene","WorshipBoothScene"]`))
 
 	mock.ExpectQuery(queryPattern(`
 		SELECT p.id, p.name, p.is_host, p.connected, p.team, p.total_score, pg.game_key, pg.status, pg.score
@@ -184,6 +184,14 @@ func TestFinalizeGameRejectsWhenPlayersStillPlaying(t *testing.T) {
 		WithArgs(1, 20).
 		WillReturnRows(sqlmock.NewRows([]string{"is_host"}).AddRow(true))
 	mock.ExpectQuery(queryPattern(`
+		SELECT selected_booths
+		FROM rooms
+		WHERE id=$1
+	`)).
+		WithArgs(20).
+		WillReturnRows(sqlmock.NewRows([]string{"selected_booths"}).
+			AddRow(`["FishScoopingScene","HorseDeliveryScene","BoxingGameScene","CookingGameScene","BalloonShootScene","DollGameScene","FlowerGameScene","HauntedHouseScene","TugOfWarScene","WorshipBoothScene"]`))
+	mock.ExpectQuery(queryPattern(`
 		SELECT p.id,
 		       COALESCE(COUNT(pg.id) FILTER (WHERE pg.status='completed'), 0) AS completed_count
 		FROM players p
@@ -239,6 +247,14 @@ func TestFinalizeGameReturnsSummaryWhenComplete(t *testing.T) {
 	`)).
 		WithArgs(1, 55).
 		WillReturnRows(sqlmock.NewRows([]string{"is_host"}).AddRow(true))
+	mock.ExpectQuery(queryPattern(`
+		SELECT selected_booths
+		FROM rooms
+		WHERE id=$1
+	`)).
+		WithArgs(55).
+		WillReturnRows(sqlmock.NewRows([]string{"selected_booths"}).
+			AddRow(`["FishScoopingScene","HorseDeliveryScene","BoxingGameScene","CookingGameScene","BalloonShootScene","DollGameScene","FlowerGameScene","HauntedHouseScene","TugOfWarScene","WorshipBoothScene"]`))
 	mock.ExpectQuery(queryPattern(`
 		SELECT p.id,
 		       COALESCE(COUNT(pg.id) FILTER (WHERE pg.status='completed'), 0) AS completed_count
@@ -333,13 +349,14 @@ func TestCompleteGameMarksCompletedAndUnlocksNextGame(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectQuery(queryPattern(`
-		SELECT id, status
+		SELECT id, status, selected_booths
 		FROM rooms
 		WHERE code=$1
 		FOR UPDATE
 	`)).
 		WithArgs("654987").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "status"}).AddRow(90, "playing"))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "status", "selected_booths"}).
+			AddRow(90, "playing", `["FishScoopingScene","HorseDeliveryScene","BoxingGameScene","CookingGameScene","BalloonShootScene","DollGameScene","FlowerGameScene","HauntedHouseScene","TugOfWarScene","WorshipBoothScene"]`))
 	mock.ExpectQuery(queryPattern(`
 		SELECT EXISTS (
 			SELECT 1
@@ -466,13 +483,14 @@ func TestCompleteGameForcesWorshipScoreToZero(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectQuery(queryPattern(`
-		SELECT id, status
+		SELECT id, status, selected_booths
 		FROM rooms
 		WHERE code=$1
 		FOR UPDATE
 	`)).
 		WithArgs("888999").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "status"}).AddRow(91, "playing"))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "status", "selected_booths"}).
+			AddRow(91, "playing", `["FishScoopingScene","HorseDeliveryScene","BoxingGameScene","CookingGameScene","BalloonShootScene","DollGameScene","FlowerGameScene","HauntedHouseScene","TugOfWarScene","WorshipBoothScene"]`))
 	mock.ExpectQuery(queryPattern(`
 		SELECT EXISTS (
 			SELECT 1
@@ -583,11 +601,11 @@ func TestCreateRoomAppliesDefaultsAndReturnsHost(t *testing.T) {
 	mock.ExpectBegin()
 	mock.ExpectQuery(queryPattern(`
 	INSERT INTO rooms
-	(code,name,mode,prize,max_players,status)
-	VALUES ($1,$2,$3,$4,$5,'waiting')
+	(code,name,mode,prize,max_players,selected_booths,status)
+	VALUES ($1,$2,$3,$4,$5,$6,'waiting')
 	RETURNING id
 	`)).
-		WithArgs(sqlmock.AnyArg(), "Thai Festival Room", "solo", "[]", 8).
+		WithArgs(sqlmock.AnyArg(), "Thai Festival Room", "solo", "[]", 8, `["FishScoopingScene","HorseDeliveryScene","BoxingGameScene","CookingGameScene","BalloonShootScene","DollGameScene","FlowerGameScene","HauntedHouseScene","TugOfWarScene","WorshipBoothScene"]`).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(101))
 	mock.ExpectQuery(queryPattern(`
 	INSERT INTO players
@@ -859,13 +877,14 @@ func TestStartGameSoloInitializesFirstUnlockedGame(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectQuery(queryPattern(`
-	SELECT id,status,mode
+	SELECT id,status,mode,selected_booths
 	FROM rooms
 	WHERE code=$1
 	FOR UPDATE
 	`)).
 		WithArgs("444555").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "status", "mode"}).AddRow(66, "waiting", "solo"))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "status", "mode", "selected_booths"}).
+			AddRow(66, "waiting", "solo", `["FishScoopingScene","HorseDeliveryScene","BoxingGameScene","CookingGameScene","BalloonShootScene","DollGameScene","FlowerGameScene","HauntedHouseScene","TugOfWarScene","WorshipBoothScene"]`))
 	mock.ExpectQuery(queryPattern(`
 	SELECT is_host
 	FROM players
@@ -933,13 +952,14 @@ func TestStartGameTeamAssignsTeamsAndInitializesProgress(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectQuery(queryPattern(`
-	SELECT id,status,mode
+	SELECT id,status,mode,selected_booths
 	FROM rooms
 	WHERE code=$1
 	FOR UPDATE
 	`)).
 		WithArgs("777333").
-		WillReturnRows(sqlmock.NewRows([]string{"id", "status", "mode"}).AddRow(70, "waiting", "team"))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "status", "mode", "selected_booths"}).
+			AddRow(70, "waiting", "team", `["FishScoopingScene","HorseDeliveryScene","BoxingGameScene","CookingGameScene","BalloonShootScene","DollGameScene","FlowerGameScene","HauntedHouseScene","TugOfWarScene","WorshipBoothScene"]`))
 	mock.ExpectQuery(queryPattern(`
 	SELECT is_host
 	FROM players

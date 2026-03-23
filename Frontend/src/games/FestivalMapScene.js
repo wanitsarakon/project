@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { FESTIVAL_BOOTHS, getFestivalBoothsBySceneKeys } from "./festivalBooths";
 
 const BOOTH_SPACING = 620;
 const BOOTH_Y = 585;
@@ -6,19 +7,6 @@ const WORLD_MARGIN = 220;
 const STALL_WIDTH = 430;
 const STALL_HEIGHT = 430;
 const FESTIVAL_STALL_BG = "/assets/festival-stall-bg.png";
-
-export const FESTIVAL_BOOTHS = [
-  { key: "fish", label: "เกมตักปลา", subtitle: "ช้อนปลาไวให้ได้มากที่สุด", scene: "FishScoopingScene", texture: "/assets/booth-fish.png", accent: 0x57d2ff, trim: 0x0e778b, awningAlt: 0xfff4d8 },
-  { key: "horse", label: "เกมม้าก้านกล้วยส่งของ", subtitle: "วิ่งฝ่างานวัดกลางคืน เก็บของส่งให้ไว", scene: "HorseDeliveryScene", texture: "/assets/booth-horse.png", accent: 0xffc75c, trim: 0x9e5a12, awningAlt: 0xfff2d2 },
-  { key: "boxing", label: "เกมท่ามวย", subtitle: "จับจังหวะแล้วตอบให้ถูก", scene: "BoxingGameScene", texture: "/assets/booth-boxing.png", accent: 0xff8f84, trim: 0xc24736, awningAlt: 0xffece9 },
-  { key: "cooking", label: "เกมสอนทำลูกชุบ", subtitle: "ทำตามสูตรให้ครบทุกขั้นตอน", scene: "CookingGameScene", texture: "/assets/booth-cooking.png", accent: 0xffc772, trim: 0xd06f1c, awningAlt: 0xfff1d8 },
-  { key: "balloon", label: "เกมปาโป่ง", subtitle: "เล็งดี ยิงไว ทำคอมโบให้ต่อเนื่อง", scene: "BalloonShootScene", texture: "/assets/booth-balloon.png", accent: 0xff78cf, trim: 0xc33479, awningAlt: 0xffedf9 },
-  { key: "doll", label: "เกมยิงตุ๊กตา", subtitle: "เล็งเป้าให้แม่น คว้ารางวัลกลับบ้าน", scene: "DollGameScene", texture: "/assets/booth-doll.png", accent: 0x9fc6ff, trim: 0x4167c4, awningAlt: 0xedf4ff },
-  { key: "flower", label: "เกมร้อยมาลัย", subtitle: "ร้อยพวงมาลัยตามใจลูกค้า", scene: "FlowerGameScene", texture: "/assets/booth-flower.png", accent: 0xffa9c6, trim: 0xc4507d, awningAlt: 0xffeef4 },
-  { key: "haunted", label: "เกมบ้านผีสิง", subtitle: "ช่วยวิญญาณให้พบของที่ตามหา", scene: "HauntedHouseScene", texture: "/assets/booth-haunted.png", accent: 0xbda7ff, trim: 0x6241bd, awningAlt: 0xf2eeff },
-  { key: "tug", label: "เกมชักเย่อ", subtitle: "ดวลแรงใจให้ทีมเป็นผู้ชนะ", scene: "TugOfWarScene", texture: "/assets/booth-tug.png", accent: 0x8cf2b0, trim: 0x199653, awningAlt: 0xeaffef },
-  { key: "worship", label: "เกมไหว้พระ", subtitle: "พิธีปิดท้าย เสี่ยงเซียมซีรับพรกลับบ้าน", scene: "WorshipBoothScene", texture: "/assets/booth-worship.png", accent: 0xffec9e, trim: 0xb78019, awningAlt: 0xfff8e1 },
-];
 
 const BOOTH_THUMBNAIL_LAYOUT = {
   fish: { x: 0, y: 8, scale: 0.36 },
@@ -34,8 +22,17 @@ const BOOTH_THUMBNAIL_LAYOUT = {
 };
 
 const FIRST_X = WORLD_MARGIN + STALL_WIDTH / 2;
-const LAST_X = FIRST_X + BOOTH_SPACING * (FESTIVAL_BOOTHS.length - 1);
-const WORLD_WIDTH = LAST_X + STALL_WIDTH / 2 + WORLD_MARGIN;
+
+function getWorldWidth(boothCount) {
+  const safeCount = Math.max(1, boothCount);
+  const lastX = FIRST_X + BOOTH_SPACING * (safeCount - 1);
+  return lastX + STALL_WIDTH / 2 + WORLD_MARGIN;
+}
+
+function sequencesMatch(left = [], right = []) {
+  if (left.length !== right.length) return false;
+  return left.every((item, index) => item === right[index]);
+}
 
 export default class FestivalMapScene extends Phaser.Scene {
   constructor() {
@@ -46,6 +43,9 @@ export default class FestivalMapScene extends Phaser.Scene {
     this.boothCards = {};
     this.dragStartX = 0;
     this.didPan = false;
+    this.sequence = FESTIVAL_BOOTHS.map((booth) => booth.scene);
+    this.visibleBooths = FESTIVAL_BOOTHS;
+    this.worldWidth = getWorldWidth(FESTIVAL_BOOTHS.length);
   }
 
   init(data = {}) {
@@ -54,6 +54,11 @@ export default class FestivalMapScene extends Phaser.Scene {
     this.boothStates = data?.boothStates ?? {};
     this.dragStartX = 0;
     this.didPan = false;
+    this.sequence = Array.isArray(data?.sequence) && data.sequence.length > 0
+      ? data.sequence
+      : FESTIVAL_BOOTHS.map((booth) => booth.scene);
+    this.visibleBooths = getFestivalBoothsBySceneKeys(this.sequence);
+    this.worldWidth = getWorldWidth(this.visibleBooths.length);
   }
 
   preload() {
@@ -71,19 +76,20 @@ export default class FestivalMapScene extends Phaser.Scene {
 
   create() {
     const { width, height } = this.scale;
-    this.physics.world.setBounds(0, 0, WORLD_WIDTH, height);
+    this.physics.world.setBounds(0, 0, this.worldWidth, height);
 
     this.drawNightFestivalBackground(height);
 
     const cam = this.cameras.main;
     cam.setBackgroundColor("#081022");
-    cam.setBounds(0, 0, WORLD_WIDTH, height);
+    cam.setBounds(0, 0, this.worldWidth, height);
     cam.scrollX = 0;
 
-    this.boothContainers = FESTIVAL_BOOTHS.map((booth, index) =>
+    this.boothCards = {};
+    this.boothContainers = this.visibleBooths.map((booth, index) =>
       this.createBoothCard(booth, FIRST_X + index * BOOTH_SPACING, BOOTH_Y + (index % 2 === 0 ? 0 : 8)),
     );
-    this.applyMapData({ boothStates: this.boothStates });
+    this.applyMapData({ boothStates: this.boothStates, sequence: this.sequence });
     this.createMapHints(width);
     this.installCameraControls();
     this.panToNextUnlocked(false);
@@ -103,9 +109,9 @@ export default class FestivalMapScene extends Phaser.Scene {
 
   drawNightFestivalBackground(height) {
     const bg = this.add.tileSprite(
-      WORLD_WIDTH / 2,
+      this.worldWidth / 2,
       height / 2,
-      WORLD_WIDTH,
+      this.worldWidth,
       height,
       "festival-stall-bg",
     );
@@ -158,7 +164,7 @@ export default class FestivalMapScene extends Phaser.Scene {
   installCameraControls() {
     const cam = this.cameras.main;
     const clampScroll = (scrollX) =>
-      Phaser.Math.Clamp(scrollX, 0, Math.max(0, WORLD_WIDTH - this.scale.width));
+      Phaser.Math.Clamp(scrollX, 0, Math.max(0, this.worldWidth - this.scale.width));
 
     this.input.on("pointerdown", (pointer) => {
       this.dragStartX = pointer.x;
@@ -317,81 +323,22 @@ export default class FestivalMapScene extends Phaser.Scene {
     return container;
   }
 
-  createBoothDecorations(booth) {
-    const decor = [];
-    const palette = [booth.accent, 0xffefb6, 0xffb15e];
+  applyMapData(data = {}) {
+    const nextSequence = Array.isArray(data?.sequence) && data.sequence.length > 0
+      ? data.sequence
+      : this.sequence;
 
-    const shelf = this.add.rectangle(0, 92, 248, 10, 0xffddb0, 0.82);
-    decor.push(shelf);
-
-    if (booth.key === "fish") {
-      const tub = this.add.ellipse(0, 102, 116, 34, 0x4cc8ff, 0.8);
-      tub.setStrokeStyle(4, 0xffddb0, 0.9);
-      decor.push(tub);
-      decor.push(this.add.circle(-26, 98, 10, 0xff8d5e, 1));
-      decor.push(this.add.circle(8, 106, 8, 0xffca5f, 1));
-      decor.push(this.add.circle(34, 97, 9, 0xff6f61, 1));
-    } else if (booth.key === "horse") {
-      decor.push(this.add.circle(-46, -2, 12, 0xffb9df, 0.98));
-      decor.push(this.add.circle(-20, 4, 12, 0x94e4ff, 0.98));
-      decor.push(this.add.circle(12, 0, 12, 0xffdb83, 0.98));
-      decor.push(this.add.circle(42, 6, 12, 0xb7ff9c, 0.98));
-      decor.push(this.add.rectangle(-2, 100, 120, 16, 0xffd59a, 0.94).setStrokeStyle(2, 0x8a5a1b, 0.8));
-      decor.push(this.add.line(-58, 100, 0, 0, 116, 0, 0x8a5a1b, 0.85).setLineWidth(2));
-    } else if (booth.key === "boxing") {
-      for (let i = 0; i < 5; i += 1) {
-        const d = this.add.circle(-54 + i * 27, 92, 10, i % 2 === 0 ? 0xffd168 : 0xff876b, 1);
-        d.setStrokeStyle(2, 0x7a3412, 0.9);
-        decor.push(d);
-      }
-    } else if (booth.key === "cooking") {
-      for (let i = 0; i < 4; i += 1) {
-        decor.push(this.add.circle(-48 + i * 32, 96, 12, [0xffcd68, 0xff8d6f, 0x94e08c, 0xffeab2][i], 1));
-      }
-    } else if (booth.key === "balloon") {
-      for (let i = 0; i < 4; i += 1) {
-        decor.push(this.add.circle(-48 + i * 30, -8 - (i % 2) * 12, 11, [0xff74a6, 0x78d9ff, 0xffd86d, 0xb685ff][i], 0.95));
-        decor.push(this.add.line(-48 + i * 30, 8, 0, 0, 0, 24, 0x805425, 0.8).setLineWidth(2));
-      }
-    } else if (booth.key === "doll") {
-      for (let i = 0; i < 4; i += 1) {
-        const body = this.add.circle(-44 + i * 29, 98, 10, [0xffc78f, 0xffa1d6, 0x9fd1ff, 0xffe179][i], 1);
-        decor.push(body);
-      }
-    } else if (booth.key === "flower") {
-      for (let i = 0; i < 5; i += 1) {
-        const petal = this.add.circle(-56 + i * 28, 96, 11, [0xffb5c9, 0xffe38c, 0xffd6f5, 0xc1ff9e, 0xffc88d][i], 1);
-        decor.push(petal);
-      }
-    } else if (booth.key === "haunted") {
-      const lantern = this.add.rectangle(0, 90, 124, 34, 0x49305f, 0.7);
-      lantern.setStrokeStyle(2, 0xbca8ff, 0.9);
-      decor.push(lantern);
-      for (let i = 0; i < 3; i += 1) {
-        decor.push(this.add.circle(-32 + i * 32, 90, 7, 0xd9cfff, 0.95));
-        decor.push(this.add.circle(-32 + i * 32, 90, 18, 0xd9cfff, 0.12));
-      }
-    } else if (booth.key === "tug") {
-      decor.push(this.add.rectangle(-38, 98, 24, 18, 0xff6f5f, 1));
-      decor.push(this.add.rectangle(-8, 98, 24, 18, 0xffd56b, 1));
-      decor.push(this.add.rectangle(22, 98, 24, 18, 0x7ce39f, 1));
-      decor.push(this.add.line(-60, 98, 0, 0, 120, 0, 0xe7c189, 0.9).setLineWidth(4));
-    } else if (booth.key === "worship") {
-      const altar = this.add.rectangle(0, 96, 132, 40, 0x7a4a18, 0.95);
-      altar.setStrokeStyle(3, 0xffdc94, 0.85);
-      decor.push(altar);
-      decor.push(this.add.circle(-36, 84, 7, 0xffe8a8, 1));
-      decor.push(this.add.circle(36, 84, 7, 0xffe8a8, 1));
-      decor.push(this.add.rectangle(0, 82, 18, 26, 0xffd86f, 1));
-      decor.push(this.add.circle(0, 70, 10, 0xfff0b7, 0.75));
+    if (!sequencesMatch(nextSequence, this.sequence)) {
+      this.scene.restart({
+        onEnterGame: this.onEnterGame,
+        boothStates: data?.boothStates ?? this.boothStates,
+        sequence: nextSequence,
+      });
+      return;
     }
 
-    return decor;
-  }
-
-  applyMapData(data = {}) {
     this.boothStates = data?.boothStates ?? {};
-    FESTIVAL_BOOTHS.forEach((booth) => {
+    this.visibleBooths.forEach((booth) => {
       this.applyBoothState(booth.scene, this.boothStates?.[booth.scene] ?? "locked");
     });
     this.panToNextUnlocked();
@@ -429,9 +376,9 @@ export default class FestivalMapScene extends Phaser.Scene {
 
   panToNextUnlocked(animated = true) {
     const nextBooth =
-      FESTIVAL_BOOTHS.find((booth) => this.boothStates?.[booth.scene] === "unlocked")
-      || FESTIVAL_BOOTHS.find((booth) => this.boothStates?.[booth.scene] === "completed")
-      || FESTIVAL_BOOTHS[0];
+      this.visibleBooths.find((booth) => this.boothStates?.[booth.scene] === "unlocked")
+      || this.visibleBooths.find((booth) => this.boothStates?.[booth.scene] === "completed")
+      || this.visibleBooths[0];
 
     const card = this.boothCards?.[nextBooth?.scene];
     if (!card) return;
@@ -439,7 +386,7 @@ export default class FestivalMapScene extends Phaser.Scene {
     const targetScroll = Phaser.Math.Clamp(
       card.x - this.scale.width / 2,
       0,
-      Math.max(0, WORLD_WIDTH - this.scale.width),
+      Math.max(0, this.worldWidth - this.scale.width),
     );
 
     if (!animated) {

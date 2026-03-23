@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS rooms (
     CHECK (mode IN ('solo','team')),
 
   prize TEXT,
+  selected_booths TEXT,
 
   max_players INT NOT NULL DEFAULT 8
     CHECK (max_players > 0 AND max_players <= 100),
