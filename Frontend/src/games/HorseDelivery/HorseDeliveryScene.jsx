@@ -32,14 +32,14 @@ const HORSE_SWAP_TIMINGS = [
 ];
 const HORSE_SWAP_REQUIRED_ACTIONS = 2;
 const HORSE_SWAP_MISS_PENALTY = 5;
-const RUN_SPEED = 620;
+const RUN_SPEED = 680;
 const ITEM_SPAWN_OFFSET_X = 150;
 const ITEM_LANE_OFFSET = 175;
-const OBSTACLE_LANE_OFFSET = -115;
+const OBSTACLE_LANE_OFFSET = -98;
 const ITEM_MIN_SPACING = 260;
 const SWAP_PREVIEW_SCREEN_X = 640;
 const HORSE_Y_OFFSET = 8;
-const SPAWN_PATTERN = ["item", "obstacle","item","item", "obstacle"];
+const SPAWN_PATTERN = ["item", "item", "obstacle", "item", "item", "item", "obstacle"];
 const BASE_SPAWN_DELAY = 3100;
 const LATE_SPAWN_DELAY = 2700;
 const OPENING_SPAWN_DELAYS = [700, 2100, 3600];
@@ -752,9 +752,13 @@ export default class HorseDeliveryScene extends Phaser.Scene {
 
     const playerBounds = this.getCollisionBounds(player, player.airborneVisualCollisionInsets);
     const obstacleBounds = this.getCollisionBounds(obstacle, obstacle.visualCollisionInsets);
+    const verticalVelocity = player.body?.velocity?.y ?? 0;
+    const baseClearHeight = obstacleBounds.y + (obstacleBounds.height * 0.52);
+    const clearanceGrace = verticalVelocity <= 180 ? 12 : 8;
 
-    // If the horse's collision feet are above the upper portion of the barrel, count it as a clean jump.
-    return playerBounds.bottom <= obstacleBounds.y + (obstacleBounds.height * 0.38);
+    // Give airborne jumps a small grace window so higher refresh-rate browsers
+    // do not register a barrel hit when the horse is already visually clearing it.
+    return playerBounds.bottom <= baseClearHeight + clearanceGrace;
   }
 
   collectItem(player, item) {

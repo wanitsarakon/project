@@ -91,6 +91,9 @@ const maxStamina = 100;
 const staminaDrain = 4;      
 const staminaRecover = 0.4;  
 let isExhausted = false;     
+const FRAME_DURATION_MS = 1000 / 60;
+const MAX_FRAME_DELTA_MS = 50;
+let lastGameLoopTime = 0;
 
 
 // --- ฟิสิกส์และการเคลื่อนที่ ---
@@ -411,6 +414,16 @@ function updateSlots(id, team) {
 
 function prepareArena() {
     setupCanvas();
+    ropePos = 600;
+    playerVelocity = 0;
+    aiVelocity = 0;
+    playerStamina = maxStamina;
+    aiStaminaValue = 100;
+    isExhausted = false;
+    aiExhaustion = 0;
+    aiLastPushTime = 0;
+    aiNextPushDelay = 150;
+    lastGameLoopTime = 0;
     
     totalPower = myTeam.reduce((s, c) => s + (c.power || 0), 0);
     totalSpeed = myTeam.reduce((s, c) => s + (c.speed || 0), 0);
@@ -471,10 +484,16 @@ function updateStaminaUI() {
 
 
 function gameLoop(timestamp) {
+    const deltaMs = lastGameLoopTime
+        ? Math.min(Math.max(timestamp - lastGameLoopTime, 0), MAX_FRAME_DELTA_MS)
+        : FRAME_DURATION_MS;
+    const frameScale = deltaMs / FRAME_DURATION_MS;
+    lastGameLoopTime = timestamp;
+
     if (isPlaying) {
         // --- 1. ระบบ Stamina ผู้เล่น ---
         if (playerStamina < maxStamina) {
-            playerStamina += staminaRecover;
+            playerStamina = Math.min(maxStamina, playerStamina + (staminaRecover * frameScale));
         }
         // ถ้า Exhausted ต้องรอฟื้นถึง 25% ถึงจะหายเหนื่อย
         if (isExhausted && playerStamina > 25) { 
@@ -500,10 +519,11 @@ function gameLoop(timestamp) {
         }
 
         // --- 3. คำนวณตำแหน่งเชือกและแรงเฉื่อย ---
-        ropePos -= playerVelocity; 
-        ropePos += aiVelocity;
-        playerVelocity *= 0.88; 
-        aiVelocity *= 0.88;
+        ropePos -= playerVelocity * frameScale; 
+        ropePos += aiVelocity * frameScale;
+        const drag = Math.pow(0.88, frameScale);
+        playerVelocity *= drag; 
+        aiVelocity *= drag;
 
         // --- 4. สกิลติดตัวของ AI (พยายามทำให้ผู้เล่นเป็นตะคริว) ---
         let aiDistress = ropePos < 550;
@@ -1138,7 +1158,7 @@ function startCountdown() {
             setTimeout(() => {
                 overlay.style.display = 'none'; // ซ่อนหน้าจอ
                 isPlaying = true; // อนุญาตให้เริ่มเกม
-                if (typeof lastTime !== 'undefined') lastTime = performance.now();
+                lastGameLoopTime = performance.now();
                 
                 // เริ่ม Loop เกมถ้าคุณใช้ requestAnimationFrame
                 // requestAnimationFrame(gameLoop); 

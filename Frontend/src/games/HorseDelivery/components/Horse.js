@@ -43,8 +43,8 @@ export default class Horse extends Phaser.Physics.Arcade.Sprite {
     this.airborneVisualCollisionInsets = {
       left: this.displayWidth * 0.3,
       right: this.displayWidth * 0.24,
-      top: this.displayHeight * 0.5,
-      bottom: this.displayHeight * 0.24,
+      top: this.displayHeight * 0.54,
+      bottom: this.displayHeight * 0.32,
     };
   }
 

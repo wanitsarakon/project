@@ -405,6 +405,10 @@ JavaScript
     const groundLevel = () => window.innerHeight * 0.85;
     const getStartX   = () => window.innerWidth  / 2;
     const getStartY   = () => window.innerHeight - 80;
+    const frameDurationMs = 1000 / 60;
+    const maxFrameDeltaMs = 50;
+    let lastFrameTime = 0;
+    let rainSpawnCarry = 0;
 
     resize();
 
@@ -508,37 +512,42 @@ JavaScript
     }
 
     // ─── update ───
-    function update() {
+    function update(frameScale = 1, deltaSeconds = frameDurationMs / 1000) {
       if (!gs.gameActive && !gs.isCountingDown) return;
       if (gs.isCountingDown) return;
 
       const isFrozen = gs.balloons.some(b => b.freezeTimer > 0);
+      const lightningChance = 1 - Math.pow(1 - 0.003, frameScale);
+      const handTiltLerp = 1 - Math.pow(1 - 0.05, frameScale);
 
       if (gs.isCharging) {
-        gs.power += gs.powerDirection === 1 ? 2 : -2;
+        gs.power += (gs.powerDirection === 1 ? 2 : -2) * frameScale;
         if (gs.power >= 100) { gs.power=100; gs.powerDirection=-1; }
         if (gs.power <= 0)   { gs.power=0;   gs.powerDirection=1; }
       } else if (gs.power > 0) {
-        gs.power = Math.max(0, gs.power - 1.5);
+        gs.power = Math.max(0, gs.power - (1.5 * frameScale));
       }
 
-      if (gs.screenShake > 0) gs.screenShake *= 0.9;
-      if (gs.lightningFlash > 0) gs.lightningFlash--;
-      if (gs.doubleScoreTimer > 0) gs.doubleScoreTimer = Math.max(0, gs.doubleScoreTimer - 1/60);
+      if (gs.screenShake > 0) gs.screenShake *= Math.pow(0.9, frameScale);
+      if (gs.lightningFlash > 0) gs.lightningFlash = Math.max(0, gs.lightningFlash - frameScale);
+      if (gs.doubleScoreTimer > 0) gs.doubleScoreTimer = Math.max(0, gs.doubleScoreTimer - deltaSeconds);
 
-      if (gs.timeLeft < 30 && !isFrozen && Math.random() < 0.003) triggerLightning();
+      if (gs.timeLeft < 30 && !isFrozen && Math.random() < lightningChance) triggerLightning();
 
       // hand
       const curHandSpeed = gs.handSpeed * (1 + (gs.totalScore/2000)*0.1);
-      gs.handX += curHandSpeed * gs.handAutoDir;
-      gs.handTilt += (gs.handAutoDir * 0.25 - gs.handTilt) * 0.05;
+      gs.handX += curHandSpeed * gs.handAutoDir * frameScale;
+      gs.handTilt += (gs.handAutoDir * 0.25 - gs.handTilt) * handTiltLerp;
       if (Math.abs(gs.handX) > window.innerWidth * 0.28) gs.handAutoDir *= -1;
 
       // darts
       gs.darts.forEach(dart => {
         if (!dart.active) return;
-        dart.vx *= 0.995; dart.vx += gs.wind * 0.04; dart.vy += 0.15;
-        dart.x += dart.vx; dart.y += dart.vy;
+        dart.vx *= Math.pow(0.995, frameScale);
+        dart.vx += gs.wind * 0.04 * frameScale;
+        dart.vy += 0.15 * frameScale;
+        dart.x += dart.vx * frameScale;
+        dart.y += dart.vy * frameScale;
 
         // hit auntie
         if (auntie.isActive && gs.auntieStunTimer <= 0) {
@@ -613,14 +622,17 @@ JavaScript
 
       if (!isFrozen) {
         gs.difficultyMultiplier = Math.min(2.2, 1 + (gs.totalScore/1500)*0.05 + gs.comboCount*0.015);
-        gs.flagWave += 0.1;
-        gs.shieldRotation += (gs.timeLeft<=30 ? 0.08 : 0.04) * gs.difficultyMultiplier;
-        gs.balloonOffset   += (gs.timeLeft<=30 ? 12 : 8.0) * gs.difficultyMultiplier * gs.balloonDirection;
+        gs.flagWave += 0.1 * frameScale;
+        gs.shieldRotation += (gs.timeLeft<=30 ? 0.08 : 0.04) * gs.difficultyMultiplier * frameScale;
+        gs.balloonOffset   += (gs.timeLeft<=30 ? 12 : 8.0) * gs.difficultyMultiplier * gs.balloonDirection * frameScale;
         if (Math.abs(gs.balloonOffset) > 85) gs.balloonDirection *= -1;
 
         if (gs.timeLeft <= 30) {
           try { if (sounds.rain.paused) sounds.rain.play(); } catch(_) {}
-          for (let i=0;i<2;i++) {
+          rainSpawnCarry += 120 * deltaSeconds;
+          const rainSpawnCount = Math.floor(rainSpawnCarry);
+          rainSpawnCarry -= rainSpawnCount;
+          for (let i = 0; i < rainSpawnCount; i += 1) {
             gs.rainParticles.push({
               x:Math.random()*canvas.width, y:-20,
               speed:15+Math.random()*10, len:15+Math.random()*20,
@@ -642,8 +654,8 @@ JavaScript
 
         if (auntie.isActive) {
           if (gs.auntieStunTimer <= 0) {
-            auntie.x += auntie.speed * gs.difficultyMultiplier * auntie.direction;
-            auntie.walkCycle += auntie.currentType===1 ? 0.15 : 0;
+            auntie.x += auntie.speed * gs.difficultyMultiplier * auntie.direction * frameScale;
+            auntie.walkCycle += (auntie.currentType===1 ? 0.15 : 0) * frameScale;
           }
           auntie.y = groundLevel() - auntie.baseHeight*0.8 - (auntie.currentType===2 ? 70 : 0);
           auntie.height = auntie.baseHeight * (auntie.currentType===1 ? 1.13 : 1.3);
@@ -656,23 +668,35 @@ JavaScript
         }
       }
 
-      if (gs.lightningStrike) { gs.lightningStrike.timer--; if (gs.lightningStrike.timer<=0) gs.lightningStrike=null; }
-      if (gs.auntieStunTimer > 0) gs.auntieStunTimer--;
-      if (gs.stormWarningTimer > 0) gs.stormWarningTimer--;
+      if (gs.lightningStrike) { gs.lightningStrike.timer -= frameScale; if (gs.lightningStrike.timer<=0) gs.lightningStrike=null; }
+      if (gs.auntieStunTimer > 0) gs.auntieStunTimer = Math.max(0, gs.auntieStunTimer - frameScale);
+      if (gs.stormWarningTimer > 0) gs.stormWarningTimer = Math.max(0, gs.stormWarningTimer - frameScale);
       if (gs.timeLeft===33 && gs.stormWarningTimer<=0) gs.stormWarningTimer=180;
 
       gs.popParticles.forEach((p,i) => {
-        p.vx*=p.friction; p.vy*=p.friction; p.x+=p.vx; p.y+=p.vy; p.vy+=p.gravity; p.life-=0.02;
+        p.vx *= Math.pow(p.friction, frameScale);
+        p.vy *= Math.pow(p.friction, frameScale);
+        p.x += p.vx * frameScale;
+        p.y += p.vy * frameScale;
+        p.vy += p.gravity * frameScale;
+        p.life -= 0.02 * frameScale;
         if (p.life<=0) gs.popParticles.splice(i,1);
       });
       gs.rainParticles.forEach((r,i) => {
-        r.y+=r.speed; r.x+=gs.wind*2; if (r.y>canvas.height) gs.rainParticles.splice(i,1);
+        r.y += r.speed * frameScale;
+        r.x += gs.wind * 2 * frameScale;
+        if (r.y>canvas.height) gs.rainParticles.splice(i,1);
       });
       gs.comboTexts.forEach((t,i) => {
-        t.y-=1.5; t.opacity-=0.02; if (t.opacity<=0) gs.comboTexts.splice(i,1);
+        t.y -= 1.5 * frameScale;
+        t.opacity -= 0.02 * frameScale;
+        if (t.opacity<=0) gs.comboTexts.splice(i,1);
       });
       gs.balloons.forEach(b => {
-        if (b.freezeTimer>0) { b.freezeTimer--; if (b.freezeTimer<=0) b.color=b.originalColor; }
+        if (b.freezeTimer>0) {
+          b.freezeTimer -= frameScale;
+          if (b.freezeTimer<=0) b.color=b.originalColor;
+        }
       });
     }
 
@@ -843,7 +867,18 @@ JavaScript
 
     // ─── game loop ───
     let rafId;
-    function loop() { update(); draw(); rafId = requestAnimationFrame(loop); }
+    function loop(timestamp = performance.now()) {
+      const deltaMs = lastFrameTime
+        ? Math.min(Math.max(timestamp - lastFrameTime, 0), maxFrameDeltaMs)
+        : frameDurationMs;
+      const frameScale = deltaMs / frameDurationMs;
+      const deltaSeconds = deltaMs / 1000;
+
+      lastFrameTime = timestamp;
+      update(frameScale, deltaSeconds);
+      draw();
+      rafId = requestAnimationFrame(loop);
+    }
     this._stopLoop = () => cancelAnimationFrame(rafId);
 
     // ─── countdown ───
