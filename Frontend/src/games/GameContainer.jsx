@@ -400,7 +400,6 @@ export default function GameContainer({
   ========================= */
 
   return (
-
     <div
       ref={containerRef}
       id="phaser-root"

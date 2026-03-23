@@ -15,14 +15,24 @@ export default class Spoon extends Phaser.Physics.Arcade.Image {
     this.setScale(0.26);
     this.setOrigin(NET_ORIGIN.x, NET_ORIGIN.y);
     this.setDepth(5);
-    this.body.setCircle(
-      34,
-      (this.displayWidth * NET_ORIGIN.x) - 34,
-      (this.displayHeight * NET_ORIGIN.y) - 34,
-    );
+    this.refreshBody();
     this.body.allowGravity = false;
 
     this.holdingFish = null;
+  }
+
+  refreshBody() {
+    const radius = Math.max(24, Math.round(this.displayWidth * 0.19));
+    this.body.setCircle(
+      radius,
+      (this.displayWidth * NET_ORIGIN.x) - radius,
+      (this.displayHeight * NET_ORIGIN.y) - radius,
+    );
+  }
+
+  setResponsiveScale(scale) {
+    this.setScale(scale);
+    this.refreshBody();
   }
 
   update(pointer, enabled = true) {

@@ -53,6 +53,7 @@ export default class FishScoopingScene extends Phaser.Scene {
     this.hud = {};
     this.escapeTimer = null;
     this.toastTween = null;
+    this.layout = null;
   }
 
   init(data = {}) {
@@ -88,22 +89,18 @@ export default class FishScoopingScene extends Phaser.Scene {
 
   create() {
     const { width, height } = this.scale;
-    const pondSize = Math.min(width * 1.28, height * 1.95);
 
-    this.add.image(width / 2, height / 2, "bg").setDisplaySize(width, height);
-    this.pond = this.add.image(width * 0.51, height * 0.81, "pond")
-      .setDisplaySize(pondSize, pondSize)
-      .setDepth(1);
+    this.bg = this.add.image(width / 2, height / 2, "bg").setDepth(0);
+    this.pond = this.add.image(width * 0.51, height * 0.81, "pond").setDepth(1);
 
     this.waterZone = {
       cx: width * 0.51,
       cy: height * 0.585,
-      rx: pondSize * 0.385,
-      ry: pondSize * 0.225,
+      rx: 0,
+      ry: 0,
     };
 
     this.bucket = this.physics.add.image(width * 0.11, height * 0.865, "bucket")
-      .setScale(Math.min(width / 800, height / 600) * 0.34)
       .setImmovable(true)
       .setDepth(3);
     this.bucket.body.allowGravity = false;
@@ -122,24 +119,23 @@ export default class FishScoopingScene extends Phaser.Scene {
       this.tryCatchFish();
     });
 
+    this.handleResize({ width, height });
+    this.scale.on("resize", this.handleResize, this);
     this.events.once("shutdown", () => this.cleanup());
     this.events.once("destroy", () => this.cleanup());
   }
 
   createHud() {
-    const { width } = this.scale;
-
-    const createPanel = (x, y, label, valueColor) => {
-      const bg = this.add.image(x, y, "fish-hud-sign")
-        .setDisplaySize(222, 84)
+    const createPanel = (label, valueColor) => {
+      const bg = this.add.image(0, 0, "fish-hud-sign")
         .setScrollFactor(0)
         .setDepth(10);
-      const labelText = this.add.text(x, y - 12, label, {
+      const labelText = this.add.text(0, 0, label, {
         fontFamily: "Kanit",
         fontSize: "17px",
         color: "#ffe8b0",
       }).setOrigin(0.5).setDepth(11);
-      const valueText = this.add.text(x, y + 10, "0", {
+      const valueText = this.add.text(0, 0, "0", {
         fontFamily: "Kanit",
         fontSize: "26px",
         fontStyle: "bold",
@@ -150,10 +146,10 @@ export default class FishScoopingScene extends Phaser.Scene {
       return { bg, labelText, valueText };
     };
 
-    this.hud.score = createPanel(width * 0.15, 58, "คะแนน", "#fff7cc");
-    this.hud.timer = createPanel(width * 0.85, 58, "เวลา", "#ffd86a");
+    this.hud.score = createPanel("คะแนน", "#fff7cc");
+    this.hud.timer = createPanel("เวลา", "#ffd86a");
 
-    this.hud.note = this.add.text(width / 2, 92, "ลากช้อนให้ครอบปลาแล้วคลิกตัก จากนั้นรีบปล่อยลงถังให้ทัน", {
+    this.hud.note = this.add.text(0, 0, "ลากช้อนให้ครอบปลาแล้วคลิกตัก จากนั้นรีบปล่อยลงถังให้ทัน", {
       fontFamily: "Kanit",
       fontSize: "18px",
       color: "#fffaf0",
@@ -161,17 +157,8 @@ export default class FishScoopingScene extends Phaser.Scene {
       padding: { left: 14, right: 14, top: 6, bottom: 6 },
     }).setOrigin(0.5).setDepth(10);
 
-    const ruleWidth = 336;
-    const ruleHeight = 124;
-    const ruleX = width - (ruleWidth / 2) - 24;
-    const ruleY = 112;
-    const ruleBg = this.add.graphics().setDepth(10).setScrollFactor(0);
-    ruleBg.fillStyle(0x4a2b0b, 0.8);
-    ruleBg.lineStyle(3, 0xf3c977, 0.96);
-    ruleBg.fillRoundedRect(ruleX - (ruleWidth / 2), ruleY, ruleWidth, ruleHeight, 18);
-    ruleBg.strokeRoundedRect(ruleX - (ruleWidth / 2), ruleY, ruleWidth, ruleHeight, 18);
-
-    const ruleTitle = this.add.text(ruleX, ruleY + 12, "กติกา", {
+    this.hud.ruleBg = this.add.graphics().setDepth(10).setScrollFactor(0);
+    this.hud.ruleTitle = this.add.text(0, 0, "กติกา", {
       fontFamily: "Kanit",
       fontSize: "20px",
       fontStyle: "bold",
@@ -180,7 +167,7 @@ export default class FishScoopingScene extends Phaser.Scene {
       strokeThickness: 4,
     }).setOrigin(0.5, 0).setDepth(11);
 
-    const ruleText = this.add.text(ruleX - 145, ruleY + 40, [
+    this.hud.ruleText = this.add.text(0, 0, [
       "ลากช้อนให้ครอบปลาแล้วคลิกตัก",
       "รีบปล่อยปลาลงถังภายใน 1 วินาที",
       "ปลาแดง +1  ปลาเงิน +2  ปลาทอง +3",
@@ -192,19 +179,22 @@ export default class FishScoopingScene extends Phaser.Scene {
       wordWrap: { width: 290 },
     }).setOrigin(0, 0).setDepth(11);
 
-    this.hud.rulePanel = this.add.container(0, 0, [ruleBg, ruleTitle, ruleText]).setScrollFactor(0);
+    this.hud.rulePanel = this.add.container(0, 0, [
+      this.hud.ruleBg,
+      this.hud.ruleTitle,
+      this.hud.ruleText,
+    ]).setScrollFactor(0);
 
     this.updateHud();
   }
 
   createStartOverlay() {
-    const { width, height } = this.scale;
     this.startOverlay = this.add.container(0, 0).setDepth(30);
-    const dim = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.55);
-    const panel = this.add.image(width / 2, height / 2, "fish-start").setDisplaySize(700, 467);
+    const dim = this.add.rectangle(0, 0, 0, 0, 0x000000, 0.55);
+    const panel = this.add.image(0, 0, "fish-start");
     const copy = this.add.text(
-      width / 2,
-      height / 2 + 72,
+      0,
+      0,
       "ลากช้อนให้ครอบปลาแล้วคลิกตัก รีบเอาปลาไปลงถังภายใน 1 วินาที\nปลาแดง +1  ปลาเงิน +2  ปลาทอง +3",
       {
         fontFamily: "Kanit",
@@ -216,7 +206,7 @@ export default class FishScoopingScene extends Phaser.Scene {
         wordWrap: { width: 500 },
       },
     ).setOrigin(0.5);
-    const btn = this.add.text(width / 2, height / 2 + 152, "เริ่มเกม", {
+    const btn = this.add.text(0, 0, "เริ่มเกม", {
       fontFamily: "Kanit",
       fontSize: "28px",
       color: "#fff8dd",
@@ -228,14 +218,14 @@ export default class FishScoopingScene extends Phaser.Scene {
 
     btn.on("pointerdown", () => this.startCountdown());
     this.startOverlay.add([dim, panel, copy, btn]);
+    this.startOverlayRefs = { dim, panel, copy, btn };
   }
 
   createResultOverlay() {
-    const { width, height } = this.scale;
     this.resultOverlay = this.add.container(0, 0).setDepth(40).setVisible(false);
-    const dim = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.68);
-    const panel = this.add.image(width / 2, height / 2, "fish-result").setDisplaySize(700, 467);
-    this.resultScoreText = this.add.text(width / 2, height / 2 + 10, "0", {
+    const dim = this.add.rectangle(0, 0, 0, 0, 0x000000, 0.68);
+    const panel = this.add.image(0, 0, "fish-result");
+    this.resultScoreText = this.add.text(0, 0, "0", {
       fontFamily: "Kanit",
       fontSize: "60px",
       fontStyle: "bold",
@@ -243,14 +233,14 @@ export default class FishScoopingScene extends Phaser.Scene {
       stroke: "#fff1bb",
       strokeThickness: 6,
     }).setOrigin(0.5);
-    this.resultMetaText = this.add.text(width / 2, height / 2 + 96, "", {
+    this.resultMetaText = this.add.text(0, 0, "", {
       fontFamily: "Kanit",
       fontSize: "20px",
       color: "#6b2500",
       align: "center",
       lineSpacing: 6,
     }).setOrigin(0.5);
-    const btn = this.add.text(width / 2, height / 2 + 168, "กลับแผนที่", {
+    const btn = this.add.text(0, 0, "กลับแผนที่", {
       fontFamily: "Kanit",
       fontSize: "26px",
       color: "#fff8dd",
@@ -275,6 +265,147 @@ export default class FishScoopingScene extends Phaser.Scene {
     });
 
     this.resultOverlay.add([dim, panel, this.resultScoreText, this.resultMetaText, btn]);
+    this.resultOverlayRefs = { dim, panel, btn };
+  }
+
+  handleResize(gameSize) {
+    const width = gameSize?.width ?? this.scale.width;
+    const height = gameSize?.height ?? this.scale.height;
+    const shortSide = Math.min(width, height);
+    const uiScale = Phaser.Math.Clamp(shortSide / 900, 0.78, 1.18);
+    const panelScale = Phaser.Math.Clamp(shortSide / 980, 0.74, 1.14);
+
+    this.layout = { width, height, uiScale, panelScale };
+
+    this.bg?.setPosition(width / 2, height / 2).setDisplaySize(width, height);
+
+    const pondSize = Math.min(width * 1.24, height * 1.9);
+    this.pond?.setPosition(width * 0.51, height * 0.81).setDisplaySize(pondSize, pondSize);
+    this.waterZone = {
+      cx: width * 0.51,
+      cy: height * 0.585,
+      rx: pondSize * 0.385,
+      ry: pondSize * 0.225,
+    };
+
+    const bucketScale = Math.min(width / 800, height / 600) * 0.34;
+    this.bucket?.setPosition(width * 0.11, height * 0.865).setScale(bucketScale);
+    this.bucket?.body?.updateFromGameObject();
+
+    if (this.spoon) {
+      const spoonScale = Phaser.Math.Clamp(Math.min(width / 800, height / 600) * 0.26, 0.2, 0.36);
+      this.spoon.setResponsiveScale(spoonScale);
+      this.spoon.x = Phaser.Math.Clamp(this.spoon.x, 24, width - 24);
+      this.spoon.y = Phaser.Math.Clamp(this.spoon.y, 24, height - 24);
+    }
+
+    this.layoutHud(width, uiScale);
+    this.layoutStartOverlay(width, height, panelScale);
+    this.layoutResultOverlay(width, height, panelScale);
+
+    if (this.countdownText) {
+      this.countdownText
+        .setPosition(width / 2, height / 2)
+        .setFontSize(`${Math.round(Phaser.Math.Clamp(shortSide * 0.16, 96, 150))}px`);
+    }
+  }
+
+  layoutHud(width, uiScale) {
+    const panelWidth = Math.round(222 * uiScale);
+    const panelHeight = Math.round(84 * uiScale);
+    const panelY = Math.round(58 * uiScale);
+
+    const placePanel = (panel, x) => {
+      if (!panel) return;
+      panel.bg.setPosition(x, panelY).setDisplaySize(panelWidth, panelHeight);
+      panel.labelText.setPosition(x, panelY - (12 * uiScale)).setFontSize(`${Math.round(17 * uiScale)}px`);
+      panel.valueText.setPosition(x, panelY + (10 * uiScale)).setFontSize(`${Math.round(26 * uiScale)}px`);
+    };
+
+    placePanel(this.hud.score, width * 0.16);
+    placePanel(this.hud.timer, width * 0.84);
+
+    this.hud.note
+      ?.setPosition(width / 2, Math.round(92 * uiScale))
+      .setFontSize(`${Math.round(18 * uiScale)}px`);
+
+    const pondRight = this.pond
+      ? this.pond.x + (this.pond.displayWidth * 0.47)
+      : width * 0.78;
+    const viewportRightMargin = Math.round(12 * uiScale);
+    const ruleGap = Math.round(18 * uiScale);
+    const maxRuleWidth = Math.round(300 * uiScale);
+    const minRuleWidth = Math.round(220 * uiScale);
+    const availableRightSpace = width - pondRight - viewportRightMargin - ruleGap;
+    const ruleWidth = Phaser.Math.Clamp(availableRightSpace, minRuleWidth, maxRuleWidth);
+    const ruleHeight = Math.round(124 * uiScale);
+    const ruleLeft = Math.max(
+      pondRight + ruleGap,
+      width - ruleWidth - viewportRightMargin,
+    );
+    const ruleX = ruleLeft + (ruleWidth / 2);
+    const ruleY = Math.round(104 * uiScale);
+
+    this.hud.ruleBg?.clear();
+    this.hud.ruleBg?.fillStyle(0x4a2b0b, 0.8);
+    this.hud.ruleBg?.lineStyle(Math.max(2, Math.round(3 * uiScale)), 0xf3c977, 0.96);
+    this.hud.ruleBg?.fillRoundedRect(ruleLeft, ruleY, ruleWidth, ruleHeight, 18 * uiScale);
+    this.hud.ruleBg?.strokeRoundedRect(ruleLeft, ruleY, ruleWidth, ruleHeight, 18 * uiScale);
+
+    this.hud.ruleTitle
+      ?.setPosition(ruleX, ruleY + (12 * uiScale))
+      .setFontSize(`${Math.round(20 * uiScale)}px`);
+    this.hud.ruleText
+      ?.setPosition(ruleLeft + (14 * uiScale), ruleY + (40 * uiScale))
+      .setFontSize(`${Math.round(17 * uiScale)}px`)
+      .setWordWrapWidth(ruleWidth - (28 * uiScale));
+  }
+
+  isFishOverBucket(fish) {
+    if (!fish || !this.bucket) return false;
+
+    const dx = fish.x - this.bucket.x;
+    const dy = fish.y - (this.bucket.y - (this.bucket.displayHeight * 0.18));
+    const rx = Math.max(78, this.bucket.displayWidth * 0.34);
+    const ry = Math.max(52, this.bucket.displayHeight * 0.22);
+
+    return ((dx * dx) / (rx * rx)) + ((dy * dy) / (ry * ry)) <= 1;
+  }
+
+  layoutStartOverlay(width, height, panelScale) {
+    if (!this.startOverlayRefs) return;
+    const { dim, panel, copy, btn } = this.startOverlayRefs;
+    const panelWidth = Math.min(width * 0.78, 700 * panelScale);
+    const panelHeight = panelWidth * (467 / 700);
+
+    dim.setPosition(width / 2, height / 2).setSize(width, height);
+    panel.setPosition(width / 2, height / 2).setDisplaySize(panelWidth, panelHeight);
+    copy
+      .setPosition(width / 2, height / 2 + (panelHeight * 0.155))
+      .setFontSize(`${Math.round(20 * panelScale)}px`)
+      .setWordWrapWidth(panelWidth * 0.72);
+    btn
+      .setPosition(width / 2, height / 2 + (panelHeight * 0.325))
+      .setFontSize(`${Math.round(28 * panelScale)}px`);
+  }
+
+  layoutResultOverlay(width, height, panelScale) {
+    if (!this.resultOverlayRefs) return;
+    const { dim, panel, btn } = this.resultOverlayRefs;
+    const panelWidth = Math.min(width * 0.78, 700 * panelScale);
+    const panelHeight = panelWidth * (467 / 700);
+
+    dim.setPosition(width / 2, height / 2).setSize(width, height);
+    panel.setPosition(width / 2, height / 2).setDisplaySize(panelWidth, panelHeight);
+    this.resultScoreText
+      ?.setPosition(width / 2, height / 2 + (panelHeight * 0.02))
+      .setFontSize(`${Math.round(60 * panelScale)}px`);
+    this.resultMetaText
+      ?.setPosition(width / 2, height / 2 + (panelHeight * 0.205))
+      .setFontSize(`${Math.round(20 * panelScale)}px`);
+    btn
+      ?.setPosition(width / 2, height / 2 + (panelHeight * 0.36))
+      .setFontSize(`${Math.round(26 * panelScale)}px`);
   }
 
   spawnFish(type) {
@@ -317,6 +448,7 @@ export default class FishScoopingScene extends Phaser.Scene {
       stroke: "#5f2600",
       strokeThickness: 8,
     }).setOrigin(0.5).setDepth(35);
+    this.handleResize();
 
     let count = 3;
     this.sound.play("fish-count", { volume: 0.45 });
@@ -428,14 +560,7 @@ export default class FishScoopingScene extends Phaser.Scene {
     if (!this.spoon?.holdingFish) return;
 
     const fish = this.spoon.holdingFish;
-    const dist = Phaser.Math.Distance.Between(
-      fish.x,
-      fish.y,
-      this.bucket.x,
-      this.bucket.y,
-    );
-
-    if (dist < 128) {
+    if (this.isFishOverBucket(fish)) {
       this.registerCatch(fish);
     }
   }
@@ -457,16 +582,20 @@ export default class FishScoopingScene extends Phaser.Scene {
     fish.destroy();
     this.spoon.releaseFish();
     this.cameras.main.flash(90, 255, 247, 210, false);
+
+    const baseBucketScale = Math.min(this.scale.width / 800, this.scale.height / 600) * 0.34;
     this.tweens.add({
       targets: this.bucket,
-      scaleX: this.bucket.scaleX * 1.06,
-      scaleY: this.bucket.scaleY * 1.06,
+      scaleX: baseBucketScale * 1.06,
+      scaleY: baseBucketScale * 1.06,
       duration: 120,
       yoyo: true,
       ease: "Sine.easeOut",
     });
 
-    const burst = this.add.circle(this.bucket.x, this.bucket.y - 44, 16, 0xffef9c, 0.9).setDepth(7);
+    const burstOffset = Math.max(28, this.bucket.displayHeight * 0.22);
+    const burstRadius = Math.max(12, this.bucket.displayWidth * 0.07);
+    const burst = this.add.circle(this.bucket.x, this.bucket.y - burstOffset, burstRadius, 0xffef9c, 0.9).setDepth(7);
     this.tweens.add({
       targets: burst,
       scale: 3,
@@ -482,9 +611,13 @@ export default class FishScoopingScene extends Phaser.Scene {
   }
 
   showToast(message, color) {
-    const toast = this.add.text(this.scale.width / 2, 136, message, {
+    const uiScale = this.layout?.uiScale ?? 1;
+    const baseY = Math.round(136 * uiScale);
+    const targetY = Math.round(112 * uiScale);
+    const exitY = Math.round(100 * uiScale);
+    const toast = this.add.text(this.scale.width / 2, baseY, message, {
       fontFamily: "Kanit",
-      fontSize: "24px",
+      fontSize: `${Math.round(24 * uiScale)}px`,
       color: "#381600",
       backgroundColor: color,
       padding: { left: 14, right: 14, top: 8, bottom: 8 },
@@ -494,14 +627,14 @@ export default class FishScoopingScene extends Phaser.Scene {
     this.toastTween = this.tweens.add({
       targets: toast,
       alpha: 1,
-      y: 112,
+      y: targetY,
       duration: 700,
       ease: "Cubic.easeOut",
       onComplete: () => {
         this.tweens.add({
           targets: toast,
           alpha: 0,
-          y: 100,
+          y: exitY,
           duration: 220,
           onComplete: () => toast.destroy(),
         });
@@ -525,9 +658,11 @@ export default class FishScoopingScene extends Phaser.Scene {
       `ปลาแดง ${this.redCaught} ตัว  •  ปลาเงิน ${this.silverCaught} ตัว  •  ปลาทอง ${this.goldCaught} ตัว\nเวลาที่เหลือ ${Math.max(0, this.timeLeft)} วินาที`,
     );
     this.resultOverlay.setVisible(true);
+    this.handleResize();
   }
 
   cleanup() {
+    this.scale.off("resize", this.handleResize, this);
     this.fairBgm?.stop();
     this.fairBgm?.destroy();
     this.fairBgm = null;
