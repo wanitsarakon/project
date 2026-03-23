@@ -4,31 +4,31 @@ const FISH_TRAITS = {
   red: {
     scale: 0.29,
     score: 1,
-    cruiseSpeed: [122, 158],
-    fleeBoost: [138, 182],
-    fleeRadius: 148,
+    cruiseSpeed: [156, 198],
+    fleeBoost: [220, 276],
+    fleeRadius: 172,
     steerEase: 0.075,
-    routeMs: [1120, 1880],
+    routeMs: [920, 1480],
     swimBobSpeed: [0.0048, 0.0062],
   },
   silver: {
     scale: 0.3,
     score: 2,
-    cruiseSpeed: [144, 184],
-    fleeBoost: [168, 220],
-    fleeRadius: 166,
+    cruiseSpeed: [178, 226],
+    fleeBoost: [250, 318],
+    fleeRadius: 194,
     steerEase: 0.09,
-    routeMs: [960, 1620],
+    routeMs: [820, 1320],
     swimBobSpeed: [0.0054, 0.0069],
   },
   gold: {
     scale: 0.33,
     score: 3,
-    cruiseSpeed: [168, 212],
-    fleeBoost: [198, 255],
-    fleeRadius: 184,
+    cruiseSpeed: [202, 252],
+    fleeBoost: [292, 362],
+    fleeRadius: 214,
     steerEase: 0.108,
-    routeMs: [820, 1420],
+    routeMs: [720, 1180],
     swimBobSpeed: [0.0058, 0.0075],
   },
 };
@@ -98,7 +98,7 @@ export default class Fish extends Phaser.Physics.Arcade.Sprite {
   }
 
   chooseCruiseRoute(bounds, shortened = false) {
-    if (Math.random() < 0.42) {
+    if (Math.random() < 0.34) {
       const point = randomPointInEllipse(bounds);
       const topBias = Math.random() < 0.58 ? Phaser.Math.FloatBetween(0.12, 0.3) : 0;
       this.routeTarget.set(
@@ -107,8 +107,8 @@ export default class Fish extends Phaser.Physics.Arcade.Sprite {
       );
     } else {
       const currentAngle = Phaser.Math.Angle.Between(bounds.cx, bounds.cy, this.x, this.y);
-      const advance = Phaser.Math.FloatBetween(0.42, 1.08) * this.orbitDirection;
-      const radial = Phaser.Math.FloatBetween(0.16, 0.98);
+      const advance = Phaser.Math.FloatBetween(0.56, 1.28) * this.orbitDirection;
+      const radial = Phaser.Math.FloatBetween(0.38, 0.98);
       const angle = currentAngle + advance + Phaser.Math.FloatBetween(-0.24, 0.24);
 
       if (Math.random() < 0.18) {
@@ -178,11 +178,11 @@ export default class Fish extends Phaser.Physics.Arcade.Sprite {
     const edgePressure = Phaser.Math.Clamp((this.getNormalizedRadius(bounds) - 0.72) / 0.28, 0, 1);
     const wobble = Math.sin(this.motionClock * 1.65) * 0.16;
     const angle = Phaser.Math.Angle.RotateTo(fleeAngle + wobble, homeAngle, edgePressure * 0.58);
-    const speed = this.baseSpeed + this.fleeBoost * (0.65 + proximity * 0.7);
+    const speed = this.baseSpeed + this.fleeBoost * (0.9 + proximity * 0.95);
 
     this.targetVelocity.setToPolar(angle, speed);
-    this.fleeTimer = Math.max(this.fleeTimer, 220 + (proximity * 260));
-    this.routeTimer = Math.max(this.routeTimer, 180);
+    this.fleeTimer = Math.max(this.fleeTimer, 320 + (proximity * 320));
+    this.routeTimer = Math.max(this.routeTimer, 240);
   }
 
   update(bounds, threat = null, delta = 16.67) {
@@ -225,8 +225,12 @@ export default class Fish extends Phaser.Physics.Arcade.Sprite {
 
     keepInsideEllipse(this, bounds);
 
-    this.rotation = Phaser.Math.Clamp(this.body.velocity.y / 980, -0.2, 0.2)
-      + Math.sin(this.motionClock) * 0.025;
-    this.setFlipX(this.body.velocity.x < 0);
+    const speed = Math.hypot(this.body.velocity.x, this.body.velocity.y);
+    if (speed > 6) {
+      const tilt = Phaser.Math.Clamp(this.body.velocity.y / 900, -0.32, 0.32)
+        + (Math.sin(this.motionClock) * 0.035);
+      this.rotation = Phaser.Math.Linear(this.rotation, tilt, 0.16);
+      this.setFlipX(this.body.velocity.x > 0);
+    }
   }
 }

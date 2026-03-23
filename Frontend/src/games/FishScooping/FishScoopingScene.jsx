@@ -334,31 +334,47 @@ export default class FishScoopingScene extends Phaser.Scene {
       : width * 0.78;
     const viewportRightMargin = Math.round(12 * uiScale);
     const ruleGap = Math.round(18 * uiScale);
-    const maxRuleWidth = Math.round(300 * uiScale);
-    const minRuleWidth = Math.round(220 * uiScale);
+    const maxRuleWidth = Math.round(340 * uiScale);
+    const minRuleWidth = Math.round(260 * uiScale);
+    const preferredWidth = Math.round(316 * uiScale);
     const availableRightSpace = width - pondRight - viewportRightMargin - ruleGap;
-    const ruleWidth = Phaser.Math.Clamp(availableRightSpace, minRuleWidth, maxRuleWidth);
-    const ruleHeight = Math.round(124 * uiScale);
-    const ruleLeft = Math.max(
-      pondRight + ruleGap,
-      width - ruleWidth - viewportRightMargin,
+    const ruleWidth = Phaser.Math.Clamp(
+      Math.min(preferredWidth, availableRightSpace),
+      minRuleWidth,
+      maxRuleWidth,
+    );
+    const textPaddingX = Math.round(18 * uiScale);
+    const titleTop = Math.round(12 * uiScale);
+    const textTop = Math.round(40 * uiScale);
+    const safeRightLeft = width - ruleWidth - viewportRightMargin;
+    const idealLeft = pondRight + ruleGap;
+    const ruleLeft = Phaser.Math.Clamp(
+      idealLeft,
+      viewportRightMargin,
+      Math.max(viewportRightMargin, safeRightLeft),
     );
     const ruleX = ruleLeft + (ruleWidth / 2);
     const ruleY = Math.round(104 * uiScale);
+
+    this.hud.ruleTitle
+      ?.setPosition(ruleX, ruleY + titleTop)
+      .setFontSize(`${Math.round(20 * uiScale)}px`);
+    this.hud.ruleText
+      ?.setPosition(ruleLeft + textPaddingX, ruleY + textTop)
+      .setFontSize(`${Math.round(16 * uiScale)}px`)
+      .setWordWrapWidth(ruleWidth - (textPaddingX * 2));
+
+    const textHeight = this.hud.ruleText?.height ?? Math.round(72 * uiScale);
+    const ruleHeight = Math.max(
+      Math.round(110 * uiScale),
+      textTop + textHeight + Math.round(18 * uiScale),
+    );
 
     this.hud.ruleBg?.clear();
     this.hud.ruleBg?.fillStyle(0x4a2b0b, 0.8);
     this.hud.ruleBg?.lineStyle(Math.max(2, Math.round(3 * uiScale)), 0xf3c977, 0.96);
     this.hud.ruleBg?.fillRoundedRect(ruleLeft, ruleY, ruleWidth, ruleHeight, 18 * uiScale);
     this.hud.ruleBg?.strokeRoundedRect(ruleLeft, ruleY, ruleWidth, ruleHeight, 18 * uiScale);
-
-    this.hud.ruleTitle
-      ?.setPosition(ruleX, ruleY + (12 * uiScale))
-      .setFontSize(`${Math.round(20 * uiScale)}px`);
-    this.hud.ruleText
-      ?.setPosition(ruleLeft + (14 * uiScale), ruleY + (40 * uiScale))
-      .setFontSize(`${Math.round(17 * uiScale)}px`)
-      .setWordWrapWidth(ruleWidth - (28 * uiScale));
   }
 
   isFishOverBucket(fish) {
