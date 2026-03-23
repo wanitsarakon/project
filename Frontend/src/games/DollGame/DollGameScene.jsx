@@ -46,6 +46,9 @@ const SOUND_PATHS = {
   bgm: `${ASSET_BASE}/sounds/bg-music.mp3`,
 };
 
+const FRAME_DURATION_MS = 1000 / 60;
+const MAX_FRAME_DELTA_MS = 50;
+
 export default class DollGameScene extends Phaser.Scene {
   constructor() {
     super({ key: "DollGameScene" });
@@ -59,6 +62,7 @@ export default class DollGameScene extends Phaser.Scene {
     this.imageCache = {};
     this.audio = {};
     this._onResize = null;
+    this.lastFrameTime = 0;
   }
 
   init(data = {}) {
@@ -775,8 +779,15 @@ export default class DollGameScene extends Phaser.Scene {
   }
 
   startRenderLoop() {
-    const render = () => {
-      this.draw();
+    const render = (timestamp = performance.now()) => {
+      const deltaMs = this.lastFrameTime
+        ? Math.min(Math.max(timestamp - this.lastFrameTime, 0), MAX_FRAME_DELTA_MS)
+        : FRAME_DURATION_MS;
+      const frameScale = deltaMs / FRAME_DURATION_MS;
+
+      this.lastFrameTime = timestamp;
+      this.draw(frameScale);
+
       if (!this.state?.over || this.state?.particles.length || this.state?.smokes.length || this.state?.scorePopups.length) {
         this.animationFrame = window.requestAnimationFrame(render);
       }
@@ -784,7 +795,7 @@ export default class DollGameScene extends Phaser.Scene {
     render();
   }
 
-  draw() {
+  draw(frameScale = 1) {
     if (!this.ctx || !this.canvas || !this.state) return;
     const ctx = this.ctx;
     const gs = this.state;
@@ -794,14 +805,15 @@ export default class DollGameScene extends Phaser.Scene {
 
     if (gs.shakeTimer > 0) {
       ctx.translate((Math.random() - 0.5) * 7, (Math.random() - 0.5) * 7);
-      gs.shakeTimer -= 1;
+      gs.shakeTimer = Math.max(0, gs.shakeTimer - frameScale);
     }
 
     gs.targets.forEach((target) => {
       if (gs.started && !gs.over) {
-        target.x += target.speed;
+        target.x += target.speed * frameScale;
         if (target.x > target.maxX || target.x < target.minX) {
           target.speed *= -1;
+          target.x = Phaser.Math.Clamp(target.x, target.minX, target.maxX);
         }
       }
       const img = this.imageCache[target.type];
@@ -834,10 +846,10 @@ export default class DollGameScene extends Phaser.Scene {
       ctx.fill();
       ctx.restore();
 
-      smoke.x += smoke.vx;
-      smoke.y += smoke.vy;
-      smoke.size += smoke.growth;
-      smoke.life -= 0.016;
+      smoke.x += smoke.vx * frameScale;
+      smoke.y += smoke.vy * frameScale;
+      smoke.size += smoke.growth * frameScale;
+      smoke.life -= 0.016 * frameScale;
       smoke.opacity = Math.max(0, smoke.life / 6);
       if (smoke.life <= 0 || smoke.y + smoke.size < -50) {
         gs.smokes.splice(i, 1);
@@ -849,15 +861,15 @@ export default class DollGameScene extends Phaser.Scene {
       ctx.globalAlpha = p.life;
       ctx.fillStyle = p.color;
       ctx.fillRect(p.x, p.y, p.size, p.size);
-      p.x += p.vx;
-      p.y += p.vy;
-      p.vy += 0.2;
-      p.life -= 0.03;
+      p.x += p.vx * frameScale;
+      p.y += p.vy * frameScale;
+      p.vy += 0.2 * frameScale;
+      p.life -= 0.03 * frameScale;
       if (p.life <= 0) gs.particles.splice(i, 1);
     }
 
     if (gs.screenSmoke > 0) {
-      gs.screenSmoke = Math.max(0, gs.screenSmoke - 0.012);
+      gs.screenSmoke = Math.max(0, gs.screenSmoke - (0.012 * frameScale));
       this.updateScreenSmoke();
     }
 
@@ -877,8 +889,8 @@ export default class DollGameScene extends Phaser.Scene {
       ctx.textAlign = "center";
       ctx.globalAlpha = popup.life;
       ctx.fillText(popup.text, popup.x, popup.y);
-      popup.y -= 1;
-      popup.life -= 0.02;
+      popup.y -= 1 * frameScale;
+      popup.life -= 0.02 * frameScale;
       if (popup.life <= 0) gs.scorePopups.splice(i, 1);
     }
     ctx.globalAlpha = 1;
@@ -929,6 +941,7 @@ export default class DollGameScene extends Phaser.Scene {
     window.clearTimeout(this.countdownTimer);
     window.clearTimeout(this.comboClearTimer);
     window.clearInterval(this.gameTimer);
+    this.lastFrameTime = 0;
     this.cleanupFns.forEach((fn) => {
       try {
         fn();
