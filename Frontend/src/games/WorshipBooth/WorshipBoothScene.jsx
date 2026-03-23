@@ -120,18 +120,18 @@ export default class WorshipBoothScene extends Phaser.Scene {
           z-index: 2;
           height: 100%;
           box-sizing: border-box;
-          padding: 10px 12px 12px;
+          padding: 10px 14px 14px;
           display: grid;
-          grid-template-columns: 196px 1fr;
-          grid-template-rows: auto 1fr auto;
-          gap: 10px;
+          grid-template-columns: 182px minmax(0, 1fr);
+          grid-template-rows: auto minmax(0, 1fr);
+          gap: 12px;
         }
 
         .wb-top {
           grid-column: 1 / -1;
           display: grid;
-          grid-template-columns: 122px 1fr 186px;
-          gap: 8px;
+          grid-template-columns: 112px minmax(0, 1fr) 162px;
+          gap: 10px;
           align-items: stretch;
         }
 
@@ -144,30 +144,43 @@ export default class WorshipBoothScene extends Phaser.Scene {
         }
 
         .wb-mini {
-          min-height: 78px;
+          min-height: 74px;
           background: url('${HUD_SIGN_IMAGE}') center/100% 100% no-repeat;
           display: flex;
-          align-items: center;
+          flex-direction: column;
+          align-items: flex-start;
           justify-content: center;
-          gap: 12px;
-          padding: 10px 18px 8px;
+          gap: 2px;
+          padding: 10px 16px 10px 22px;
           box-sizing: border-box;
-          font-size: 25px;
+          font-size: 17px;
           font-weight: 1000;
           color: #fff4d8;
         }
 
-        .wb-coin {
-          width: 28px;
-          height: 28px;
-          border-radius: 50%;
-          background: radial-gradient(circle at 35% 35%, #fff5c4, #d89c28 66%, #9b5710);
-          box-shadow: inset 0 0 0 2px rgba(255, 240, 178, 0.6);
+        .wb-mini-label {
+          line-height: 1;
+          font-size: 16px;
+          color: #fff2d3;
+          text-shadow: 0 2px 0 rgba(92, 38, 8, 0.72);
+        }
+
+        .wb-mini-value {
+          display: block;
+          line-height: 1;
+          font-size: 28px;
+          letter-spacing: 0.02em;
+          color: #fff8e7;
+          text-shadow: 0 3px 0 rgba(92, 38, 8, 0.78);
+        }
+
+        .wb-mini-timer {
+          padding-left: 18px;
         }
 
         .wb-sign {
-          min-height: 92px;
-          padding: 12px 26px 10px;
+          min-height: 88px;
+          padding: 10px 30px 10px;
           background: url('${TOP_SIGN_IMAGE}') center/100% 100% no-repeat;
           text-align: center;
           display: flex;
@@ -176,7 +189,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
         }
 
         .wb-title {
-          font-size: 36px;
+          font-size: 34px;
           font-weight: 900;
           line-height: 1;
           color: #fff7de;
@@ -185,7 +198,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
 
         .wb-sub {
           margin-top: 6px;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 800;
           line-height: 1.28;
           color: #ffe8b2;
@@ -195,7 +208,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
         .wb-left {
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 12px;
         }
 
         .wb-side {
@@ -205,12 +218,12 @@ export default class WorshipBoothScene extends Phaser.Scene {
         }
 
         .wb-monk-box {
-          min-height: 252px;
+          min-height: 262px;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: flex-end;
-          padding-top: 76px;
+          padding-top: 78px;
         }
 
         .wb-bubble {
@@ -222,7 +235,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
           color: #6d3307;
           border-radius: 24px;
           padding: 12px 14px;
-          font-size: 15px;
+          font-size: 14px;
           font-weight: 900;
           line-height: 1.25;
           text-align: center;
@@ -242,7 +255,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
         }
 
         .wb-monk {
-          width: min(100%, 132px);
+          width: min(100%, 120px);
           display: block;
           filter: drop-shadow(0 12px 20px rgba(0, 0, 0, 0.28));
         }
@@ -276,26 +289,26 @@ export default class WorshipBoothScene extends Phaser.Scene {
 
         .wb-main {
           display: grid;
-          grid-template-rows: 1fr auto;
-          gap: 14px;
+          grid-template-rows: minmax(0, 1fr) auto;
+          gap: 12px;
+          min-height: 0;
         }
 
         .wb-bottom {
           position: relative;
-          width: min(1320px, calc(100% - 44px));
-          margin: 2px auto 0;
-          padding-right: 246px;
-          margin-top: 2px;
-          padding-bottom: 0;
+          width: min(1140px, calc(100% - 72px));
+          margin: 0 auto;
+          padding-right: 240px;
+          padding-bottom: 10px;
         }
 
         .wb-stage {
           position: relative;
           overflow: hidden;
-          border-radius: 28px;
+          border-radius: 30px;
           border: 2px solid rgba(255, 219, 145, 0.22);
           background: linear-gradient(180deg, rgba(22, 7, 3, 0.28), rgba(18, 5, 1, 0.48));
-          min-height: 390px;
+          min-height: 430px;
         }
 
         .wb-stage::before {
@@ -310,9 +323,9 @@ export default class WorshipBoothScene extends Phaser.Scene {
 
         .wb-stage-col {
           position: absolute;
-          top: 26px;
-          bottom: 26px;
-          width: 14px;
+          top: 24px;
+          bottom: 24px;
+          width: 13px;
           border-radius: 999px;
           background: linear-gradient(180deg, #daab5a, #8c521e);
           box-shadow: inset 0 0 0 2px rgba(255, 235, 185, 0.22);
@@ -323,23 +336,23 @@ export default class WorshipBoothScene extends Phaser.Scene {
 
         .wb-ribbon {
           position: absolute;
-          top: 70px;
-          width: 40px;
-          height: 108px;
+          top: 66px;
+          width: 32px;
+          height: 102px;
           background: linear-gradient(180deg, rgba(164, 23, 20, 0.92), rgba(114, 9, 8, 0.96));
           border: 2px solid rgba(255, 221, 154, 0.2);
           box-shadow: 0 16px 24px rgba(0, 0, 0, 0.18);
         }
 
-        .wb-ribbon.left { left: 40px; clip-path: polygon(0 0, 100% 0, 82% 100%, 14% 90%); }
-        .wb-ribbon.right { right: 40px; clip-path: polygon(0 0, 100% 0, 86% 90%, 18% 100%); }
+        .wb-ribbon.left { left: 44px; clip-path: polygon(0 0, 100% 0, 82% 100%, 14% 90%); }
+        .wb-ribbon.right { right: 44px; clip-path: polygon(0 0, 100% 0, 86% 90%, 18% 100%); }
 
         .wb-halo {
           position: absolute;
-          left: 48.5%;
-          top: 34%;
-          width: 410px;
-          height: 410px;
+          left: 50%;
+          top: 37%;
+          width: 500px;
+          height: 500px;
           transform: translate(-50%, -50%);
           border-radius: 50%;
           background: radial-gradient(circle, rgba(255, 219, 125, 0.82), rgba(255, 219, 125, 0.12) 48%, rgba(255, 219, 125, 0) 72%);
@@ -348,11 +361,11 @@ export default class WorshipBoothScene extends Phaser.Scene {
 
         .wb-buddha {
           position: absolute;
-          left: 47.5%;
-          top: 30%;
+          left: 50%;
+          top: 33%;
           transform: translate(-50%, -50%);
-          width: min(180%, 650px);
-          max-height: 230%;
+          width: clamp(390px, 33vw, 560px);
+          max-height: none;
           object-fit: contain;
           filter: drop-shadow(0 18px 28px rgba(0, 0, 0, 0.34));
         }
@@ -360,10 +373,10 @@ export default class WorshipBoothScene extends Phaser.Scene {
         .wb-altar-shadow {
           position: absolute;
           left: 50%;
-          bottom: 96px;
+          bottom: 78px;
           transform: translateX(-50%);
-          width: 420px;
-          height: 106px;
+          width: 620px;
+          height: 132px;
           border-radius: 999px;
           background: radial-gradient(circle, rgba(63, 18, 8, 0.84), rgba(63, 18, 8, 0.72) 48%, rgba(63, 18, 8, 0) 74%);
           filter: blur(10px);
@@ -373,18 +386,14 @@ export default class WorshipBoothScene extends Phaser.Scene {
         .wb-altar {
           position: absolute;
           left: 50%;
-          bottom: 60px;
+          bottom: 42px;
           transform: translateX(-50%);
-          width: 576px;
-          display: grid;
-          grid-template-columns: 444px 132px;
-          align-items: end;
-          gap: 0;
+          width: 610px;
         }
 
         .wb-altar-table {
           position: relative;
-          height: 232px;
+          height: 278px;
           overflow: visible;
         }
 
@@ -397,15 +406,20 @@ export default class WorshipBoothScene extends Phaser.Scene {
         }
 
         .wb-altar-base {
-          transform: scale(1.47);
+          transform: scale(1.34);
           transform-origin: center bottom;
         }
 
+        .wb-can-wrap {
+          position: absolute;
+          right: 8.5%;
+          bottom: 56px;
+        }
+
         .wb-can {
-          width: 300px;
+          width: 156px;
           display: block;
           filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.22));
-          transform: translate(16px, 10px);
         }
 
 
@@ -417,9 +431,9 @@ export default class WorshipBoothScene extends Phaser.Scene {
         .wb-tab {
           flex: 1;
           border-radius: 999px;
-          padding: 7px 12px;
+          padding: 8px 12px;
           text-align: center;
-          font-size: 16px;
+          font-size: 15px;
           font-weight: 900;
           color: #fff4db;
           background: linear-gradient(180deg, rgba(117, 51, 16, 0.96), rgba(70, 24, 7, 0.96));
@@ -431,10 +445,10 @@ export default class WorshipBoothScene extends Phaser.Scene {
         }
 
         .wb-message {
-          min-height: 28px;
-          margin: 2px 0 6px;
+          min-height: 32px;
+          margin: 4px 0 8px;
           text-align: center;
-          font-size: 23px;
+          font-size: 24px;
           line-height: 1.2;
           white-space: normal;
           font-weight: 900;
@@ -450,8 +464,8 @@ export default class WorshipBoothScene extends Phaser.Scene {
         .wb-action {
           border: none;
           border-radius: 18px;
-          min-height: 138px;
-          padding: 12px 10px 12px;
+          min-height: 196px;
+          padding: 18px 12px 16px;
           font: inherit;
           color: #fff8eb;
           background: linear-gradient(180deg, rgba(62, 24, 8, 0.96), rgba(35, 11, 4, 0.98));
@@ -467,29 +481,33 @@ export default class WorshipBoothScene extends Phaser.Scene {
         .wb-action.wrong { background: linear-gradient(180deg, #b74729, #6d1b0f); }
 
         .wb-action img {
-          width: 150px;
-          height: 150px;
+          width: 104px;
+          height: 104px;
           display: block;
-          margin: 0 auto 25px;
+          margin: 0 auto 24px;
           object-fit: contain;
+        }
+
+        .wb-footer {
+          padding-bottom: 4px;
         }
 
         .wb-pray {
           position: absolute;
           right: 0;
-          bottom: 8px;
-          width: 230px;
+          bottom: 26px;
+          width: 214px;
           min-height: 88px;
           border: none;
           border-radius: 24px;
           background: url('${PRAY_BUTTON_IMAGE}') center/100% 100% no-repeat;
           font: inherit;
-          font-size: 16px;
+          font-size: 15px;
           font-weight: 900;
           color: #fff7e1;
           text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
           cursor: pointer;
-          padding: 0 18px;
+          padding: 0 20px;
         }
 
         .wb-pray[disabled] {
@@ -583,7 +601,7 @@ export default class WorshipBoothScene extends Phaser.Scene {
           font-size: 36px;
         }
 
-        #wb-final-fortune {  //คำทำนายจากเซียมซี
+        #wb-final-fortune {
           color: #b71c1c;
           font-weight: 900;
         }
@@ -648,6 +666,10 @@ export default class WorshipBoothScene extends Phaser.Scene {
             flex-direction: column;
             gap: 12px;
           }
+
+          .wb-can-wrap {
+            right: 8%;
+          }
         }
 
         @media (max-width: 780px) {
@@ -657,6 +679,15 @@ export default class WorshipBoothScene extends Phaser.Scene {
           .wb-sub { font-size: 16px; }
           .wb-message { font-size: 25px; }
           .wb-grid { grid-template-columns: 1fr; }
+          .wb-altar { width: min(86vw, 430px); }
+          .wb-altar-table { height: 214px; }
+          .wb-buddha { width: min(72vw, 350px); }
+          .wb-can-wrap {
+            position: static;
+            display: flex;
+            justify-content: center;
+            margin-top: 12px;
+          }
           .wb-pray {
             position: static;
             width: 100%;
@@ -671,12 +702,18 @@ export default class WorshipBoothScene extends Phaser.Scene {
         <div class="wb-glow"></div>
         <div class="wb-wrap">
           <div class="wb-top">
-            <div class="wb-mini"><div class="wb-coin"></div><strong>คะแนน 0</strong></div>
+            <div class="wb-mini">
+              <div class="wb-mini-label">คะแนน:</div>
+              <strong class="wb-mini-value">0</strong>
+            </div>
             <div class="wb-sign">
               <div class="wb-title">ซุ้มไหว้พระขอพร</div>
               <div class="wb-sub">พิธีปิดท้ายอย่างเป็นมงคล กดธูป เทียน ดอกบัว ให้ครบตามลำดับ แล้วจึงไหว้พระขอพรและเสี่ยงเซียมซี</div>
             </div>
-            <div class="wb-mini"><strong>เวลาที่เหลือ <span id="wb-timer">45</span> วิ</strong></div>
+            <div class="wb-mini wb-mini-timer">
+              <div class="wb-mini-label">เวลาที่เหลือ</div>
+              <strong class="wb-mini-value"><span id="wb-timer">45</span></strong>
+            </div>
           </div>
 
           <div class="wb-left">
@@ -706,8 +743,8 @@ export default class WorshipBoothScene extends Phaser.Scene {
                 <div class="wb-altar-table">
                   <img class="wb-altar-base" src="${ALTAR_IMAGE}" alt="โต๊ะบูชา" />
                 </div>
-                <div><img class="wb-can" src="${SIAMSI_IMAGE}" alt="เซียมซี" /></div>
               </div>
+              <div class="wb-can-wrap"><img class="wb-can" src="${SIAMSI_IMAGE}" alt="เซียมซี" /></div>
             </div>
 
             <div class="wb-bottom">
