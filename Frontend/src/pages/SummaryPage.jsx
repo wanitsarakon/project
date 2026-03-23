@@ -77,7 +77,7 @@ export default function SummaryPage({
   };
 
   return (
-    <div className="home-root">
+    <div className="home-root home-root-entry">
       <div className="summary-shell">
         <div className="summary-hero">
           <div className="summary-kicker">

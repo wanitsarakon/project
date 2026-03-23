@@ -663,6 +663,15 @@ func TestJoinRoomSuccessBroadcastsRoomAndGlobal(t *testing.T) {
 		WithArgs(77).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(2))
 	mock.ExpectQuery(queryPattern(`
+	SELECT name
+	FROM players
+	WHERE room_id=$1
+	`)).
+		WithArgs(77).
+		WillReturnRows(sqlmock.NewRows([]string{"name"}).
+			AddRow("HostA").
+			AddRow("PlayerY"))
+	mock.ExpectQuery(queryPattern(`
 	INSERT INTO players
 	(name,room_id,is_host,connected,total_score,last_seen_at)
 	VALUES ($1,$2,false,true,0,NOW())
@@ -738,6 +747,107 @@ func TestJoinRoomRejectsWhenFull(t *testing.T) {
 	payload := mustJSONBody(t, recorder.Body)
 	if payload["error"] != "room full" {
 		t.Fatalf("error = %v, want room full", payload["error"])
+	}
+}
+
+func TestJoinRoomRejectsDuplicateName(t *testing.T) {
+	controller, mock, cleanup := newRoomControllerTest(t)
+	defer cleanup()
+
+	gin.SetMode(gin.TestMode)
+
+	mock.ExpectBegin()
+	mock.ExpectQuery(queryPattern(`
+	SELECT id,max_players
+	FROM rooms
+	WHERE code=$1 AND status='waiting'
+	FOR UPDATE
+	`)).
+		WithArgs("555666").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "max_players"}).AddRow(81, 4))
+	mock.ExpectQuery(queryPattern(`
+	SELECT COUNT(*)
+	FROM players
+	WHERE room_id=$1 AND connected=true
+	`)).
+		WithArgs(81).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+	mock.ExpectQuery(queryPattern(`
+	SELECT name
+	FROM players
+	WHERE room_id=$1
+	`)).
+		WithArgs(81).
+		WillReturnRows(sqlmock.NewRows([]string{"name"}).AddRow("playerx"))
+	mock.ExpectRollback()
+
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	req := httptest.NewRequest(http.MethodPost, "/rooms/join", strings.NewReader(`{"name":" PlayerX ","room_code":"555666"}`))
+	req.Header.Set("Content-Type", "application/json")
+	ctx.Request = req
+
+	controller.JoinRoom(ctx)
+
+	if recorder.Code != http.StatusConflict {
+		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusConflict)
+	}
+
+	payload := mustJSONBody(t, recorder.Body)
+	if payload["error"] != "duplicate player name" {
+		t.Fatalf("error = %v, want duplicate player name", payload["error"])
+	}
+	if payload["code"] != "duplicate_name" {
+		t.Fatalf("code = %v, want duplicate_name", payload["code"])
+	}
+}
+
+func TestJoinRoomRejectsDuplicateHostName(t *testing.T) {
+	controller, mock, cleanup := newRoomControllerTest(t)
+	defer cleanup()
+
+	gin.SetMode(gin.TestMode)
+
+	mock.ExpectBegin()
+	mock.ExpectQuery(queryPattern(`
+	SELECT id,max_players
+	FROM rooms
+	WHERE code=$1 AND status='waiting'
+	FOR UPDATE
+	`)).
+		WithArgs("111222").
+		WillReturnRows(sqlmock.NewRows([]string{"id", "max_players"}).AddRow(82, 5))
+	mock.ExpectQuery(queryPattern(`
+	SELECT COUNT(*)
+	FROM players
+	WHERE room_id=$1 AND connected=true
+	`)).
+		WithArgs(82).
+		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
+	mock.ExpectQuery(queryPattern(`
+	SELECT name
+	FROM players
+	WHERE room_id=$1
+	`)).
+		WithArgs(82).
+		WillReturnRows(sqlmock.NewRows([]string{"name"}).AddRow("HostPP"))
+	mock.ExpectRollback()
+
+	recorder := httptest.NewRecorder()
+	ctx, _ := gin.CreateTestContext(recorder)
+	req := httptest.NewRequest(http.MethodPost, "/rooms/join", strings.NewReader(`{"name":" hostpp ","room_code":"111222"}`))
+	req.Header.Set("Content-Type", "application/json")
+	ctx.Request = req
+
+	controller.JoinRoom(ctx)
+
+	if recorder.Code != http.StatusConflict {
+		t.Fatalf("status = %d, want %d", recorder.Code, http.StatusConflict)
+	}
+
+	payload := mustJSONBody(t, recorder.Body)
+	if payload["code"] != "duplicate_name" {
+		t.Fatalf("code = %v, want duplicate_name", payload["code"])
 	}
 }
 

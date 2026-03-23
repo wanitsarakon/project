@@ -24,6 +24,7 @@ export default function Lobby({
   const [starting, setStarting] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
   const [savingPrizes, setSavingPrizes] = useState(false);
+  const [prizeEditorLocked, setPrizeEditorLocked] = useState(false);
   const [roomMeta, setRoomMeta] = useState({
     name: "",
     mode: "solo",
@@ -146,6 +147,11 @@ export default function Lobby({
     ? players.some((entry) => entry?.id === player.id && entry?.isHost)
     : false;
 
+  const unlockPrizeEditor = useCallback(() => {
+    if (savingPrizes) return;
+    setPrizeEditorLocked(false);
+  }, [savingPrizes]);
+
   const startGame = async () => {
     if (!player?.id || !isMeHost || starting) return;
 
@@ -173,16 +179,17 @@ export default function Lobby({
   };
 
   const savePrizes = async () => {
-    if (!isMeHost || !player?.id || savingPrizes) return;
+    if (!isMeHost || !player?.id || savingPrizes || prizeEditorLocked) return;
 
     setSavingPrizes(true);
 
     try {
+      const normalizedPrizes = prizeDraft.map((item) => String(item || "").trim()).filter(Boolean);
       const res = await fetch(`${API_BASE}/rooms/${roomCode}/prizes?player_id=${player.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prizes: prizeDraft.map((item) => String(item || "").trim()).filter(Boolean),
+          prizes: normalizedPrizes,
         }),
       });
 
@@ -191,12 +198,15 @@ export default function Lobby({
         throw new Error(data?.error || "save prizes failed");
       }
 
-      safeSet(() =>
+      safeSet(() => {
+        const nextPrizes = Array.isArray(data?.prizes) ? data.prizes : [];
         setRoomMeta((prev) => ({
           ...prev,
-          prizes: Array.isArray(data?.prizes) ? data.prizes : [],
-        })),
-      );
+          prizes: nextPrizes,
+        }));
+        setPrizeDraft(nextPrizes);
+        setPrizeEditorLocked(true);
+      });
       loadRoom();
     } catch (err) {
       console.error("savePrizes error", err);
@@ -206,8 +216,23 @@ export default function Lobby({
     }
   };
 
+  const handlePrizeChange = useCallback((index, value) => {
+    setPrizeEditorLocked(false);
+    setPrizeDraft((prev) => prev.map((item, itemIndex) => (itemIndex === index ? value : item)));
+  }, []);
+
+  const removePrize = useCallback((index) => {
+    setPrizeEditorLocked(false);
+    setPrizeDraft((prev) => prev.filter((_, itemIndex) => itemIndex !== index));
+  }, []);
+
+  const addPrize = useCallback(() => {
+    setPrizeEditorLocked(false);
+    setPrizeDraft((prev) => [...prev, ""]);
+  }, []);
+
   return (
-    <div className="home-root">
+    <div className="home-root home-root-entry">
       <section className="festival-page-shell">
         <div className="landing-string-light string-top" />
         <div className="landing-string-light string-mid" />
@@ -250,21 +275,22 @@ export default function Lobby({
                         className="festival-prize-input"
                         value={prize}
                         placeholder={`รางวัลอันดับ ${index + 1}`}
-                        onChange={(e) =>
-                          setPrizeDraft((prev) =>
-                            prev.map((item, i) => (i === index ? e.target.value : item)),
-                          )
-                        }
-                        disabled={savingPrizes}
+                        onChange={(event) => handlePrizeChange(index, event.target.value)}
+                        disabled={savingPrizes || prizeEditorLocked}
                       />
                       <button
-                        className="festival-mini-btn"
-                        onClick={() =>
-                          setPrizeDraft((prev) => prev.filter((_, i) => i !== index))
-                        }
+                        type="button"
+                        className={`festival-mini-btn ${prizeEditorLocked ? "edit" : ""}`}
+                        onClick={() => {
+                          if (prizeEditorLocked) {
+                            unlockPrizeEditor();
+                            return;
+                          }
+                          removePrize(index);
+                        }}
                         disabled={savingPrizes}
                       >
-                        ลบ
+                        {prizeEditorLocked ? "แก้ไข" : "ลบ"}
                       </button>
                     </div>
                   ))}
@@ -272,18 +298,24 @@ export default function Lobby({
 
                 <div className="festival-form-actions row">
                   <button
+                    type="button"
                     className="festival-mini-btn add"
-                    onClick={() => setPrizeDraft((prev) => [...prev, ""])}
-                    disabled={savingPrizes || prizeDraft.length >= 10}
+                    onClick={addPrize}
+                    disabled={savingPrizes || prizeEditorLocked || prizeDraft.length >= 10}
                   >
                     เพิ่มรางวัล
                   </button>
                   <button
-                    className="festival-primary-btn small"
+                    type="button"
+                    className={`festival-primary-btn small ${prizeEditorLocked ? "saved" : ""}`}
                     onClick={savePrizes}
-                    disabled={savingPrizes}
+                    disabled={savingPrizes || prizeEditorLocked}
                   >
-                    {savingPrizes ? "กำลังบันทึก..." : "บันทึกรางวัล"}
+                    {savingPrizes
+                      ? "กำลังบันทึก..."
+                      : prizeEditorLocked
+                        ? "บันทึกเรียบร้อย"
+                        : "บันทึกรางวัล"}
                   </button>
                 </div>
               </>
@@ -319,7 +351,7 @@ export default function Lobby({
           </div>
 
           {isMeHost && !gameStarted && (
-            <button className="festival-primary-btn" onClick={startGame} disabled={starting}>
+            <button type="button" className="festival-primary-btn" onClick={startGame} disabled={starting}>
               {starting ? "กำลังเริ่มเกม..." : "เริ่มเกม"}
             </button>
           )}
@@ -332,7 +364,7 @@ export default function Lobby({
             <div className="festival-helper-text">รอ Host เริ่มเกม</div>
           )}
 
-          <button className="festival-secondary-link" onClick={onLeave}>
+          <button type="button" className="festival-secondary-link" onClick={onLeave}>
             ออกจากห้อง
           </button>
         </div>

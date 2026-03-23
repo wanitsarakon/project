@@ -201,8 +201,11 @@ function HostMonitor({ roomMeta, playerStatuses, completedPlayers, progressData,
       style={{
         minHeight: "100vh",
         width: "100vw",
-        background:
-          "radial-gradient(circle at top, #251036 0%, #121730 45%, #080d1b 100%)",
+        backgroundImage:
+          'linear-gradient(180deg, rgba(28, 9, 3, 0.42) 0%, rgba(18, 7, 3, 0.62) 100%), url("/assets/พื้นหลังหน้าอื่นๆ.png")',
+        backgroundPosition: "center",
+        backgroundSize: "cover",
+        backgroundRepeat: "no-repeat",
         display: "flex",
         justifyContent: "center",
         alignItems: "center",

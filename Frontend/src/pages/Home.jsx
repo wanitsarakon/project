@@ -5,50 +5,70 @@ import React, {
   useState,
 } from "react";
 
+import {
+  PLAYER_NAME_ALLOWED_MESSAGE,
+  PLAYER_NAME_MAX_LENGTH,
+  hasUnsupportedPlayerNameChars,
+  sanitizePlayerNameInput,
+  validatePlayerName,
+} from "../utils/playerName";
+
 export default function Home({ onSelect }) {
   const [step, setStep] = useState("landing");
   const [name, setName] = useState("");
   const [role, setRole] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const inputRef = useRef(null);
 
   useEffect(() => {
-    if (step === "form") {
-      window.setTimeout(() => inputRef.current?.focus(), 120);
+    if (step !== "form") {
+      setError("");
+      return undefined;
     }
+
+    const timerId = window.setTimeout(() => inputRef.current?.focus(), 120);
+    return () => window.clearTimeout(timerId);
   }, [step]);
 
-  const normalizeName = useCallback((value) => value.replace(/\s+/g, " ").trim(), []);
+  const handleNameChange = useCallback((event) => {
+    const rawValue = event.target.value;
+    setName(sanitizePlayerNameInput(rawValue));
+
+    if (hasUnsupportedPlayerNameChars(rawValue)) {
+      setError(PLAYER_NAME_ALLOWED_MESSAGE);
+      return;
+    }
+
+    setError((current) => (current === PLAYER_NAME_ALLOWED_MESSAGE ? "" : current));
+  }, []);
 
   const handleConfirm = useCallback(() => {
     if (loading) return;
 
-    const normalizedName = normalizeName(name);
+    const validation = validatePlayerName(name);
 
-    if (!normalizedName) {
-      alert("กรุณากรอกชื่อ");
-      return;
-    }
-
-    if (normalizedName.length > 20) {
-      alert("ชื่อยาวเกินไป (ไม่เกิน 20 ตัวอักษร)");
+    if (!validation.valid) {
+      setError(validation.error);
+      inputRef.current?.focus();
       return;
     }
 
     if (!role) {
-      alert("กรุณาเลือก Host หรือ Player");
+      setError("กรุณาเลือก Host หรือ Player");
       return;
     }
 
     setLoading(true);
-    onSelect(role, normalizedName);
+    setError("");
+    onSelect(role, validation.normalizedName);
     setLoading(false);
-  }, [loading, name, role, onSelect, normalizeName]);
+  }, [loading, name, onSelect, role]);
 
   useEffect(() => {
-    const onKeyDown = (e) => {
-      if (e.key !== "Enter") return;
+    const onKeyDown = (event) => {
+      if (event.key !== "Enter") return;
       if (loading || step !== "form") return;
       handleConfirm();
     };
@@ -58,10 +78,13 @@ export default function Home({ onSelect }) {
   }, [handleConfirm, loading, step]);
 
   return (
-    <div className={`home-root ${step === "landing" ? "home-root-landing" : ""}`}>
+    <div
+      className={`home-root ${step === "landing" ? "home-root-landing" : "home-root-entry"}`}
+    >
       {step === "landing" ? (
         <section className="landing-stage landing-stage-minimal">
           <button
+            type="button"
             className="enter-btn temple-enter-btn landing-start-only"
             onClick={() => setStep("form")}
           >
@@ -83,11 +106,17 @@ export default function Home({ onSelect }) {
                 className="festival-name-input"
                 placeholder="กรอกชื่อ"
                 value={name}
-                maxLength={20}
+                maxLength={PLAYER_NAME_MAX_LENGTH}
                 disabled={loading}
-                onChange={(e) => setName(e.target.value)}
+                onChange={handleNameChange}
               />
             </div>
+
+            <div className="festival-input-note">
+              {PLAYER_NAME_ALLOWED_MESSAGE}
+            </div>
+
+            {error && <div className="festival-error-box home-form-error">{error}</div>}
 
             <p className="festival-form-hint">
               เลือกบทบาทเพื่อกำหนดว่าจะเป็นผู้สร้างห้องหรือผู้เข้าแข่งขัน
@@ -95,8 +124,14 @@ export default function Home({ onSelect }) {
 
             <div className="festival-role-grid">
               <button
+                type="button"
                 className={`festival-role-card host-card ${role === "host" ? "active" : ""}`}
-                onClick={() => setRole("host")}
+                onClick={() => {
+                  setRole("host");
+                  setError((current) =>
+                    current === "กรุณาเลือก Host หรือ Player" ? "" : current,
+                  );
+                }}
                 disabled={loading}
               >
                 <span className="festival-role-copy">
@@ -106,8 +141,14 @@ export default function Home({ onSelect }) {
               </button>
 
               <button
+                type="button"
                 className={`festival-role-card player-card ${role === "player" ? "active" : ""}`}
-                onClick={() => setRole("player")}
+                onClick={() => {
+                  setRole("player");
+                  setError((current) =>
+                    current === "กรุณาเลือก Host หรือ Player" ? "" : current,
+                  );
+                }}
                 disabled={loading}
               >
                 <span className="festival-role-copy">
@@ -119,6 +160,7 @@ export default function Home({ onSelect }) {
 
             <div className="festival-form-actions">
               <button
+                type="button"
                 className="confirm-btn festival-confirm-btn"
                 onClick={handleConfirm}
                 disabled={loading}
@@ -127,6 +169,7 @@ export default function Home({ onSelect }) {
               </button>
 
               <button
+                type="button"
                 className="back-btn festival-back-btn"
                 onClick={() => setStep("landing")}
                 disabled={loading}

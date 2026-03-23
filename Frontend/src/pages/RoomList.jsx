@@ -7,8 +7,26 @@ import React, {
 } from "react";
 
 import { createRoomSocket } from "../websocket/wsClient";
+import {
+  PLAYER_NAME_ALLOWED_MESSAGE,
+  PLAYER_NAME_MAX_LENGTH,
+  hasUnsupportedPlayerNameChars,
+  normalizePlayerName,
+  sanitizePlayerNameInput,
+  validatePlayerName,
+} from "../utils/playerName";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://127.0.0.1:18082";
+const DUPLICATE_NAME_MESSAGE = "มีชื่อซ้ำในห้องนี้ กรุณาเปลี่ยนชื่อใหม่";
+
+function createEmptyDuplicateDialog() {
+  return {
+    open: false,
+    room: null,
+    draft: "",
+    error: "",
+  };
+}
 
 export default function RoomList({
   player,
@@ -20,16 +38,22 @@ export default function RoomList({
   const [joiningRoomCode, setJoiningRoomCode] = useState(null);
   const [error, setError] = useState(null);
   const [roomSearch, setRoomSearch] = useState("");
+  const [playerName, setPlayerName] = useState(() => normalizePlayerName(player?.name ?? ""));
+  const [duplicateDialog, setDuplicateDialog] = useState(createEmptyDuplicateDialog);
 
   const wsRef = useRef(null);
   const mountedRef = useRef(false);
   const joiningRef = useRef(false);
-
-  const normalizeName = useCallback((value = "") => String(value).replace(/\s+/g, " ").trim(), []);
+  const duplicateInputRef = useRef(null);
 
   const safeSet = useCallback((fn) => {
     if (mountedRef.current) fn();
   }, []);
+
+  const getComparableName = useCallback(
+    (value = "") => normalizePlayerName(value).toLowerCase(),
+    [],
+  );
 
   const loadRooms = useCallback(async () => {
     safeSet(() => {
@@ -65,6 +89,17 @@ export default function RoomList({
   }, [loadRooms]);
 
   useEffect(() => {
+    setPlayerName(normalizePlayerName(player?.name ?? ""));
+  }, [player?.name]);
+
+  useEffect(() => {
+    if (!duplicateDialog.open) return undefined;
+
+    const timerId = window.setTimeout(() => duplicateInputRef.current?.focus(), 60);
+    return () => window.clearTimeout(timerId);
+  }, [duplicateDialog.open]);
+
+  useEffect(() => {
     if (!mountedRef.current) return undefined;
 
     wsRef.current?.close();
@@ -84,7 +119,36 @@ export default function RoomList({
     };
   }, [loadRooms]);
 
-  const joinRoom = useCallback(async (room) => {
+  const openDuplicateDialog = useCallback((room, attemptedName, message = DUPLICATE_NAME_MESSAGE) => {
+    safeSet(() =>
+      setDuplicateDialog({
+        open: true,
+        room,
+        draft: attemptedName,
+        error: message,
+      }),
+    );
+  }, [safeSet]);
+
+  const roomHasDuplicateName = useCallback(async (roomCode, requestedName) => {
+    try {
+      const res = await fetch(`${API_BASE}/rooms/${roomCode}`);
+      if (!res.ok) {
+        return false;
+      }
+
+      const data = await res.json().catch(() => ({}));
+      const players = Array.isArray(data?.players) ? data.players : [];
+      const requestedNameKey = getComparableName(requestedName);
+
+      return players.some((entry) => getComparableName(entry?.name) === requestedNameKey);
+    } catch (err) {
+      console.error("roomHasDuplicateName error:", err);
+      return false;
+    }
+  }, [getComparableName]);
+
+  const joinRoom = useCallback(async (room, requestedName = playerName) => {
     if (joiningRef.current || !mountedRef.current) return;
 
     if (room.status !== "waiting") {
@@ -97,9 +161,28 @@ export default function RoomList({
       return;
     }
 
-    const cleanName = normalizeName(player?.name);
-    if (!cleanName) {
-      alert("ชื่อผู้เล่นไม่ถูกต้อง");
+    const validation = validatePlayerName(requestedName);
+    if (!validation.valid) {
+      const nextDraft = sanitizePlayerNameInput(requestedName);
+
+      if (duplicateDialog.open) {
+        safeSet(() =>
+          setDuplicateDialog((prev) => ({
+            ...prev,
+            draft: nextDraft,
+            error: validation.error,
+          })),
+        );
+      } else {
+        alert(validation.error);
+      }
+      return;
+    }
+
+    const cleanName = validation.normalizedName;
+
+    if (await roomHasDuplicateName(room.code, cleanName)) {
+      openDuplicateDialog(room, cleanName, DUPLICATE_NAME_MESSAGE);
       return;
     }
 
@@ -118,6 +201,11 @@ export default function RoomList({
 
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        if (res.status === 409 || data?.code === "duplicate_name") {
+          openDuplicateDialog(room, cleanName, DUPLICATE_NAME_MESSAGE);
+          return;
+        }
+
         throw new Error(data?.error || "join failed");
       }
 
@@ -125,6 +213,11 @@ export default function RoomList({
       if (!backendPlayer?.id) {
         throw new Error("invalid player data");
       }
+
+      safeSet(() => {
+        setPlayerName(cleanName);
+        setDuplicateDialog(createEmptyDuplicateDialog());
+      });
 
       onJoin?.(room.code, {
         id: backendPlayer.id,
@@ -138,7 +231,27 @@ export default function RoomList({
       joiningRef.current = false;
       safeSet(() => setJoiningRoomCode(null));
     }
-  }, [normalizeName, onJoin, player?.name, safeSet]);
+  }, [duplicateDialog.open, onJoin, openDuplicateDialog, playerName, roomHasDuplicateName, safeSet]);
+
+  const handleDuplicateNameChange = useCallback((event) => {
+    const rawValue = event.target.value;
+    const nextDraft = sanitizePlayerNameInput(rawValue);
+
+    setDuplicateDialog((prev) => ({
+      ...prev,
+      draft: nextDraft,
+      error: hasUnsupportedPlayerNameChars(rawValue)
+        ? PLAYER_NAME_ALLOWED_MESSAGE
+        : "",
+    }));
+  }, []);
+
+  const submitDuplicateName = useCallback((event) => {
+    event.preventDefault();
+
+    if (!duplicateDialog.room) return;
+    joinRoom(duplicateDialog.room, duplicateDialog.draft);
+  }, [duplicateDialog.draft, duplicateDialog.room, joinRoom]);
 
   const filteredRooms = useMemo(() => {
     const query = roomSearch.trim();
@@ -147,7 +260,7 @@ export default function RoomList({
   }, [roomSearch, rooms]);
 
   return (
-    <div className="home-root">
+    <div className="home-root home-root-entry">
       <section className="festival-page-shell">
         <div className="landing-string-light string-top" />
         <div className="landing-string-light string-mid" />
@@ -156,8 +269,11 @@ export default function RoomList({
           <div className="festival-page-kicker">Room List</div>
           <h1 className="festival-page-title">เลือกห้องแข่งขัน</h1>
           <p className="festival-page-subtitle">
-            ผู้เล่น: <strong>{player?.name}</strong>
+            ผู้เล่น: <strong>{playerName || "-"}</strong>
           </p>
+          <div className="festival-input-note">
+            {PLAYER_NAME_ALLOWED_MESSAGE}
+          </div>
 
           <div className="festival-room-toolbar">
             <div className="festival-room-search">
@@ -171,7 +287,7 @@ export default function RoomList({
               />
             </div>
 
-            <button className="festival-mini-btn add" onClick={loadRooms} disabled={loading}>
+            <button type="button" className="festival-mini-btn add" onClick={loadRooms} disabled={loading}>
               รีเฟรชรายการห้อง
             </button>
           </div>
@@ -205,6 +321,7 @@ export default function RoomList({
                   </div>
 
                   <button
+                    type="button"
                     className="festival-primary-btn small"
                     disabled={disabled}
                     onClick={() => joinRoom(room)}
@@ -223,6 +340,7 @@ export default function RoomList({
           </div>
 
           <button
+            type="button"
             className="festival-secondary-link"
             onClick={onBack}
             disabled={joiningRoomCode !== null}
@@ -231,6 +349,57 @@ export default function RoomList({
           </button>
         </div>
       </section>
+
+      {duplicateDialog.open && (
+        <div className="festival-modal-backdrop">
+          <form className="festival-modal-card" onSubmit={submitDuplicateName}>
+            <div className="festival-page-kicker">Duplicate Name</div>
+            <h2 className="festival-modal-title">มีชื่อซ้ำในห้อง</h2>
+            <p className="festival-modal-copy">
+              ห้อง {duplicateDialog.room?.code} มีผู้ใช้ชื่อนี้อยู่แล้ว กรุณาเปลี่ยนชื่อใหม่ก่อนเข้าร่วม
+            </p>
+
+            <div className="festival-input-wrap festival-modal-input-wrap">
+              <input
+                ref={duplicateInputRef}
+                className="festival-name-input"
+                placeholder="กรอกชื่อใหม่"
+                value={duplicateDialog.draft}
+                maxLength={PLAYER_NAME_MAX_LENGTH}
+                disabled={joiningRoomCode !== null}
+                onChange={handleDuplicateNameChange}
+              />
+            </div>
+
+            <div className="festival-input-note">
+              {PLAYER_NAME_ALLOWED_MESSAGE}
+            </div>
+
+            {duplicateDialog.error && (
+              <div className="festival-error-box festival-modal-error">{duplicateDialog.error}</div>
+            )}
+
+            <div className="festival-form-actions row festival-modal-actions">
+              <button
+                type="submit"
+                className="festival-primary-btn small"
+                disabled={joiningRoomCode !== null}
+              >
+                {joiningRoomCode !== null ? "กำลังเข้าห้อง..." : "เปลี่ยนชื่อและเข้าห้อง"}
+              </button>
+
+              <button
+                type="button"
+                className="festival-mini-btn"
+                onClick={() => setDuplicateDialog(createEmptyDuplicateDialog())}
+                disabled={joiningRoomCode !== null}
+              >
+                ยกเลิก
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

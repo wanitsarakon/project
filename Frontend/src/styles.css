@@ -96,8 +96,13 @@ button:disabled {
   padding: 24px;
 }
 
+.home-root-entry {
+  background-image: url("/assets/พื้นหลังหน้าอื่นๆ.png");
+}
+
 .home-root-landing {
   padding: 0;
+  background-image: url("/assets/หน้าเริ่มเกม.PNG");
   background-size: 100% 100%;
   background-position: center;
 }
@@ -874,6 +879,19 @@ select {
   color: rgba(255, 243, 184, 0.9);
 }
 
+.festival-input-note {
+  margin: 10px auto 0;
+  width: min(520px, 100%);
+  color: #ffe7af;
+  font-size: 16px;
+  text-align: center;
+}
+
+.home-form-error {
+  margin: 14px auto 0;
+  width: min(520px, 100%);
+}
+
 .festival-form-hint {
   margin: 10px 0 26px;
   color: #ffe7af;
@@ -1076,6 +1094,37 @@ select {
   color: #fff6d5;
 }
 
+.host-page-card {
+  display: flex;
+  flex-direction: column;
+  max-height: min(88svh, 920px);
+  overflow: hidden;
+}
+
+.host-page-content {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 10px;
+  margin-right: -10px;
+}
+
+.host-page-content::-webkit-scrollbar,
+.host-prize-list-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.host-page-content::-webkit-scrollbar-thumb,
+.host-prize-list-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 214, 118, 0.55);
+}
+
+.host-page-content::-webkit-scrollbar-track,
+.host-prize-list-scroll::-webkit-scrollbar-track {
+  background: rgba(255, 246, 221, 0.08);
+  border-radius: 999px;
+}
+
 .festival-page-kicker {
   color: #ffe6a7;
   text-transform: uppercase;
@@ -1206,6 +1255,17 @@ select {
   align-items: stretch;
 }
 
+.host-prize-list {
+  align-content: start;
+  margin-bottom: 14px;
+}
+
+.host-prize-list-scroll {
+  max-height: min(268px, 34svh);
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
 .festival-prize-rank {
   min-width: 28px;
   display: inline-flex;
@@ -1219,6 +1279,10 @@ select {
   padding: 10px 16px;
   border-radius: 16px;
   background: linear-gradient(180deg, #7f2b0a, #4a1807);
+}
+
+.festival-mini-btn.edit {
+  background: linear-gradient(180deg, #155e96, #0a3762);
 }
 
 .festival-mini-btn.add {
@@ -1243,6 +1307,13 @@ select {
   min-width: 160px;
   font-size: 18px;
   padding: 12px 20px;
+}
+
+.festival-primary-btn.saved,
+.festival-primary-btn.saved:disabled {
+  opacity: 1;
+  color: #fff5af;
+  background: linear-gradient(180deg, #1fbb5d 0%, #178246 52%, #0f6232 100%);
 }
 
 .festival-secondary-link {
@@ -1347,6 +1418,60 @@ select {
   margin-bottom: 18px;
 }
 
+.festival-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(14, 8, 19, 0.7);
+  backdrop-filter: blur(8px);
+}
+
+.festival-modal-card {
+  width: min(560px, 100%);
+  padding: 34px 28px 28px;
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(72, 26, 7, 0.94), rgba(23, 12, 16, 0.92)),
+    rgba(0, 0, 0, 0.28);
+  border: 3px solid rgba(255, 214, 118, 0.72);
+  box-shadow:
+    0 0 0 8px rgba(101, 41, 0, 0.45),
+    0 24px 50px rgba(0, 0, 0, 0.42);
+  color: #fff6d5;
+}
+
+.festival-modal-title {
+  margin: 0;
+  font-size: clamp(30px, 4vw, 42px);
+  color: #ffcf5d;
+  text-shadow:
+    0 3px 0 #7e2700,
+    0 8px 16px rgba(0, 0, 0, 0.35);
+}
+
+.festival-modal-copy {
+  margin: 12px 0 18px;
+  color: #ffe7af;
+  font-size: 18px;
+}
+
+.festival-modal-input-wrap {
+  width: 100%;
+}
+
+.festival-modal-error {
+  margin: 14px 0 0;
+}
+
+.festival-modal-actions {
+  justify-content: center;
+  margin-top: 22px;
+}
+
 @media (max-width: 700px) {
   .festival-page-shell {
     min-height: calc(100svh - 32px);
@@ -1357,6 +1482,20 @@ select {
   .festival-page-card {
     padding: 28px 18px 24px;
     border-radius: 24px;
+  }
+
+  .host-page-card {
+    max-height: calc(100svh - 36px);
+  }
+
+  .host-page-content {
+    padding-right: 6px;
+    margin-right: -6px;
+  }
+
+  .host-prize-list-scroll {
+    max-height: min(320px, 38svh);
+    padding-right: 6px;
   }
 
   .festival-info-grid {
@@ -1385,5 +1524,14 @@ select {
 
   .festival-primary-btn.small {
     width: 100%;
+  }
+
+  .festival-modal-card {
+    padding: 28px 18px 22px;
+    border-radius: 24px;
+  }
+
+  .festival-modal-actions {
+    align-items: stretch;
   }
 }

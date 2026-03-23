@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"thai-festival-backend/ws"
 
@@ -19,6 +20,33 @@ import (
 type RoomController struct {
 	DB  *sql.DB
 	Hub *ws.Hub
+}
+
+func normalizePlayerName(value string) string {
+	return strings.Join(strings.Fields(value), " ")
+}
+
+func isValidPlayerName(value string) bool {
+	if value == "" {
+		return false
+	}
+
+	for _, r := range value {
+		switch {
+		case r == ' ':
+			continue
+		case r >= 'A' && r <= 'Z':
+			continue
+		case r >= 'a' && r <= 'z':
+			continue
+		case unicode.In(r, unicode.Thai) && (unicode.IsLetter(r) || unicode.IsMark(r)):
+			continue
+		default:
+			return false
+		}
+	}
+
+	return true
 }
 
 func NewRoomController(db *sql.DB, hub *ws.Hub) *RoomController {
@@ -42,6 +70,15 @@ func (rc *RoomController) CreateRoom(c *gin.Context) {
 
 	if err := c.ShouldBindJSON(&req); err != nil || req.HostName == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request"})
+		return
+	}
+
+	req.HostName = normalizePlayerName(req.HostName)
+	if !isValidPlayerName(req.HostName) || len([]rune(req.HostName)) > 20 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid player name",
+			"code":  "invalid_name",
+		})
 		return
 	}
 
@@ -142,6 +179,15 @@ func (rc *RoomController) JoinRoom(c *gin.Context) {
 		return
 	}
 
+	req.Name = normalizePlayerName(req.Name)
+	if !isValidPlayerName(req.Name) || len([]rune(req.Name)) > 20 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "invalid player name",
+			"code":  "invalid_name",
+		})
+		return
+	}
+
 	tx, err := rc.DB.Begin()
 
 	if err != nil {
@@ -168,14 +214,49 @@ func (rc *RoomController) JoinRoom(c *gin.Context) {
 
 	var count int
 
-	tx.QueryRow(`
+	if err := tx.QueryRow(`
 	SELECT COUNT(*)
 	FROM players
 	WHERE room_id=$1 AND connected=true
-	`, roomID).Scan(&count)
+	`, roomID).Scan(&count); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
+		return
+	}
 
 	if count >= maxPlayers {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "room full"})
+		return
+	}
+
+	rows, err := tx.Query(`
+	SELECT name
+	FROM players
+	WHERE room_id=$1
+	`, roomID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
+		return
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var existingName string
+		if err := rows.Scan(&existingName); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
+			return
+		}
+
+		if strings.EqualFold(normalizePlayerName(existingName), req.Name) {
+			c.JSON(http.StatusConflict, gin.H{
+				"error": "duplicate player name",
+				"code":  "duplicate_name",
+			})
+			return
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error"})
 		return
 	}
 
@@ -193,7 +274,10 @@ func (rc *RoomController) JoinRoom(c *gin.Context) {
 		return
 	}
 
-	tx.Commit()
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "commit failed"})
+		return
+	}
 
 	rc.broadcastRoom(req.RoomCode, gin.H{
 		"type": "player_join",
