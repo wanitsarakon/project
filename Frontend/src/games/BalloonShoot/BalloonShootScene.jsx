@@ -405,10 +405,6 @@ JavaScript
     const groundLevel = () => window.innerHeight * 0.85;
     const getStartX   = () => window.innerWidth  / 2;
     const getStartY   = () => window.innerHeight - 80;
-    const frameDurationMs = 1000 / 60;
-    const maxFrameDeltaMs = 50;
-    let lastFrameTime = 0;
-    let rainSpawnCarry = 0;
 
     resize();
 
@@ -452,39 +448,75 @@ JavaScript
       createFloatingText(tx, ty, "MISS!", "#9e9e9e");
     }
 
-    function generateBalloons() {
-      gs.balloons = [];
-      resize();
-      const wallTop  = window.innerHeight * 0.25;
-      const wallLeft = window.innerWidth  * 0.29;
-      let pool = [];
-      pool.push({ color:"RAINBOW", isTrap:false, forcedHP:3 });
-      for (let i=0;i<4;i++) pool.push({ color:"GOLD",  isTrap:false, forcedHP:2 });
-      for (let i=0;i<2;i++) pool.push({ color:"FREEZE",isTrap:false, forcedHP:1 });
-      const traps = Math.floor(Math.random()*3)+4;
-      for (let i=0;i<traps;i++) pool.push({ color:"TRAP",isTrap:true,forcedHP:1 });
-      const base = ["RED","YELLOW","BLUE","GREEN","PURPLE"];
-      while (pool.length < 40) {
-        const hp = Math.random() < 0.15 ? 2 : 1;
-        pool.push({ color:base[Math.floor(Math.random()*base.length)],isTrap:false,forcedHP:hp });
-      }
-      for (let i=pool.length-1;i>0;i--) {
-        const j=Math.floor(Math.random()*(i+1));
-        [pool[i],pool[j]] = [pool[j],pool[i]];
-      }
-      let idx = 0;
-      for (let row=0;row<4;row++) for (let col=0;col<10;col++) {
-        const it = pool[idx++];
-        gs.balloons.push({
-          x: wallLeft + col*gs.actualBalloonWidth  + gs.actualBalloonWidth/2,
-          y: wallTop  + row*gs.actualBalloonHeight + gs.actualBalloonHeight/2,
-          color:it.color, originalColor:it.color,
-          radius:gs.actualBalloonWidth/2, active:true,
-          hp:it.forcedHP, gapSize:0.6, isTrap:it.isTrap,
-          freezeTimer:0, frozenX:0,
-        });
-      }
+function generateBalloons() {
+  gs.balloons = [];
+  resize();
+  const wallTop  = window.innerHeight * 0.25;
+  const wallLeft = window.innerWidth  * 0.29;
+  let pool = [];
+
+  // 1. ลูกโป่งพิเศษ (ห้ามเป็นอมตะ: ตั้ง isImmortal เป็น false เสมอ)
+  pool.push({ color: "RAINBOW", isTrap: false, hp: 3, isImmortal: false }); 
+  for (let i = 0; i < 4; i++) pool.push({ color: "GOLD", isTrap: false, hp: 3, isImmortal: false });
+  for (let i = 0; i < 2; i++) pool.push({ color: "FREEZE", isTrap: false, hp: 1, isImmortal: false });
+  
+  const traps = Math.floor(Math.random() * 3) + 4;
+  for (let i = 0; i < traps; i++) pool.push({ color: "TRAP", isTrap: true, hp: 1, isImmortal: false });
+
+  // 2. ลูกโป่งปกติ (สุ่มให้บางลูกเป็นอมตะที่นี่)
+  const base = ["RED", "YELLOW", "BLUE", "GREEN", "PURPLE"];
+  const totalNormalNeeded = 40 - pool.length;
+  
+  // สุ่มเลือกดัชนีที่จะให้เป็นอมตะ (เช่น 3 ใบจากลูกโป่งปกติ)
+  let immortalCount = 0;
+  const targetImmortal = 3; 
+
+  for (let i = 0; i < totalNormalNeeded; i++) {
+    const color = base[Math.floor(Math.random() * base.length)];
+    const rand = Math.random();
+    const hpVal = rand < 0.6 ? 1 : (rand < 0.9 ? 2 : 3);
+    
+    // สุ่มสถานะอมตะเฉพาะลูกโป่งปกติ และจำกัดจำนวนไม่ให้เกิน targetImmortal
+    let setImmortal = false;
+    if (immortalCount < targetImmortal && Math.random() < 0.15) { 
+      setImmortal = true;
+      immortalCount++;
     }
+
+    pool.push({ color: color, isTrap: false, hp: hpVal, isImmortal: setImmortal });
+  }
+
+  // Shuffle pool เพื่อกระจายตำแหน่ง
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+
+  // 3. สร้าง Object ลงใน gs.balloons
+  let idx = 0;
+  for (let row = 0; row < 4; row++) {
+    for (let col = 0; col < 10; col++) {
+      const it = pool[idx++];
+      gs.balloons.push({
+        x: wallLeft + col * gs.actualBalloonWidth + gs.actualBalloonWidth / 2,
+        y: wallTop + row * gs.actualBalloonHeight + gs.actualBalloonHeight / 2,
+        color: it.color, 
+        originalColor: it.color,
+        radius: gs.actualBalloonWidth / 2, 
+        active: true,
+        hp: it.hp, 
+        maxHp: it.hp,
+        isImmortal: it.isImmortal, // รับค่าที่สุ่มไว้จากด้านบน
+        gapSize: 0.6, 
+        isTrap: it.isTrap,
+        freezeTimer: 0, 
+        frozenX: 0,
+      });
+    }
+  }
+}
+
+
 
     function roundRect(c,x,y,w,h,r) {
       c.beginPath(); c.moveTo(x+r,y); c.lineTo(x+w-r,y);
@@ -510,50 +542,44 @@ JavaScript
       c.fillStyle="#ff4444"; c.textAlign="center";
       c.fillText(text,bx+bw/2,by+pad+18); c.restore();
     }
-
-    // ─── update ───
-    function update(frameScale = 1, deltaSeconds = frameDurationMs / 1000) {
+// ─── update ───
+    function update() {
       if (!gs.gameActive && !gs.isCountingDown) return;
       if (gs.isCountingDown) return;
 
       const isFrozen = gs.balloons.some(b => b.freezeTimer > 0);
-      const lightningChance = 1 - Math.pow(1 - 0.003, frameScale);
-      const handTiltLerp = 1 - Math.pow(1 - 0.05, frameScale);
 
       if (gs.isCharging) {
-        gs.power += (gs.powerDirection === 1 ? 2 : -2) * frameScale;
-        if (gs.power >= 100) { gs.power=100; gs.powerDirection=-1; }
-        if (gs.power <= 0)   { gs.power=0;   gs.powerDirection=1; }
+        gs.power += gs.powerDirection === 1 ? 2 : -2;
+        if (gs.power >= 100) { gs.power = 100; gs.powerDirection = -1; }
+        if (gs.power <= 0) { gs.power = 0; gs.powerDirection = 1; }
       } else if (gs.power > 0) {
-        gs.power = Math.max(0, gs.power - (1.5 * frameScale));
+        gs.power = Math.max(0, gs.power - 1.5);
       }
 
-      if (gs.screenShake > 0) gs.screenShake *= Math.pow(0.9, frameScale);
-      if (gs.lightningFlash > 0) gs.lightningFlash = Math.max(0, gs.lightningFlash - frameScale);
-      if (gs.doubleScoreTimer > 0) gs.doubleScoreTimer = Math.max(0, gs.doubleScoreTimer - deltaSeconds);
+      if (gs.screenShake > 0) gs.screenShake *= 0.9;
+      if (gs.lightningFlash > 0) gs.lightningFlash--;
+      if (gs.doubleScoreTimer > 0) gs.doubleScoreTimer = Math.max(0, gs.doubleScoreTimer - 1 / 60);
 
-      if (gs.timeLeft < 30 && !isFrozen && Math.random() < lightningChance) triggerLightning();
+      if (gs.timeLeft < 30 && !isFrozen && Math.random() < 0.003) triggerLightning();
 
       // hand
-      const curHandSpeed = gs.handSpeed * (1 + (gs.totalScore/2000)*0.1);
-      gs.handX += curHandSpeed * gs.handAutoDir * frameScale;
-      gs.handTilt += (gs.handAutoDir * 0.25 - gs.handTilt) * handTiltLerp;
+      const curHandSpeed = gs.handSpeed * (1 + (gs.totalScore / 2000) * 0.1);
+      gs.handX += curHandSpeed * gs.handAutoDir;
+      gs.handTilt += (gs.handAutoDir * 0.25 - gs.handTilt) * 0.05;
       if (Math.abs(gs.handX) > window.innerWidth * 0.28) gs.handAutoDir *= -1;
 
       // darts
       gs.darts.forEach(dart => {
         if (!dart.active) return;
-        dart.vx *= Math.pow(0.995, frameScale);
-        dart.vx += gs.wind * 0.04 * frameScale;
-        dart.vy += 0.15 * frameScale;
-        dart.x += dart.vx * frameScale;
-        dart.y += dart.vy * frameScale;
+        dart.vx *= 0.995; dart.vx += gs.wind * 0.04; dart.vy += 0.15;
+        dart.x += dart.vx; dart.y += dart.vy;
 
         // hit auntie
         if (auntie.isActive && gs.auntieStunTimer <= 0) {
           const hp = auntie.width * 0.2;
-          if (dart.x > auntie.x+hp && dart.x < auntie.x+auntie.width-hp &&
-              dart.y > auntie.y    && dart.y < auntie.y+auntie.height) {
+          if (dart.x > auntie.x + hp && dart.x < auntie.x + auntie.width - hp &&
+            dart.y > auntie.y && dart.y < auntie.y + auntie.height) {
             dart.active = false; gs.comboCount = 0; gs.auntieStunTimer = 45;
             gs.auntieSpeech = auntie.currentType === 1 ? "หยุดเดี๋ยวนี้นะ!" : "ลูกโป่งยายหายหมด!";
           }
@@ -562,56 +588,77 @@ JavaScript
         // hit balloons
         gs.balloons.forEach((b, idx) => {
           if (!b.active || !dart.active) return;
-          const row = Math.floor(idx/10);
+          const row = Math.floor(idx / 10);
           const bx = b.freezeTimer > 0 ? b.frozenX
-                   : b.x + (row%2===0 ? gs.balloonOffset : -gs.balloonDirection*gs.balloonOffset);
-          const dist = Math.hypot(dart.x-bx, dart.y-b.y);
-          if (dist >= b.radius*1.3) return;
+            : b.x + (row % 2 === 0 ? gs.balloonOffset : -gs.balloonDirection * gs.balloonOffset);
+          const dist = Math.hypot(dart.x - bx, dart.y - b.y);
+          if (dist >= b.radius * 1.3) return;
+          
+if (dist >= b.radius*1.3) return;
 
-          const hitAngle = (Math.atan2(dart.y-b.y, dart.x-bx) + Math.PI*2) % (Math.PI*2);
-          const gapStart = gs.shieldRotation % (Math.PI*2);
-          const gapEnd   = (gapStart + b.gapSize) % (Math.PI*2);
-          const hitGap   = gapStart < gapEnd
+          // --- ส่วนที่แก้ไขสำหรับลูกโป่งอมตะ (ไม่มีกรอบ เรืองแสง) ---
+          if (b.isImmortal) {
+            playSfx(sounds.hitShield); // เล่นเสียงเป้าเหล็ก/โล่
+            dart.active = false;       // ลูกดอกหายไป
+            gs.comboCount = 0;         // คอมโบหลุด
+            // เปลี่ยนข้อความที่นี่
+            createFloatingText(bx, b.y, "ไม่แตกหรอกนะ!", "#d82525", true); 
+            return;
+          }
+          // ------------------------------------------------------------------
+          const hitAngle = (Math.atan2(dart.y - b.y, dart.x - bx) + Math.PI * 2) % (Math.PI * 2);
+          const gapStart = gs.shieldRotation % (Math.PI * 2);
+          const gapEnd = (gapStart + b.gapSize) % (Math.PI * 2);
+          const hitGap = gapStart < gapEnd
             ? (hitAngle > gapStart && hitAngle < gapEnd)
             : (hitAngle > gapStart || hitAngle < gapEnd);
 
+          // ถ้ามี HP มากกว่า 1 และไม่โดนช่องโหว่ (หรือลูกโป่งปกติตั้ง HP ไว้เยอะ)
           if (b.hp > 1 && !hitGap) {
-            playSfx(sounds.hitShield); b.hp--; dart.active=false; gs.screenShake=7; gs.comboCount=0; return;
+            playSfx(sounds.hitShield); 
+            b.hp--;              // ลดเลือดลูกโป่ง
+            dart.active = false; // ลูกดอกหายไป
+            gs.screenShake = 5;
+            createFloatingText(bx, b.y, "ฮึบ!", "#ffd700"); // แสดง Feedback ว่าโดนแต่ไม่แตก
+            return; 
           }
+
+          // กรณีแตก (HP เหลือ 1 หรือปาเข้าช่องโหว่)
           playSfx(b.isTrap ? sounds.explosion : sounds.pop);
-          b.active = false; dart.active = false;
+          b.active = false;
+          dart.active = false;
           createPopParticles(bx, b.y, b.color);
 
           if (b.color === "FREEZE" && !isFrozen) {
-            playSfx(sounds.timeStop); gs.screenShake=10;
+            playSfx(sounds.timeStop); gs.screenShake = 10;
             createFloatingText(bx, b.y, "หยุดเวลา!", "#a0e9ff", true);
             const frozen_bx_offset = gs.balloonOffset;
             gs.balloons.forEach(ob => {
               if (!ob.active) return;
               ob.freezeTimer = 180; ob.color = "FREEZE";
-              const or = Math.floor(gs.balloons.indexOf(ob)/10);
-              ob.frozenX = ob.x + (or%2===0 ? frozen_bx_offset : -gs.balloonDirection*frozen_bx_offset);
+              const or = Math.floor(gs.balloons.indexOf(ob) / 10);
+              ob.frozenX = ob.x + (or % 2 === 0 ? frozen_bx_offset : -gs.balloonDirection * frozen_bx_offset);
             });
             return;
           }
 
           if (b.isTrap) {
-            gs.screenShake=20; gs.comboCount=0;
+            gs.screenShake = 20; gs.comboCount = 0;
             createFloatingText(bx, b.y, "BOOM!", "#000", true);
-            gs.balloons.forEach(o => { if (o.active && Math.hypot(o.x-bx,o.y-b.y)<80) o.active=false; });
+            gs.balloons.forEach(o => { if (o.active && Math.hypot(o.x - bx, o.y - b.y) < 80) o.active = false; });
             return;
           }
 
           gs.comboCount++;
           const baseVal = SCORE_VALUES[b.color] || 10;
-          const mult    = gs.comboCount >= 5 ? gs.comboCount : 1;
+          const mult = gs.comboCount >= 5 ? gs.comboCount : 1;
           const doubled = gs.doubleScoreTimer > 0 ? 2 : 1;
           const finalScore = baseVal * mult * doubled;
           gs.totalScore += finalScore;
-          createFloatingText(bx, b.y, `+${finalScore}`, gs.doubleScoreTimer>0 ? "#FFD700" : "#fff");
+          createFloatingText(bx, b.y, `+${finalScore}`, gs.doubleScoreTimer > 0 ? "#FFD700" : "#fff");
           if (b.color === "RAINBOW") {
             gs.doubleScoreTimer = 10;
-            createFloatingText(bx, b.y-40, "คะแนน x2!", "#FFD700", true);
+            createFloatingText(bx, b.y - 40, "คะแนน x2!", "#FFD700", true);
           }
         });
 
@@ -621,82 +668,67 @@ JavaScript
       });
 
       if (!isFrozen) {
-        gs.difficultyMultiplier = Math.min(2.2, 1 + (gs.totalScore/1500)*0.05 + gs.comboCount*0.015);
-        gs.flagWave += 0.1 * frameScale;
-        gs.shieldRotation += (gs.timeLeft<=30 ? 0.08 : 0.04) * gs.difficultyMultiplier * frameScale;
-        gs.balloonOffset   += (gs.timeLeft<=30 ? 12 : 8.0) * gs.difficultyMultiplier * gs.balloonDirection * frameScale;
+        gs.difficultyMultiplier = Math.min(2.2, 1 + (gs.totalScore / 1500) * 0.05 + gs.comboCount * 0.015);
+        gs.flagWave += 0.1;
+        gs.shieldRotation += (gs.timeLeft <= 30 ? 0.08 : 0.04) * gs.difficultyMultiplier;
+        gs.balloonOffset += (gs.timeLeft <= 30 ? 20 : 10.0) * gs.difficultyMultiplier * gs.balloonDirection;
         if (Math.abs(gs.balloonOffset) > 85) gs.balloonDirection *= -1;
 
         if (gs.timeLeft <= 30) {
-          try { if (sounds.rain.paused) sounds.rain.play(); } catch(_) {}
-          rainSpawnCarry += 120 * deltaSeconds;
-          const rainSpawnCount = Math.floor(rainSpawnCarry);
-          rainSpawnCarry -= rainSpawnCount;
-          for (let i = 0; i < rainSpawnCount; i += 1) {
+          try { if (sounds.rain.paused) sounds.rain.play(); } catch (_) { }
+          for (let i = 0; i < 2; i++) {
             gs.rainParticles.push({
-              x:Math.random()*canvas.width, y:-20,
-              speed:15+Math.random()*10, len:15+Math.random()*20,
-              opacity:0.1+Math.random()*0.3
+              x: Math.random() * canvas.width, y: -20,
+              speed: 15 + Math.random() * 10, len: 15 + Math.random() * 20,
+              opacity: 0.1 + Math.random() * 0.3
             });
           }
         } else {
-          try { if (!sounds.rain.paused) { sounds.rain.pause(); sounds.rain.currentTime=0; } } catch(_) {}
+          try { if (!sounds.rain.paused) { sounds.rain.pause(); sounds.rain.currentTime = 0; } } catch (_) { }
         }
 
         // auntie appear
-        if (!auntie.isActive && (gs.timeLeft===50 || gs.timeLeft===25)) {
+        if (!auntie.isActive && (gs.timeLeft === 50 || gs.timeLeft === 25)) {
           auntie.isActive = true; auntie.appearanceCount++;
-          auntie.currentType = gs.timeLeft===25 ? 2 : (auntie.appearanceCount%2===1 ? 1 : 2);
-          auntie.direction = Math.random()>.5 ? 1 : -1;
-          auntie.x = auntie.direction===1 ? -400 : window.innerWidth+400;
+          auntie.currentType = gs.timeLeft === 25 ? 2 : (auntie.appearanceCount % 2 === 1 ? 1 : 2);
+          auntie.direction = Math.random() > .5 ? 1 : -1;
+          auntie.x = auntie.direction === 1 ? -400 : window.innerWidth + 400;
           auntie.walkCycle = 0; auntie.speed = 2.5;
         }
 
         if (auntie.isActive) {
           if (gs.auntieStunTimer <= 0) {
-            auntie.x += auntie.speed * gs.difficultyMultiplier * auntie.direction * frameScale;
-            auntie.walkCycle += (auntie.currentType===1 ? 0.15 : 0) * frameScale;
+            auntie.x += auntie.speed * gs.difficultyMultiplier * auntie.direction;
+            auntie.walkCycle += auntie.currentType === 1 ? 0.15 : 0;
           }
-          auntie.y = groundLevel() - auntie.baseHeight*0.8 - (auntie.currentType===2 ? 70 : 0);
-          auntie.height = auntie.baseHeight * (auntie.currentType===1 ? 1.13 : 1.3);
-          const ref = auntie.currentType===1 ? imgs.auntie : imgs.auntieBalloon;
-          auntie.width = auntie.height * ((ref.naturalWidth||1)/(ref.naturalHeight||1));
-          if ((auntie.direction===1 && auntie.x>window.innerWidth+auntie.width) ||
-              (auntie.direction===-1 && auntie.x<-auntie.width)) {
+          auntie.y = groundLevel() - auntie.baseHeight * 0.8 - (auntie.currentType === 2 ? 70 : 0);
+          auntie.height = auntie.baseHeight * (auntie.currentType === 1 ? 1.13 : 1.3);
+          const ref = auntie.currentType === 1 ? imgs.auntie : imgs.auntieBalloon;
+          auntie.width = auntie.height * ((ref.naturalWidth || 1) / (ref.naturalHeight || 1));
+          if ((auntie.direction === 1 && auntie.x > window.innerWidth + auntie.width) ||
+            (auntie.direction === -1 && auntie.x < -auntie.width)) {
             auntie.isActive = false;
           }
         }
       }
 
-      if (gs.lightningStrike) { gs.lightningStrike.timer -= frameScale; if (gs.lightningStrike.timer<=0) gs.lightningStrike=null; }
-      if (gs.auntieStunTimer > 0) gs.auntieStunTimer = Math.max(0, gs.auntieStunTimer - frameScale);
-      if (gs.stormWarningTimer > 0) gs.stormWarningTimer = Math.max(0, gs.stormWarningTimer - frameScale);
-      if (gs.timeLeft===33 && gs.stormWarningTimer<=0) gs.stormWarningTimer=180;
+      if (gs.lightningStrike) { gs.lightningStrike.timer--; if (gs.lightningStrike.timer <= 0) gs.lightningStrike = null; }
+      if (gs.auntieStunTimer > 0) gs.auntieStunTimer--;
+      if (gs.stormWarningTimer > 0) gs.stormWarningTimer--;
+      if (gs.timeLeft === 33 && gs.stormWarningTimer <= 0) gs.stormWarningTimer = 180;
 
-      gs.popParticles.forEach((p,i) => {
-        p.vx *= Math.pow(p.friction, frameScale);
-        p.vy *= Math.pow(p.friction, frameScale);
-        p.x += p.vx * frameScale;
-        p.y += p.vy * frameScale;
-        p.vy += p.gravity * frameScale;
-        p.life -= 0.02 * frameScale;
-        if (p.life<=0) gs.popParticles.splice(i,1);
+      gs.popParticles.forEach((p, i) => {
+        p.vx *= p.friction; p.vy *= p.friction; p.x += p.vx; p.y += p.vy; p.vy += p.gravity; p.life -= 0.02;
+        if (p.life <= 0) gs.popParticles.splice(i, 1);
       });
-      gs.rainParticles.forEach((r,i) => {
-        r.y += r.speed * frameScale;
-        r.x += gs.wind * 2 * frameScale;
-        if (r.y>canvas.height) gs.rainParticles.splice(i,1);
+      gs.rainParticles.forEach((r, i) => {
+        r.y += r.speed; r.x += gs.wind * 2; if (r.y > canvas.height) gs.rainParticles.splice(i, 1);
       });
-      gs.comboTexts.forEach((t,i) => {
-        t.y -= 1.5 * frameScale;
-        t.opacity -= 0.02 * frameScale;
-        if (t.opacity<=0) gs.comboTexts.splice(i,1);
+      gs.comboTexts.forEach((t, i) => {
+        t.y -= 1.5; t.opacity -= 0.02; if (t.opacity <= 0) gs.comboTexts.splice(i, 1);
       });
       gs.balloons.forEach(b => {
-        if (b.freezeTimer>0) {
-          b.freezeTimer -= frameScale;
-          if (b.freezeTimer<=0) b.color=b.originalColor;
-        }
+        if (b.freezeTimer > 0) { b.freezeTimer--; if (b.freezeTimer <= 0) b.color = b.originalColor; }
       });
     }
 
@@ -713,23 +745,33 @@ JavaScript
         ctx.filter="none";
       }
 
-      // balloons
+// balloons
       gs.balloons.forEach((b,idx) => {
         if (!b.active) return;
         const row  = Math.floor(idx/10);
         const curX = b.freezeTimer>0 ? b.frozenX : b.x+(row%2===0 ? gs.balloonOffset : -gs.balloonOffset);
         ctx.save();
         if (imgs[b.color]?.complete) {
-          if (b.hp > 1) {
+          
+          // --- ส่วนที่แก้ไข: ใส่เอฟเฟกต์เรืองแสงสีขาวแทนกรอบ ---
+          if (b.isImmortal) {
+            ctx.shadowBlur = 30;         // ความฟุ้งของแสง (ปรับเพิ่มได้ 30-50)
+            ctx.shadowColor = "#ffffff";  // สีขาวเรืองแสง
+          } 
+          // ----------------------------------------------------
+
+          // เงื่อนไขเดิมสำหรับลูกโป่งมีเกราะ (ทอง/รุ้ง)
+          else if ((b.color === "GOLD" || b.color === "RAINBOW") && b.hp > 1) {
             ctx.beginPath();
             ctx.arc(curX, b.y, b.radius*1.35, gs.shieldRotation+b.gapSize, gs.shieldRotation, false);
             ctx.strokeStyle = b.hp===3 ? "white" : "Cyan"; ctx.lineWidth=8; ctx.lineCap="round"; ctx.stroke();
           }
+
+          // วาดตัวลูกโป่ง (ถ้าเป็นอมตะ จะได้รับผล shadowBlur จาก ctx.save() ก่อนหน้า)
           ctx.drawImage(imgs[b.color], curX-gs.actualBalloonWidth/2, b.y-gs.actualBalloonHeight/2, gs.actualBalloonWidth, gs.actualBalloonHeight);
         }
         ctx.restore();
       });
-
       // combo text
       if (gs.gameActive && gs.comboCount >= 5) {
         ctx.save(); ctx.textAlign="center";
@@ -867,18 +909,7 @@ JavaScript
 
     // ─── game loop ───
     let rafId;
-    function loop(timestamp = performance.now()) {
-      const deltaMs = lastFrameTime
-        ? Math.min(Math.max(timestamp - lastFrameTime, 0), maxFrameDeltaMs)
-        : frameDurationMs;
-      const frameScale = deltaMs / frameDurationMs;
-      const deltaSeconds = deltaMs / 1000;
-
-      lastFrameTime = timestamp;
-      update(frameScale, deltaSeconds);
-      draw();
-      rafId = requestAnimationFrame(loop);
-    }
+    function loop() { update(); draw(); rafId = requestAnimationFrame(loop); }
     this._stopLoop = () => cancelAnimationFrame(rafId);
 
     // ─── countdown ───
