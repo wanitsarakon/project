@@ -8,6 +8,7 @@ const BUCKET_IMAGE = new URL("./assetsFish/ถังไม้.png", import.meta.
 const POND_IMAGE = new URL("./assetsFish/อ่างปลา.png", import.meta.url).href;
 const START_IMAGE = new URL("./assetsFish/fish_start.png", import.meta.url).href;
 const RESULT_IMAGE = new URL("./assetsFish/fish_score.png", import.meta.url).href;
+const SPOON_BROKEN_IMAGE = new URL("./assetsFish/ช้อนขาด.png", import.meta.url).href;
 const FISH_IMAGES = {
   red: new URL("./assetsFish/ปลาเเดง.png", import.meta.url).href,
   silver: new URL("./assetsFish/ปลาเงิน.png", import.meta.url).href,
@@ -54,6 +55,10 @@ export default class FishScoopingScene extends Phaser.Scene {
     this.silverCaught = 0;
     this.goldCaught = 0;
     this.ended = false;
+   this.missDamage = 0;      // สะสมความเสียหายของช้อนปัจจุบัน (เต็ม 5 คือขาด)
+    this.spoonsLeft = 5;      // จำนวนช้อนทั้งหมด (5 ชีวิต)
+    this.isSpoonBroken = false;
+    this.spoonIcons = [];     // Array สำหรับเก็บ GameObject ของไอคอนช้อน
   }
 
   preload() {
@@ -62,6 +67,7 @@ export default class FishScoopingScene extends Phaser.Scene {
     this.load.image("bucket", BUCKET_IMAGE);
     this.load.image("pond", POND_IMAGE);
     this.load.image("fish-start", START_IMAGE);
+    this.load.image("spoon-broken", SPOON_BROKEN_IMAGE);
     this.load.image("fish-result", RESULT_IMAGE);
     this.load.image("fish-red", FISH_IMAGES.red);
     this.load.image("fish-silver", FISH_IMAGES.silver);
@@ -115,85 +121,89 @@ this.waterZone = {
 // FishScoopingScene.jsx -> createHud()
 createHud() {
     const createPanel = (label, valueColor) => {
-      // สร้างแผ่นป้ายไม้
-      const bg = this.add.image(0, 0, "fish-hud-sign")
-        .setScrollFactor(0)
-        .setDepth(10);
+        const bg = this.add.image(0, 0, "fish-hud-sign").setScrollFactor(0).setDepth(10);
+        const valueText = this.add.text(0, 0, `${label}: 0`, {
+            fontFamily: "Kanit",
+            fontSize: "28px",
+            fontWeight: "bold",
+            color: "#ffffff",
+            stroke: "#2b1703",
+            strokeThickness: 5,
+            shadow: { offsetX: 0, offsetY: 3, color: "#000", blur: 4, fill: true }
+        }).setOrigin(0.5).setDepth(11);
 
-      // สร้างข้อความหลักบรรทัดเดียว (เช่น คะแนน: 0)
-      const valueText = this.add.text(0, 0, `${label}: 0`, {
-        fontFamily: "Kanit",
-        fontSize: "28px",
-        fontWeight: "bold",
-        color: "#ffffff",
-        stroke: "#2b1703",
-        strokeThickness: 5,
-        shadow: { offsetX: 0, offsetY: 3, color: "#000", blur: 4, fill: true }
-      }).setOrigin(0.5).setDepth(11);
+        const grad = valueText.context.createLinearGradient(0, 0, 0, 30);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(1, valueColor);
+        valueText.setFill(grad);
 
-      // ใส่ Gradient ให้ตัวอักษรดูมีมิติ
-      const grad = valueText.context.createLinearGradient(0, 0, 0, 30);
-      grad.addColorStop(0, '#ffffff');
-      grad.addColorStop(1, valueColor);
-      valueText.setFill(grad);
-
-      // คืนค่าแค่ bg และ valueText (ไม่มี labelText แล้ว)
-      return { bg, valueText, label };
+        return { bg, valueText, label };
     };
 
     this.hud.score = createPanel("คะแนน", "#fff7cc");
     this.hud.timer = createPanel("เวลา", "#ffd86a");
 
-    // FishScoopingScene.jsx -> createHud()
-this.hud.note = this.add.text(0, 0, "ลากช้อนให้ครอบปลาแล้วคลิกตัก จากนั้นรีบปล่อยลงถังให้ทัน", {
-    fontFamily: "Kanit",
-    fontSize: "40px",
-    fontWeight: "bold",
-    color: "#ffffff",
-    stroke: "#2b1703",
-    strokeThickness: 5, // ขอบหนาเพื่อให้ดูคมชัด
-    shadow: {
-        offsetX: 0,
-        offsetY: 3,
-        color: "#000000",
-        blur: 4,
-        fill: true,
-        stroke: true
+    // --- ส่วนที่เพิ่ม: สร้างไอคอนช้อน 5 อันเรียงกันที่มุมขวาล่าง ---
+    const { width, height } = this.scale;
+    const uiScale = this.layout?.uiScale || 1;
+    
+    this.spoonIcons = []; // เก็บ GameObject ของไอคอนช้อน
+    const startX = width - (60 * uiScale);  // ตำแหน่ง X เริ่มจากขวา
+    const startY = height - (60 * uiScale); // ตำแหน่ง Y เริ่มจากล่าง
+    const gap = 45 * uiScale;               // ระยะห่างระหว่างช้อน
+
+    for (let i = 0; i < this.spoonsLeft; i++) {
+        const icon = this.add.image(startX - (i * gap), startY, "spoon")
+            .setOrigin(0.5)
+            .setScale(uiScale * 0.1) // ปรับขนาดให้เป็นไอคอนเล็กๆ
+            .setAngle(-15)           // เอียงช้อนให้ดูสวยงาม
+            .setDepth(20)            // ให้อยู่เหนือ UI อื่นๆ
+            .setAlpha(0.9);
+
+        this.spoonIcons.push(icon);
     }
-}).setOrigin(0.5, 1).setDepth(10);
+    // -------------------------------------------------------
 
-// เพิ่มการไล่เฉดสีทอง (Gradient) เหมือนป้ายคะแนน
-const noteGradient = this.hud.note.context.createLinearGradient(0, 0, 0, 24);
-noteGradient.addColorStop(0, '#ffffff'); // ขาวบน
-noteGradient.addColorStop(1, '#ffddaa'); // ทองเหลืองล่าง
-this.hud.note.setFill(noteGradient);
+    this.hud.note = this.add.text(0, 0, "ลากช้อนให้ครอบปลาแล้วคลิกตัก จากนั้นรีบปล่อยลงถังให้ทัน", {
+        fontFamily: "Kanit",
+        fontSize: "40px",
+        fontWeight: "bold",
+        color: "#ffffff",
+        stroke: "#2b1703",
+        strokeThickness: 5,
+        shadow: { offsetX: 0, offsetY: 3, color: "#000000", blur: 4, fill: true, stroke: true }
+    }).setOrigin(0.5, 1).setDepth(10);
 
-    // ส่วนกติกา (Rules) นำกลับมาวางไว้ที่เดิม
+    const noteGradient = this.hud.note.context.createLinearGradient(0, 0, 0, 24);
+    noteGradient.addColorStop(0, '#ffffff');
+    noteGradient.addColorStop(1, '#ffddaa');
+    this.hud.note.setFill(noteGradient);
+
     this.hud.ruleBg = this.add.graphics().setDepth(10).setScrollFactor(0);
     this.hud.ruleTitle = this.add.text(0, 0, "กติกาการเล่น", {
-      fontFamily: "Kanit", fontSize: "20px", fontStyle: "bold", color: "#ffe7ab",
-      stroke: "#2b1703", strokeThickness: 4,
+        fontFamily: "Kanit", fontSize: "20px", fontStyle: "bold", color: "#ffe7ab",
+        stroke: "#2b1703", strokeThickness: 4,
     }).setOrigin(0.5, 0).setDepth(11);
 
     this.hud.ruleText = this.add.text(0, 0, [
-      "• ลากช้อนให้ครอบปลาแล้วคลิกตัก",
-      "• รีบปล่อยปลาลงถังภายใน 1 วินาที",
-      "• ปลาแดง +1 | ปลาเงิน +2 | ปลาทอง +3",
+        "• ลากช้อนให้ครอบปลาแล้วคลิกตัก",
+        "• รีบปล่อยปลาลงถังภายใน 1 วินาที",
+        "• ปลาแดง 1 ครั้งขาด | เงิน 2 ครั้ง | ทอง 5 ครั้ง",
     ].join("\n"), {
-      fontFamily: "Kanit", fontSize: "16px", color: "#fff8e7",
-      lineSpacing: 6, wordWrap: { width: 300 },
+        fontFamily: "Kanit", fontSize: "16px", color: "#fff8e7",
+        lineSpacing: 6, wordWrap: { width: 300 },
     }).setOrigin(0, 0).setDepth(11);
 
-     // FishScoopingScene.jsx -> createHud()
-this.hud.rulePanel = this.add.container(0, 0, [
-    this.hud.ruleBg,
-    this.hud.ruleTitle,
-    this.hud.ruleText,
-]).setScrollFactor(0).setDepth(15); // ตั้งให้สูงกว่าอ่างปลา (Depth 15)
+    this.hud.rulePanel = this.add.container(0, 0, [
+        this.hud.ruleBg,
+        this.hud.ruleTitle,
+        this.hud.ruleText,
+    ]).setScrollFactor(0).setDepth(15);
 
     this.updateHud();
 }
 
+//เพิ่มให้เเสดงจำนวนช้อนปลา
   createOverlayButton(label, onClick) {
     const button = this.add.container(0, 0);
     const width = 246;
@@ -264,17 +274,7 @@ this.hud.rulePanel = this.add.container(0, 0, [
       align: "center",
       lineSpacing: 6,
     }).setOrigin(0.5);
-    const btn = this.add.text(0, 0, "กลับแผนที่", {
-      fontFamily: "Kanit",
-      fontSize: "26px",
-      color: "#fff8dd",
-      backgroundColor: "#914013",
-      padding: { left: 24, right: 24, top: 10, bottom: 10 },
-      stroke: "#522000",
-      strokeThickness: 4,
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-    btn.on("pointerdown", () => {
+const btn = this.createOverlayButton("กลับแผนที่", () => {
       this.onGameEnd?.({
         score: this.score,
         roundId: this.roundId,
@@ -331,7 +331,19 @@ this.hud.rulePanel = this.add.container(0, 0, [
         child.setScale(uiScale * 0.11); // ปรับตามขนาดหน้าจอ
     });
 }
-    // ----------------------------------------------
+    if (this.spoonIcons && this.spoonIcons.length > 0) {
+        const startX = width - (60 * uiScale);  // ระยะห่างจากขอบขวา
+        const startY = height - (60 * uiScale); // ระยะห่างจากขอบล่าง
+        const gap = 45 * uiScale;               // ระยะห่างระหว่างไอคอน
+
+        this.spoonIcons.forEach((icon, i) => {
+            if (icon && icon.active) {
+                // คำนวณตำแหน่งใหม่ให้เรียงจากขวาไปซ้ายเหมือนตอนสร้าง
+                icon.setPosition(startX - (i * gap), startY);
+                icon.setScale(uiScale * 0.1); // ปรับ Scale ตาม uiScale ของหน้าจอใหม่
+            }
+        });
+    }
 
     if (this.spoon) {
       const spoonScale = Phaser.Math.Clamp(Math.min(width / 800, height / 600) * 0.18, 0.15, 0.25);
@@ -350,6 +362,7 @@ this.hud.rulePanel = this.add.container(0, 0, [
         .setFontSize(`${Math.round(Phaser.Math.Clamp(shortSide * 0.16, 96, 150))}px`);
     }
 }
+
 layoutHud(width, uiScale) {
     const height = this.scale.height;
     const panelWidth = Math.round(222 * uiScale);
@@ -449,7 +462,7 @@ layoutStartOverlay(width, height, panelScale) {
 
     // ปรับตำแหน่งปุ่มให้อยู่กึ่งกลางค่อนลงมาข้างล่างของแผ่นป้าย
     btn
-      .setPosition(width / 2, height / 2 + (panelHeight * 0.325))
+      .setPosition(width / 2, height / 2.7 + (panelHeight * 0.325))
       .setScale(panelScale);
 }
 
@@ -467,9 +480,9 @@ layoutStartOverlay(width, height, panelScale) {
     this.resultMetaText
       ?.setPosition(width / 2, height / 2 + (panelHeight * 0.205))
       .setFontSize(`${Math.round(20 * panelScale)}px`);
-    btn
+   btn
       ?.setPosition(width / 2, height / 2 + (panelHeight * 0.36))
-      .setFontSize(`${Math.round(26 * panelScale)}px`);
+      .setScale(panelScale);
   }
 
   // FishScoopingScene.jsx
@@ -621,8 +634,10 @@ tryCatchFish() {
 
     this.catchFish(nearestFish);
 }
-  catchFish(fish) {
-    if (this.phase !== "playing") return;
+
+//เเก้กำหนดการขาดของช้อนตามขนาดตัวปลา เเละหักไอคอนช้อน
+catchFish(fish) {
+    if (this.phase !== "playing" || this.isSpoonBroken) return;
     if (this.spoon.holdingFish || fish.isCaught) return;
 
     this.spoon.catchFish(fish);
@@ -631,14 +646,51 @@ tryCatchFish() {
 
     this.escapeTimer?.remove(false);
     this.escapeTimer = this.time.delayedCall(HOLD_LIMIT_MS, () => {
-      if (this.spoon.holdingFish !== fish || this.phase !== "playing") return;
-      this.spoon.releaseFish();
-      fish.releaseBackToWater(this.waterZone);
-      this.cameras.main.shake(120, 0.0022);
-      this.showToast("ช้าเกินไป ปลาเลยดิ้นหลุดแล้ว!", "#ffd2a0");
-    });
-  }
+        if (this.spoon.holdingFish !== fish || this.phase !== "playing") return;
+        
+        const fishType = fish.type;
+        this.spoon.releaseFish();
+        fish.releaseBackToWater(this.waterZone);
+        this.cameras.main.shake(120, 0.0022);
 
+        let damage = (fishType === "red") ? 5 : (fishType === "silver") ? 2.5 : 1;
+        this.missDamage += damage;
+
+        if (this.missDamage >= 5) {
+            this.isSpoonBroken = true;
+            this.spoonsLeft -= 1;
+            this.spoon.setTexture("spoon-broken");
+
+            // --- ส่วนการจัดการไอคอนขวาล่าง ---
+            const lastIcon = this.spoonIcons.pop(); // ดึงไอคอนอันสุดท้ายออกมา
+            if (lastIcon) {
+                this.tweens.add({
+                    targets: lastIcon,
+                    alpha: 0,
+                    scale: 0,
+                    duration: 400,
+                    onComplete: () => lastIcon.destroy()
+                });
+            }
+
+            if (this.spoonsLeft > 0) {
+                this.showToast(`ช้อนขาด! เปลี่ยนอันใหม่ (เหลือ ${this.spoonsLeft})`, "#ff7a7a");
+                
+                // หน่วงเวลา 0.8 วินาทีแล้วเริ่มช้อนใหม่ทันที
+                this.time.delayedCall(800, () => {
+                    this.spoon.setTexture("spoon");
+                    this.missDamage = 0;
+                    this.isSpoonBroken = false;
+                });
+            } else {
+                this.showToast("ช้อนหมดแล้ว!", "#ff0000");
+                this.time.delayedCall(1000, () => this.endGame());
+            }
+        } else {
+            this.showToast("ระวังช้อนขาด!", "#ffd2a0");
+        }
+    });
+}
  // FishScoopingScene.jsx
 update(_, delta) {
     const pointer = this.input.activePointer;

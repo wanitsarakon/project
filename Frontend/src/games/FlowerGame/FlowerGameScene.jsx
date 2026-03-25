@@ -97,7 +97,45 @@ export default class FlowerGameScene extends Phaser.Scene {
       #game-container{position:absolute;inset:0;overflow:hidden;font-family:Kanit,Tahoma,sans-serif;background:url('${ASSET_BASE}/image/bg-temple.png') no-repeat center/100% 100%}
       .ui-header{position:absolute;top:1.2vh;left:0;width:100%;display:flex;justify-content:space-between;align-items:flex-start;padding:0 1.6vw;z-index:100;pointer-events:none}
       .sign-board{width:min(18vw,250px);min-width:170px;aspect-ratio:606/186;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;padding:0 1.4vw 0 1.2vw;background:url('${SIGN_BOARD}') no-repeat center/100% 100%;filter:drop-shadow(0 5px 12px rgba(0,0,0,.4))}
-      .sign-board .label{font-size:clamp(18px,1.7vw,24px);font-weight:800;color:#ffd55b;text-shadow:1px 1px 0 #6d3300}.sign-board .value{justify-self:end;font-size:clamp(30px,3vw,50px);font-weight:900;line-height:1;color:#fff0a8;text-shadow:0 2px 0 #7a3f00}
+     .sign-board {
+        width: min(22vw, 280px);
+        min-width: 140px;
+        aspect-ratio: 606/186;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        
+        /* แก้ไขตรงนี้: 
+           ค่าที่ 2 (3.5vw) คือระยะห่างจากขอบขวา (ดันตัวเลขมาซ้าย)
+           ค่าที่ 4 (2.5vw) คือระยะห่างจากขอบซ้าย (ดันข้อความมาขวาเล็กน้อยเพื่อให้สมดุล) 
+        */
+        padding: 0 6vw 0 3.5vw; 
+        
+        background: url('${SIGN_BOARD}') no-repeat center/100% 100%;
+        filter: drop-shadow(0 5px 12px rgba(0,0,0,.4));
+      }
+
+      .sign-board .label {
+        /* ปรับขนาดตัวอักษรให้พอดีกับป้าย */
+        font-size: clamp(16px, 1.8vw, 26px);
+        font-weight: 800;
+        color: #ffd55b;
+        text-shadow: 1px 1px 0 #6d3300;
+        
+        /* ถ้าต้องการให้ข้อความ "เวลา/คะแนน" ขยับมาทางขวาเพื่อเข้าใกล้ตัวเลขมากขึ้น 
+           ให้เอาเครื่องหมายคอมเมนต์ข้างล่างนี้ออกครับ 
+        */
+        /* margin-left: 10px; */
+      }
+
+      .sign-board .value {
+        justify-self: end;
+        font-size: clamp(35px, 4vw, 25px);
+        font-weight: 900;
+        line-height: 1;
+        color: #fff0a8;
+        text-shadow: 0 2px 0 #7a3f00;
+      }
       .item-inventory{position:absolute;left:50%;bottom:2vh;transform:translateX(-50%);display:flex;gap:18px;align-items:center;padding:7px 22px 9px;background:rgba(65,32,20,.82);border:2px solid #d6aa2c;border-radius:999px;z-index:101;pointer-events:none}.item-slot{min-width:76px;text-align:center;color:#fff}.item-label{display:block;font-size:12px;color:#f4cf54}.item-count{display:block;font-size:24px;font-weight:900;line-height:1.1}
       .customer-area{position:absolute;left:0;bottom:0;width:100%;height:100vh;pointer-events:none;z-index:10}.customer-container{position:absolute;width:45vh;height:80vh;bottom:0;display:flex;align-items:flex-end;pointer-events:auto;cursor:pointer;transition:left 1.5s ease-out,right 1.5s ease-out,opacity 1s,transform .3s,filter .3s}.from-left{left:-50vh}.from-right{right:-50vh}.customer-container.selected{filter:drop-shadow(0 0 20px rgba(255,215,0,.8));transform:scale(1.05)}.customer-container.fast-leave{transition:left .5s ease-in,right .5s ease-in,opacity .4s}.customer-container.patience-warning{animation:blink-red .5s infinite alternate}
       .customer-sprite{width:100%;height:100%;background:no-repeat center/contain}.npc-5-special .customer-sprite{transform:scale(.9);transform-origin:bottom center}
@@ -111,7 +149,7 @@ export default class FlowerGameScene extends Phaser.Scene {
       .table-foreground{position:absolute;left:0;bottom:0;width:100%;height:100%;background:url('${ASSET_BASE}/image/table-front.png') no-repeat bottom center/100% auto;z-index:30;pointer-events:none}.item-actions{position:absolute;inset:0;z-index:210;pointer-events:none}.btn-use-item{position:absolute;z-index:210;min-width:102px;padding:12px 25px;border:2px solid rgba(255,255,255,.8);border-radius:50px;color:#fff;font-size:18px;font-weight:800;text-shadow:1px 1px 2px rgba(0,0,0,.5);box-shadow:0 6px 0 rgba(0,0,0,.2),0 10px 20px rgba(0,0,0,.3);cursor:pointer;pointer-events:auto;transition:all .2s cubic-bezier(.175,.885,.32,1.275)}
       .btn-use-item:hover{transform:translateY(-3px) scale(1.05);box-shadow:0 9px 0 rgba(0,0,0,.15),0 15px 25px rgba(0,0,0,.4);filter:brightness(1.1)}.btn-use-item:disabled{opacity:.45;cursor:default;transform:none;filter:none}.btn-use-item::after{content:attr(data-tooltip);position:absolute;bottom:130%;left:50%;transform:translateX(-50%) translateY(10px);padding:8px 15px;background:#632b00;color:#ffd700;border:2px solid #ffd700;border-radius:12px;font-size:14px;white-space:nowrap;box-shadow:0 5px 15px rgba(0,0,0,.4);opacity:0;visibility:hidden;transition:all .2s ease-out;pointer-events:none}.btn-use-item::before{content:"";position:absolute;bottom:115%;left:50%;transform:translateX(-50%) translateY(10px);border-width:8px 8px 0;border-style:solid;border-color:#ffd700 transparent transparent;opacity:0;visibility:hidden;transition:all .2s ease-out;pointer-events:none}.btn-use-item:hover::after,.btn-use-item:hover::before{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
       .water-bg{left:14vw;bottom:30vh;background:linear-gradient(135deg,#00c6ff 0%,#0072ff 100%)}.powder-bg{right:13vw;bottom:31vh;background:linear-gradient(135deg,#ff9a9e 0%,#f6416c 100%)}.controls-container{position:absolute;bottom:20vh;left:0;width:100%;display:flex;justify-content:center;gap:2vw;padding-left:2vw;z-index:200}.btn-flower{width:15vh;height:20vh;border:none;background:transparent no-repeat center/contain;cursor:pointer;transition:transform .12s ease,filter .12s ease}.btn-flower:hover{transform:translateY(-2px) scale(1.05);filter:drop-shadow(0 3px 6px rgba(0,0,0,.25))}.btn-flower:active{transform:scale(.9)}
-      .overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.62);z-index:1000}.overlay.show{display:flex}.level-board{position:relative;width:min(78vw,820px);aspect-ratio:1280/960;background:url('${ASSET_BASE}/image/frame.png') no-repeat center/contain;filter:drop-shadow(0 14px 28px rgba(0,0,0,.42))}.start-copy{position:absolute;top:51%;left:50%;width:46%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;color:#fff6e7;text-shadow:0 2px 8px rgba(0,0,0,.45)}.start-copy p{margin:0;font-size:clamp(14px,1.05vw,17px);line-height:1.55;max-width:100%}.start-actions{position:absolute;left:50%;bottom:17%;display:flex;gap:16px;transform:translateX(-50%)}
+      .overlay{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.62);z-index:1000}.overlay.show{display:flex}.level-board{position:relative;width:min(78vw,820px);aspect-ratio:1280/960;background:url('${ASSET_BASE}/image/frame.png') no-repeat center/contain;filter:drop-shadow(0 14px 28px rgba(0,0,0,.42))}.start-copy{position:absolute;top:51%;left:50%;width:46%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;color:#fff6e7;text-shadow:0 2px 8px rgba(0,0,0,.45)}.start-copy p{margin:0;font-size:clamp(14px,1.05vw,17px);line-height:1.55;max-width:100%}.start-actions{position:absolute;left:50%;bottom:35%;display:flex;gap:16px;transform:translateX(-50%)}
       #start-btn,#finish-btn,#close-tutorial,#tutorial-btn{border:none;border-radius:999px;cursor:pointer;font-family:inherit;font-weight:800}#start-btn,#finish-btn{padding:15px 40px;font-size:clamp(20px,2vw,30px);color:#fff;background:linear-gradient(180deg,#ffcc00 0%,#ff8800 50%,#ff4400 100%);box-shadow:0 8px 0 #992200,0 15px 20px rgba(0,0,0,.5);text-shadow:2px 2px 4px rgba(0,0,0,.5)}#start-btn:hover,#finish-btn:hover{transform:translateY(-3px) scale(1.05)}#tutorial-btn{padding:13px 26px;font-size:clamp(16px,1.5vw,20px);color:#fff4dc;background:rgba(82,29,5,.88);box-shadow:0 10px 18px rgba(0,0,0,.28)}#countdown-text{color:#f1c40f;font-size:clamp(110px,18vw,180px);font-weight:900;text-shadow:8px 8px 0 #000;animation:count-bounce .5s ease-out forwards}
       #tutorial-overlay{flex-direction:column}.tutorial-step{position:absolute;bottom:110px;display:flex;flex-direction:column-reverse;align-items:center;text-align:center}#tutorial-water{left:20%}#tutorial-powder{right:20%}.tutorial-box{width:180px;padding:10px;background:#fff;border:3px solid #632b00;border-radius:15px;box-shadow:0 5px 15px rgba(0,0,0,.3);color:#333}.tutorial-box h4{margin:0 0 5px;color:#d32f2f}.tutorial-box p{margin:0;font-size:14px;line-height:1.45}.arrow{font-size:40px;font-weight:900;color:#ffd700;text-shadow:2px 2px 0 #632b00;animation:arrow-bounce .6s infinite alternate}#close-tutorial{margin-top:auto;margin-bottom:48px;padding:12px 30px;font-size:20px;color:#fff7e8;background:linear-gradient(180deg,#b33e08,#7c2200);box-shadow:0 14px 24px rgba(0,0,0,.24)}
       #result-screen{flex-direction:column}.result-container{position:relative;width:min(76vw,780px);display:flex;align-items:center;justify-content:center}#result-banner{display:block;width:100%;height:auto;filter:drop-shadow(0 10px 15px rgba(0,0,0,.5))}.result-text-overlay{position:absolute;top:59%;left:50%;width:74%;transform:translate(-50%,-50%);text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px}#total-score{margin:34px 0 0;font-size:clamp(56px,8vw,90px);font-weight:900;line-height:.9;background:linear-gradient(180deg,#fff 30%,#ffd700 60%,#ff8c00 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(4px 4px 0 #632b00) drop-shadow(0 0 15px rgba(255,140,0,.5))}.result-meta{margin:0;max-width:420px;color:#5c2600;font-size:clamp(14px,2vw,18px);font-weight:700}.result-actions{margin-top:14px}
@@ -121,27 +159,76 @@ export default class FlowerGameScene extends Phaser.Scene {
     `;
   }
 
-  html() {
+ html() {
     return `
       <div id="game-container">
         <div class="ui-header">
-          <div class="sign-board"><div class="label">เวลา</div><div id="timer-val" class="value">${GAME_DURATION_SECONDS}</div></div>
-          <div class="item-inventory"><div class="item-slot"><span class="item-label">น้ำอบ</span><span id="count-water" class="item-count">3</span></div><div class="item-slot"><span class="item-label">ธูป</span><span id="count-powder" class="item-count">1</span></div></div>
-          <div class="sign-board"><div class="label">คะแนน</div><div id="score-val" class="value">0</div></div>
+          <div class="sign-board timer-board">
+            <div class="label">เวลา :</div>
+            <div id="timer-val" class="value">${GAME_DURATION_SECONDS}</div>
+          </div>
+
+          <div class="item-inventory">
+            <div class="item-slot"><span class="item-label">น้ำอบ</span><span id="count-water" class="item-count">3</span></div>
+            <div class="item-slot"><span class="item-label">ธูป</span><span id="count-powder" class="item-count">1</span></div>
+          </div>
+
+          <div class="sign-board score-board">
+            <div class="label">คะแนน :</div>
+            <div id="score-val" class="value">0</div>
+          </div>
         </div>
-        <div id="start-screen" class="overlay show"><div class="level-board"><div class="start-copy"><p>เลือกลูกค้าที่ต้องการบริการ แล้วร้อยพวงมาลัยให้ตรงแบบก่อนความอดทนจะหมด ใช้น้ำอบและธูปให้ถูกจังหวะเพื่อเร่งคอมโบและทำคะแนนให้สูงที่สุด</p></div><div class="start-actions"><button id="start-btn">เริ่มเกม</button><button id="tutorial-btn">ดูวิธีเล่น</button></div></div></div>
-        <div id="result-screen" class="overlay"><div class="result-container"><img src="${ASSET_BASE}/image/result_summary_banner.png" id="result-banner" alt="สรุปผลคะแนน" /><div class="result-text-overlay"><h1 id="total-score">0</h1><p id="result-meta" class="result-meta"></p><div class="result-actions"><button id="finish-btn">กลับไปแผนที่</button></div></div></div></div>
+
+        <div id="start-screen" class="overlay show">
+          <div class="level-board">
+            <div class="start-copy">
+              <p></p>
+            </div>
+            <div class="start-actions">
+              <button id="start-btn">เริ่มเกม</button>
+              <button id="tutorial-btn">ดูวิธีเล่น</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="result-screen" class="overlay">
+          <div class="result-container">
+            <img src="${ASSET_BASE}/image/result_summary_banner.png" id="result-banner" alt="สรุปผลคะแนน" />
+            <div class="result-text-overlay">
+              <h1 id="total-score">0</h1>
+              <div class="result-actions">
+                <button id="finish-btn">กลับไปแผนที่</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div id="countdown-overlay" class="overlay"><div id="countdown-text">3</div></div>
         <div id="customer-area" class="customer-area"></div>
         <div class="garland-display"><div class="rope"></div><div id="garland-stack"></div></div>
         <div class="table-foreground"></div>
-        <div class="item-actions"><button id="water-btn" class="btn-use-item water-bg" data-tooltip="น้ำอบ: ช่วยหยุดหลอดความอดทนเป็นเวลา 5 วินาที">ใช้น้ำอบ</button><button id="powder-btn" class="btn-use-item powder-bg" data-tooltip="ธูป: ช่วยให้ร้อยพวงมาลัยเสร็จทันที">ใช้ธูป</button></div>
+        
+        <div class="item-actions">
+          <button id="water-btn" class="btn-use-item water-bg" data-tooltip="น้ำอบ: ช่วยหยุดหลอดความอดทนเป็นเวลา 5 วินาที">ใช้น้ำอบ</button>
+          <button id="powder-btn" class="btn-use-item powder-bg" data-tooltip="ธูป: ช่วยให้ร้อยพวงมาลัยเสร็จทันที">ใช้ธูป</button>
+        </div>
+
         <div id="controls-container" class="controls-container"></div>
-        <div id="tutorial-overlay" class="overlay"><div class="tutorial-step" id="tutorial-water"><div class="tutorial-box"><h4>น้ำอบ</h4><p>ช่วยหยุดหลอดความอดทนของลูกค้าทุกคนเป็นเวลา 5 วินาที</p></div><div class="arrow">↓</div></div><div class="tutorial-step" id="tutorial-powder"><div class="tutorial-box"><h4>ธูป</h4><p>ช่วยร้อยพวงมาลัยของลูกค้าคนที่เลือกอยู่ให้เสร็จทันที</p></div><div class="arrow">↓</div></div><button id="close-tutorial">เข้าใจแล้ว!</button></div>
+        
+        <div id="tutorial-overlay" class="overlay">
+          <div class="tutorial-step" id="tutorial-water">
+            <div class="tutorial-box"><h4>น้ำอบ</h4><p>ช่วยหยุดหลอดความอดทนของลูกค้าทุกคนเป็นเวลา 5 วินาที</p></div>
+            <div class="arrow">↓</div>
+          </div>
+          <div class="tutorial-step" id="tutorial-powder">
+            <div class="tutorial-box"><h4>ธูป</h4><p>ช่วยร้อยพวงมาลัยของลูกค้าคนที่เลือกอยู่ให้เสร็จทันที</p></div>
+            <div class="arrow">↓</div>
+          </div>
+          <button id="close-tutorial">เข้าใจแล้ว!</button>
+        </div>
       </div>
     `;
   }
-
   mount() {
     const container = this.game.canvas?.parentElement;
     if (!container) return;
@@ -367,12 +454,6 @@ export default class FlowerGameScene extends Phaser.Scene {
     this.currentInput.forEach((color) => this.appendGarlandFlower(color));
   }
 
-  addTassel() {
-    const tassel = document.createElement("div");
-    tassel.className = "tassel-garland";
-    tassel.innerHTML = '<div class="tassel-knot"></div>';
-    this.garlandStackEl.appendChild(tassel);
-  }
 
   playAdd(color) {
     if (!this.gameActive || !this.selectedCustomer) return;
@@ -461,7 +542,9 @@ export default class FlowerGameScene extends Phaser.Scene {
     }
     this.score += Math.floor((150 + this.combo * 20 + Math.floor(this.perfectStreak * 5)) * ((this.feverMode ? 2 : 1) * profile.scoreMult));
     if (profile.timeBonus > 0) this.timeLeft += profile.timeBonus;
-    this.addTassel();
+    
+    // ลบ this.addTassel(); ออกแล้ว เพื่อไม่ให้มีแท่งไม้ขึ้นตอนร้อยเสร็จ
+    
     this.selectedCustomer = null;
     this.renderHud();
     this.schedule(() => {
@@ -541,15 +624,18 @@ export default class FlowerGameScene extends Phaser.Scene {
     }
   }
 
-  renderHud() {
+renderHud() {
     if (this.timerValEl) this.timerValEl.textContent = `${Math.max(0, this.timeLeft)}`;
     if (this.scoreValEl) this.scoreValEl.textContent = `${this.score}`;
     if (this.countWaterEl) this.countWaterEl.textContent = `${this.itemWaterCount}`;
     if (this.countPowderEl) this.countPowderEl.textContent = `${this.itemPowderCount}`;
+    
+    // ปุ่มน้ำอบยังคงเงื่อนไขเดิม (จางเมื่อหมดหรือหยุดเวลา)
     if (this.waterBtnEl) this.waterBtnEl.disabled = this.itemWaterCount <= 0 || !this.gameActive || this.isTimeFrozen;
-    if (this.powderBtnEl) this.powderBtnEl.disabled = this.itemPowderCount <= 0 || !this.gameActive || !this.selectedCustomer;
+    
+    // แก้ไข: ปรับให้ปุ่มธูปไม่ disabled (ปุ่มจะชัดเจนและกดได้ตลอดเวลา)
+    if (this.powderBtnEl) this.powderBtnEl.disabled = false;
   }
-
   endGame() {
     if (this.ended) return;
     this.ended = true;
