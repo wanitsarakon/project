@@ -303,7 +303,9 @@ export default function GameContainer({
       height: viewport.height,
 
       backgroundColor: "#000",
-
+dom: {
+        createContainer: true
+      },
       physics: {
         default: "arcade",
         arcade: {

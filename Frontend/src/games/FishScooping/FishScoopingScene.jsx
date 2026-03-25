@@ -78,45 +78,169 @@ export default class FishScoopingScene extends Phaser.Scene {
     this.load.audio("fish-fair-bgm", FAIR_AMBIENCE);
     this.load.image("fish-hud-sign", HUD_SIGN_IMAGE);
   }
-
-  create() {
+create() {
     const { width, height } = this.scale;
 
-    this.bg = this.add.image(width / 2, height / 2, "bg").setDepth(0);
-    // ค้นหาบรรทัดเหล่านี้ใน create() และแก้ไขตัวเลข
-this.pond = this.add.image(width * 0.5, height * 0.5, "pond").setDepth(1); // เปลี่ยนจาก 0.51, 0.81 เป็น 0.5, 0.5
+  // หาจุดนี้ใน create() และวางทับ
+const style = document.createElement('style');
+style.innerHTML = `
+  @keyframes countBounce {
+    0% { transform: scale(0.3); opacity: 0; }
+    50% { transform: scale(1.1); opacity: 1; }
+    100% { transform: scale(1); opacity: 1; }
+  }
 
-this.waterZone = {
-  cx: width * 0.5, // เปลี่ยนจาก 0.51 เป็น 0.5
-  cy: height * 0.5, // เปลี่ยนจาก 0.585 เป็น 0.5
-  rx: 0,
-  ry: 0,
-};
+  /* ใน FishScoopingScene.jsx ส่วน create() */
+.countdown-overlay-style {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;         /* ใช้ Flexbox */
+  justify-content: center; /* จัดกึ่งกลางแนวนอน */
+  align-items: center;     /* จัดกึ่งกลางแนวตั้ง */
+  z-index: 1000;
+  pointer-events: none;
+}
+#total-score {
+    font-size: 90px;          /* ขนาดตัวเลขที่ใหญ่สะใจ */
+    font-family: 'Kanit', sans-serif;
+    font-weight: 900;          /* ใช้ความหนาสูงสุด */
+    margin: 0;
+    /* การไล่เฉดสีจากขาวไปเหลืองทอง */
+    background: linear-gradient(180deg, #FFFFFF 30%, #FFD700 60%, #FF8C00 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    /* ใส่ขอบตัวอักษรสีน้ำตาลเข้ม/ดำ เพื่อให้ตัดกับป้าย */
+    filter: drop-shadow(4px 4px 0px #632b00) 
+            drop-shadow(0px 0px 15px rgba(255, 140, 0, 0.5));
+    transform: translateY(50px);
+    /* เพิ่ม Animation เล็กๆ ให้ตัวเลขดูมีชีวิต */
+    animation: scorePop 0.5s ease-out;
+}
+
+@keyframes scorePop {
+    0% { transform: scale(0.5); opacity: 0; }
+    70% { transform: scale(1.1); }
+    100% { transform: scale(1); opacity: 1; }
+}
+.game-btn {
+    padding: 15px 40px;
+    font-size: 28px;
+    font-family: 'Kanit', sans-serif;
+    font-weight: bold;
+    color: white;
+    background: linear-gradient(180deg, #ffcc00 0%, #ff8800 50%, #ff4400 100%);
+    border: 4px solid #fff;
+    border-radius: 50px;
+    cursor: pointer;
+    outline: none;
+    box-shadow: 0 8px 0 #992200, 0 15px 20px rgba(0,0,0,0.5);
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .game-btn:hover {
+    transform: translateY(-3px) scale(1.05);
+    background: linear-gradient(180deg, #ffe066 0%, #ffa500 50%, #ff5500 100%);
+    box-shadow: 0 10px 0 #992200, 0 20px 25px rgba(0,0,0,0.6);
+  }
+
+  .game-btn:active {
+    transform: translateY(4px);
+    box-shadow: 0 2px 0 #992200, 0 5px 10px rgba(0,0,0,0.5);
+  }
+
+  /* เอฟเฟกต์แสงวิ่ง (Shine) */
+  .game-btn:after {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -60%;
+    width: 20%;
+    height: 200%;
+    background: rgba(255, 255, 255, 0.4);
+    transform: rotate(30deg);
+    animation: shine 3s infinite;
+  }
+
+  @keyframes shine {
+    0% { left: -60%; }
+    20% { left: 120%; }
+    100% { left: 120%; }
+  }
+#countdown-text {
+  color: #f1c40f !important;
+  font-size: 180px; 
+  font-weight: 900 !important;
+  font-family: 'Kanit', sans-serif !important;
+  text-shadow: 8px 8px 0px #000, 0px 10px 20px rgba(0,0,0,0.4) !important;
+  animation: countBounce 0.5s ease-out forwards;
+  text-align: center !important;
+  margin-left: 430px;
+  margin-top: 290px;
+  display: inline-block !important;
+  width: 600px;           /* กำหนดความกว้างให้คลุมคำที่ยาวที่สุด */
+  text-align: center !important; 
+  line-height: 1 !important;
+}
+`;
+document.head.appendChild(style);
+
+    // --- 2. สร้าง Elements ในเกม ---
+    
+    // Background
+    this.bg = this.add.image(width / 2, height / 2, "bg").setDepth(0);
+
+    // อ่างปลา (Pond)
+    this.pond = this.add.image(width * 0.5, height * 0.5, "pond").setDepth(1); 
+
+    // โซนน้ำ (WaterZone)
+    this.waterZone = {
+      cx: width * 0.5, 
+      cy: height * 0.5,
+      rx: 400, 
+      ry: 250,
+    };
+
+    // ถังน้ำ
     this.bucket = this.physics.add.image(width * 0.11, height * 0.865, "bucket")
       .setImmovable(true)
       .setDepth(3);
     this.bucket.body.allowGravity = false;
 
+    // ช้อนตักปลา
     this.spoon = new Spoon(this, width / 2, height / 2);
     this.spoon.setDepth(5);
 
+    // กลุ่มปลา
     this.fishes = this.physics.add.group();
     this.bucketFishGroup = this.add.group();
+    
+    // ระบบเริ่มเกม
     this.spawnInitialFish();
     this.createHud();
     this.createStartOverlay();
     this.createResultOverlay();
 
+    // Input การคลิกตักปลา
     this.input.on("pointerdown", () => {
       if (this.phase !== "playing" || this.spoon?.holdingFish) return;
       this.tryCatchFish();
     });
 
+    // ระบบจัดการขนาดหน้าจอและ Cleanup
     this.handleResize({ width, height });
     this.scale.on("resize", this.handleResize, this);
     this.events.once("shutdown", () => this.cleanup());
     this.events.once("destroy", () => this.cleanup());
   }
+  
 
 // FishScoopingScene.jsx -> createHud()
 createHud() {
@@ -203,42 +327,47 @@ createHud() {
     this.updateHud();
 }
 
-//เพิ่มให้เเสดงจำนวนช้อนปลา
-  createOverlayButton(label, onClick) {
-    const button = this.add.container(0, 0);
-    const width = 246;
-    const height = 76;
-    const shadow = this.add.graphics();
-    shadow.fillStyle(0x7f2500, 0.95);
-    shadow.fillRoundedRect(-width / 2, -height / 2 + 8, width, height, 30);
-    const outer = this.add.graphics();
-    outer.fillStyle(0xffca33, 1);
-    outer.fillRoundedRect(-width / 2, -height / 2, width, height, 30);
-    const inner = this.add.graphics();
-    inner.fillGradientStyle(0xffd45b, 0xffd45b, 0xff6f18, 0xff6f18, 1);
-    inner.fillRoundedRect(-(width - 14) / 2, -(height - 14) / 2 - 1, width - 14, height - 14, 26);
-    const gloss = this.add.graphics();
-    gloss.fillStyle(0xffef99, 0.38);
-    gloss.fillRoundedRect(-(width - 48) / 2, -(height - 40) / 2 - 9, width - 48, height - 40, 18);
-    const labelText = this.add.text(0, 1, label, {
-      fontFamily: "Kanit",
-      fontSize: "30px",
-      fontStyle: "bold",
-      color: "#fff8ea",
-      stroke: "#7a2f00",
-      strokeThickness: 5,
-      shadow: { offsetX: 0, offsetY: 3, color: "#6a2200", blur: 2, fill: true },
-    }).setOrigin(0.5);
-    const hitArea = this.add.rectangle(0, 4, width, height, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
-    hitArea.on("pointerover", () => button.setScale(1.04));
-    hitArea.on("pointerout", () => button.setScale(1));
-    hitArea.on("pointerdown", () => {
-      button.setScale(0.97);
-      onClick?.();
-    });
-    hitArea.on("pointerup", () => button.setScale(1.04));
-    button.add([shadow, outer, inner, gloss, labelText, hitArea]);
-    button.setSize(width, height);
+createOverlayButton(label, onClick) {
+    // 1. สร้าง HTML Element (ปุ่มจริง)
+    const element = document.createElement('div');
+    
+    // แต่งสไตล์ด้วย CSS Direct
+    element.style.cssText = `
+      background: linear-gradient(to bottom, #ffd45b 0%, #ff6f18 100%);
+      color: white;
+      font-family: 'Kanit', sans-serif;
+      font-size: 28px;
+      font-weight: 900;
+      padding: 12px 40px;
+      border: 6px solid white;
+      border-radius: 40px;
+      cursor: pointer;
+      box-shadow: 0 6px 0 #7f2500, 0 10px 20px rgba(0,0,0,0.3);
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3); /* เงาตัวอักษรให้อ่านง่าย ไม่มีเส้นขอบกวนตา */
+      user-select: none;
+      min-width: 200px;
+      transition: transform 0.1s;
+    `;
+
+    element.innerText = label;
+
+    // 2. นำเข้าสู่ Phaser ด้วยคำสั่ง dom
+    const button = this.add.dom(0, 0, element);
+
+    // 3. ใส่ลูกเล่นตอนเอาเมาส์ชี้และกด
+    element.onmouseover = () => { element.style.transform = 'scale(1.05)'; };
+    element.onmouseout = () => { element.style.transform = 'scale(1)'; };
+    element.onmousedown = () => { element.style.transform = 'scale(0.95)'; };
+    element.onmouseup = () => { element.style.transform = 'scale(1.05)'; };
+
+    element.onclick = () => {
+        onClick?.();
+    };
+
     return button;
   }
 
@@ -255,49 +384,55 @@ createHud() {
     this.startOverlay.add([dim, panel, btn]);
     this.startOverlayRefs = { dim, panel, btn };
 }
-  createResultOverlay() {
+ // FishScoopingScene.jsx
+createResultOverlay() {
     this.resultOverlay = this.add.container(0, 0).setDepth(40).setVisible(false);
     const dim = this.add.rectangle(0, 0, 0, 0, 0x000000, 0.68);
     const panel = this.add.image(0, 0, "fish-result");
+    
     this.resultScoreText = this.add.text(0, 0, "0", {
-      fontFamily: "Kanit",
-      fontSize: "60px",
-      fontStyle: "bold",
-      color: "#7c1e00",
-      stroke: "#fff1bb",
-      strokeThickness: 6,
+        fontFamily: "Kanit", fontSize: "60px", fontStyle: "bold",
+        color: "#7c1e00", stroke: "#fff1bb", strokeThickness: 6,
     }).setOrigin(0.5);
+
     this.resultMetaText = this.add.text(0, 0, "", {
-      fontFamily: "Kanit",
-      fontSize: "20px",
-      color: "#6b2500",
-      align: "center",
-      lineSpacing: 6,
+        fontFamily: "Kanit", fontSize: "20px", color: "#6b2500",
+        align: "center", lineSpacing: 6,
     }).setOrigin(0.5);
-const btn = this.createOverlayButton("กลับแผนที่", () => {
-      this.onGameEnd?.({
-        score: this.score,
-        roundId: this.roundId,
-        meta: {
-          redCaught: this.redCaught,
-          silverCaught: this.silverCaught,
-          goldCaught: this.goldCaught,
-          normalCaught: this.redCaught + this.silverCaught,
-          timeLeft: this.timeLeft,
-        },
-      });
+
+    const btn = this.createOverlayButton("กลับแผนที่", () => {
+        // --- ส่วนสำคัญ: ต้องลบปุ่ม DOM ออกก่อนเปลี่ยนหน้า ---
+        if (this.startOverlayRefs?.btn) this.startOverlayRefs.btn.destroy();
+        if (this.resultOverlayRefs?.btn) this.resultOverlayRefs.btn.destroy();
+        if (this.countdownDisplay) this.countdownDisplay.destroy();
+
+        if (this.onGameEnd) {
+            this.onGameEnd({
+                score: this.score,
+                roundId: this.roundId,
+                meta: {
+                    redCaught: this.redCaught,
+                    silverCaught: this.silverCaught,
+                    goldCaught: this.goldCaught,
+                    timeLeft: this.timeLeft,
+                },
+            });
+        } else {
+            // มั่นใจว่าชื่อ Scene ตรงกับใน class FestivalMapScene
+            this.scene.start("FestivalMapScene", { fromGame: true, lastScore: this.score });
+        }
     });
 
     this.resultOverlay.add([dim, panel, this.resultScoreText, this.resultMetaText, btn]);
     this.resultOverlayRefs = { dim, panel, btn };
-  }
+} // ปิดฟังก์ชัน createResultOverlay
 
   handleResize(gameSize) {
     const width = gameSize?.width ?? this.scale.width;
     const height = gameSize?.height ?? this.scale.height;
     const shortSide = Math.min(width, height);
     const uiScale = Phaser.Math.Clamp(shortSide / 900, 0.78, 1.18);
-    const panelScale = Phaser.Math.Clamp(shortSide / 980, 0.74, 1.14);
+    const panelScale = Phaser.Math.Clamp(shortSide / 980, 0.25, 1.14);
 
     this.layout = { width, height, uiScale, panelScale };
 
@@ -355,12 +490,59 @@ const btn = this.createOverlayButton("กลับแผนที่", () => {
     this.layoutHud(width, uiScale);
     this.layoutStartOverlay(width, height, panelScale);
     this.layoutResultOverlay(width, height, panelScale);
+if (this.resultOverlay && this.resultOverlayRefs) {
+    const { dim, panel, btn } = this.resultOverlayRefs;
+    dim.setSize(width, height).setPosition(width / 2, height / 2);
 
-    if (this.countdownText) {
-      this.countdownText
-        .setPosition(width / 2, height / 2)
-        .setFontSize(`${Math.round(Phaser.Math.Clamp(shortSide * 0.16, 96, 150))}px`);
+    // 1. ขนาดป้ายที่คุณกำหนดไว้ (เล็กลงเหลือ 0.48)
+    const resultPanelScale = panelScale * 0.48;
+    panel.setPosition(width / 2, height * 0.48).setScale(resultPanelScale);
+
+    // 2. ปรับขนาดและตำแหน่งคะแนน (Score) ให้อยู่ในป้าย
+    // ขยับ Y ขึ้นไปนิดหน่อย (0.45) เพื่อให้อยู่ครึ่งบนของป้าย
+    if (this.resultScoreText) {
+        this.resultScoreText
+            .setPosition(width / 2, height * 0.52) 
+            .setScale(resultPanelScale * 2.2); // ปรับตัวคูณตามความเหมาะสม
     }
+
+    // 3. ปรับขนาดและตำแหน่งรายละเอียด (Meta)
+    // ขยับ Y ลงมาหน่อย (0.52)
+    if (this.resultMetaText) {
+        this.resultMetaText
+            .setPosition(width / 2, height * 0.52)
+            .setScale(resultPanelScale * 1.9);
+    }
+
+    // 4. ปรับขนาดปุ่ม "กลับแผนที่" ให้เล็กลงและอยู่ในป้าย
+    // ขยับ Y ลงมาด้านล่างของป้าย (0.60)
+    if (btn) {
+        btn.setPosition(width / 2, height * 0.60)
+           .setScale(resultPanelScale * 1.8); 
+    }
+}
+    
+/* ใน FishScoopingScene.jsx ส่วน handleResize() */
+if (this.countdownDisplay) {
+  const { width, height } = this.scale;
+  // ตั้งค่าให้อยู่กึ่งกลางจอ (ซึ่งเป็นจุดเดียวกับศูนย์กลางอ่างปลา)
+  this.countdownDisplay.setPosition(width / 2, height / 2);
+  
+  // ปรับขนาด font ตามขนาดหน้าจอเล็กน้อยเพื่อให้ดูสมดุล
+  if (this.countdownDisplay.node) {
+    const shortSide = Math.min(width, height);
+    const fontSize = Math.round(shortSide * 0.25); // ปรับขนาดตามความเหมาะสม
+    this.countdownDisplay.node.style.fontSize = `${fontSize}px`;
+  }
+}
+
+if (this.countdownBg) {
+    const { width, height } = this.scale;
+    this.countdownBg.clear()
+        .fillStyle(0x000000, 0.4)
+        .fillRect(0, 0, width, height);
+
+}
 }
 
 layoutHud(width, uiScale) {
@@ -465,26 +647,40 @@ layoutStartOverlay(width, height, panelScale) {
       .setPosition(width / 2, height / 2.7 + (panelHeight * 0.325))
       .setScale(panelScale);
 }
+layoutResultOverlay(width, height, panelScale) {
+    if (!this.resultOverlay || !this.resultOverlay.visible) return;
 
-  layoutResultOverlay(width, height, panelScale) {
-    if (!this.resultOverlayRefs) return;
     const { dim, panel, btn } = this.resultOverlayRefs;
-    const panelWidth = Math.min(width * 0.78, 700 * panelScale);
-    const panelHeight = panelWidth * (467 / 700);
 
-    dim.setPosition(width / 2, height / 2).setSize(width, height);
-    panel.setPosition(width / 2, height / 2).setDisplaySize(panelWidth, panelHeight);
-    this.resultScoreText
-      ?.setPosition(width / 2, height / 2 + (panelHeight * 0.02))
-      .setFontSize(`${Math.round(60 * panelScale)}px`);
-    this.resultMetaText
-      ?.setPosition(width / 2, height / 2 + (panelHeight * 0.205))
-      .setFontSize(`${Math.round(20 * panelScale)}px`);
-   btn
-      ?.setPosition(width / 2, height / 2 + (panelHeight * 0.36))
-      .setScale(panelScale);
-  }
+    // 1. พื้นหลังมืด
+    dim.setSize(width, height).setPosition(width / 2, height / 2);
 
+    // 2. ปรับขนาดป้ายให้เท่ากับป้ายเริ่มเกม
+    // โดยปกติป้ายเริ่มเกมมักใช้การคำนวณ scale ที่เล็กกว่า หรือใช้ค่ามาตรฐานเดียวกัน
+    // ในที่นี้เราจะใช้ panelScale ปกติแต่ตรวจสอบว่าไม่ได้ถูกขยายเพิ่มในส่วนอื่น
+    panel.setPosition(width / 2, height / 2).setScale(panelScale);
+
+    // 3. จัดวางปุ่ม "กลับแผนที่"
+    // ปรับค่า 0.28 ลงเล็กน้อยถ้าป้ายเล็กลง เพื่อให้ปุ่มอยู่ขอบล่างพอดี
+    const btnY = (height / 2) + (panel.displayHeight * 0.28);
+    btn.setPosition(width / 2, btnY).setScale(panelScale);
+
+    // 4. แสดงคะแนนไว้ด้านบนของปุ่ม
+    if (this.resultScoreText) {
+        this.resultScoreText
+            .setPosition(width / 2, btnY - (110 * panelScale)) // ขยับขึ้นจากปุ่ม 110 หน่วย
+            .setScale(panelScale)
+            .setVisible(true);
+    }
+
+    if (this.resultMetaText) {
+        this.resultMetaText
+            .setPosition(width / 2, btnY - (55 * panelScale)) // อยู่ระหว่างคะแนนกับปุ่ม
+            .setScale(panelScale * 0.8) // ย่อขนาดตัวอักษรรายละเอียดลงเล็กน้อยเพื่อให้เข้ากับป้ายเล็ก
+            .setVisible(true);
+    }
+
+}
   // FishScoopingScene.jsx
 spawnFish(type) {
   const point = this.randomPointInWater();
@@ -522,46 +718,81 @@ spawnFish(type) {
     this.phase = "countdown";
     this.startOverlay.setVisible(false);
 
-    // --- เพิ่มส่วนนี้: สั่งให้ปลาทึ่มีอยู่ทั้งหมดสุ่มทิศทางว่ายทันที ---
     this.fishes.children.each((fish) => {
-      if (fish.active) {
-        fish.chooseCruiseRoute(this.waterZone);
-      }
+      if (fish.active) fish.chooseCruiseRoute(this.waterZone);
     });
-    // -------------------------------------------------------
-
-    this.countdownText = this.add.text(this.scale.width / 2, this.scale.height / 2, "3", {
-      fontFamily: "Kanit",
-      fontSize: "130px",
-      fontStyle: "bold",
-      color: "#fff4c7",
-      stroke: "#5f2600",
-      strokeThickness: 8,
-    }).setOrigin(0.5).setDepth(35);
-
-    this.handleResize();
 
     let count = 3;
     this.sound.play("fish-count", { volume: 0.45 });
+    
+    // --- เปลี่ยนจาก this.add.text เป็นบรรทัดนี้ ---
+    this.updateCountdownDisplay(count); 
+
     this.countdownTimer = this.time.addEvent({
       delay: 1000,
       repeat: 3,
       callback: () => {
         count -= 1;
         if (count > 0) {
-          this.countdownText.setText(String(count));
+          // --- เปลี่ยนจาก this.countdownText.setText เป็นบรรทัดนี้ ---
+          this.updateCountdownDisplay(count);
           this.sound.play("fish-count", { volume: 0.45 });
-        } else if (count === 0) {
-          this.countdownText.setText("เริ่ม!");
-          this.sound.play("fish-start-sfx", { volume: 0.55 });
-        } else {
-          this.countdownText.destroy();
-          this.startPlaying(); // เข้าสู่สถานะเล่นเกมจริงและเริ่มนับเวลา 60 วิ
-        }
+       // แก้ไขใน countdownTimer callback
+} else if (count === 0) {
+    this.updateCountdownDisplay("เริ่ม!");
+    this.sound.play("fish-start-sfx", { volume: 0.55 });
+} else {
+    // ลบตัวเลข
+    if (this.countdownDisplay) {
+        this.countdownDisplay.destroy();
+        this.countdownDisplay = null;
+    }
+    // ลบพื้นหลังสีดำ
+    if (this.countdownBg) {
+        this.countdownBg.destroy();
+        this.countdownBg = null;
+    }
+    this.startPlaying();
+}
       },
     });
-}
+  }
+updateCountdownDisplay(value) {
+    if (this.countdownDisplay) {
+        this.countdownDisplay.destroy();
+    }
 
+    const { width, height } = this.scale;
+
+    // 1. สร้างแผ่นหลังมืด (เพื่อความสวยงามเหมือนเดิม)
+    if (!this.countdownBg) {
+        this.countdownBg = this.add.graphics()
+            .fillStyle(0x000000, 0.4)
+            .fillRect(0, 0, width, height)
+            .setDepth(99);
+    }
+
+    // 2. สร้างตัวเลข
+    const el = document.createElement('div');
+    el.id = 'countdown-text';
+    
+    if (value === "เริ่ม!") {
+        el.className = 'start-dom';
+        el.innerText = 'เริ่ม!';
+    } else {
+        el.innerText = value;
+    }
+
+    // 3. วางที่กึ่งกลางจอ (สำคัญ: ต้องใช้ setOrigin(0.5))
+    this.countdownDisplay = this.add.dom(width / 2, height / 0, el)
+        .setOrigin(0.5) 
+        .setDepth(100);
+
+    // ปรับ Scale ของ DOM ให้สัมพันธ์กับขนาดจอ เพื่อความสวยงาม
+    const shortSide = Math.min(width, height);
+    const scaleFactor = Phaser.Math.Clamp(shortSide / 900, 0.8, 1.2);
+    this.countdownDisplay.setScale(scaleFactor);
+}
 // FishScoopingScene.jsx
 startPlaying() {
     this.phase = "playing";
@@ -860,10 +1091,12 @@ showToast(message, color) {
       },
     });
 }
-  endGame() {
+endGame() {
     if (this.ended) return;
     this.ended = true;
     this.phase = "ended";
+    
+    // หยุดการทำงานของระบบต่างๆ
     this.fairBgm?.stop();
     this.spawnTimer?.remove(false);
     this.gameTimer?.remove(false);
@@ -871,13 +1104,16 @@ showToast(message, color) {
     this.escapeTimer?.remove(false);
     this.physics.pause();
 
-    this.resultScoreText.setText(String(this.score));
-    this.resultMetaText.setText(
-      `ปลาแดง ${this.redCaught} ตัว  •  ปลาเงิน ${this.silverCaught} ตัว  •  ปลาทอง ${this.goldCaught} ตัว\nเวลาที่เหลือ ${Math.max(0, this.timeLeft)} วินาที`,
-    );
+    // --- ส่วนที่ต้องเพิ่ม/แก้ไข เพื่อให้อัปเดตคะแนน ---
+    if (this.resultScoreText) {
+        this.resultScoreText.setText(this.score.toString()); // อัปเดตตัวเลขคะแนนหลัก
+        this.resultScoreText.setVisible(true);
+    }
+
+    // แสดงหน้าจอสรุปผล
     this.resultOverlay.setVisible(true);
-    this.handleResize();
-  }
+    this.handleResize(); // เรียก resize เพื่อจัดตำแหน่งคะแนนให้อยู่ในป้ายที่ย่อขนาดลง
+}
 
   cleanup() {
     this.scale.off("resize", this.handleResize, this);
