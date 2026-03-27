@@ -1,0 +1,56 @@
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#ffffff",
+    "fontFamily": "Arial",
+    "fontSize": "26px",
+    "primaryColor": "#eef2ff",
+    "primaryBorderColor": "#4f46e5",
+    "primaryTextColor": "#111827",
+    "lineColor": "#374151"
+  },
+  "flowchart": {
+    "nodeSpacing": 70,
+    "rankSpacing": 95,
+    "curve": "linear",
+    "padding": 24,
+    "htmlLabels": true
+  }
+}}%%
+flowchart TD
+    classDef action fill:#eef2ff,stroke:#4f46e5,color:#111827,stroke-width:2px,font-size:26px,font-family:Arial;
+    classDef decision fill:#f8f7ff,stroke:#4f46e5,color:#111827,stroke-width:2px,font-size:26px,font-family:Arial;
+    classDef terminal fill:#ede9fe,stroke:#4f46e5,color:#111827,stroke-width:2px,font-size:24px,font-family:Arial;
+    linkStyle default stroke:#374151,stroke-width:2px;
+
+    A([Start]) --> B[Choose Host<br/>Enter name]
+    B --> C[Set room options<br/>mode, players, booths<br/>privacy, prizes]
+    C --> D{Create room success?}
+    D -- No --> C
+    D -- Yes --> E[Create room + host<br/>status = waiting]
+    E --> F[Lobby<br/>load room + WebSocket]
+
+    F --> G{Host action}
+    G --> H[Edit prizes]
+    H --> I{Save allowed?}
+    I -- No --> F
+    I -- Yes --> J[PATCH prizes]
+    J --> F
+
+    G --> K[Start game]
+    K --> L{Start allowed?}
+    L -- No --> F
+    L -- Yes --> M[status = playing<br/>assign teams if needed<br/>unlock first booth]
+    M --> N[Host Monitor<br/>track room + progress]
+    N --> O{All players complete?}
+    O -- No --> N
+    O -- Yes --> P[Finalize]
+    P --> Q{Finalize allowed?}
+    Q -- No --> N
+    Q -- Yes --> R[status = finished<br/>build summary]
+    R --> S[Summary page]
+    S --> T([Exit / timeout])
+
+    class A,T terminal;
+    class B,C,E,F,H,J,K,M,N,P,R,S action;
+    class D,G,I,L,O,Q decision;
