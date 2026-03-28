@@ -78,9 +78,7 @@ export default function Home({ onSelect }) {
   }, [handleConfirm, loading, step]);
 
   return (
-    <div
-      className={`home-root ${step === "landing" ? "home-root-landing" : "home-root-entry"}`}
-    >
+<div className={`home-root ${step === "landing" ? "is-landing" : "is-form"}`}>
       {step === "landing" ? (
         <section className="landing-stage landing-stage-minimal">
           <button

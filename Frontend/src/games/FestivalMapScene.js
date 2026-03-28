@@ -2,7 +2,7 @@ import Phaser from "phaser";
 import { FESTIVAL_BOOTHS, getFestivalBoothsBySceneKeys } from "./festivalBooths";
 
 const BOOTH_SPACING = 620;
-const BOOTH_Y = 585;
+const BOOTH_Y = 370;
 const WORLD_MARGIN = 220;
 const STALL_WIDTH = 430;
 const STALL_HEIGHT = 430;
@@ -108,21 +108,38 @@ export default class FestivalMapScene extends Phaser.Scene {
   }
 
   drawNightFestivalBackground(height) {
-    const bg = this.add.tileSprite(
-      this.worldWidth / 2,
-      height / 2,
-      this.worldWidth,
-      height,
-      "festival-stall-bg",
-    );
-    bg.setOrigin(0.5, 0.5);
-    const texture = this.textures.get("festival-stall-bg")?.getSourceImage?.();
-    if (texture?.width && texture?.height) {
-      const scaleByHeight = height / texture.height;
-      bg.tileScaleX = scaleByHeight;
-      bg.tileScaleY = scaleByHeight;
+  const texture = this.textures.get("festival-stall-bg");
+  if (!texture) return;
+
+  const source = texture.getSourceImage();
+  const originalWidth = source.width;
+  const originalHeight = source.height;
+
+  // คำนวณ Scale ให้ความสูงภาพพอดีกับความสูงจอ
+  const scale = height / originalHeight;
+  const scaledWidth = originalWidth * scale;
+
+  // คำนวณจำนวนแผ่นที่ต้องใช้ให้เต็มความกว้าง World
+  const count = Math.ceil(this.worldWidth / scaledWidth);
+
+  for (let i = 0; i < count; i++) {
+    const x = i * scaledWidth;
+    
+    // สร้างรูปภาพทีละแผ่น
+    const bg = this.add.image(x, 0, "festival-stall-bg")
+      .setOrigin(0, 0)
+      .setDisplaySize(scaledWidth, height)
+      .setScrollFactor(1); // ให้เลื่อนตามกล้องปกติ
+
+    // --- จุดสำคัญ: สลับฝั่งแผ่นที่เป็นเลขคี่ ---
+    if (i % 2 !== 0) {
+      bg.setFlipX(true);
     }
+    
+    // ตั้งค่า Depth ให้อยู่หลังสุด (ถ้าจำเป็น)
+    bg.setDepth(-10);
   }
+}
 
   drawFestivalBackdrop(height) {
     return height;

@@ -548,12 +548,22 @@ select {
   }
 }
 
-/* =========================
-   HOME HERO OVERRIDES
-========================= */
 .home-root {
-  position: relative;
-  overflow: hidden;
+  /* ล็อคพื้นหลังให้อยู่กับที่ ไม่ขยับหรือขยายตามการ Scroll */
+  background-attachment: fixed;
+
+  /* ใช้คุณสมบัตินี้เพื่อให้รูปครอบคลุมพื้นที่โดยไม่เปลี่ยนสัดส่วน (Aspect Ratio) */
+  background-size: cover;
+
+  /* จัดวางกึ่งกลางเสมอ */
+  background-position: center center;
+
+  /* ป้องกันรูปซ้ำ */
+  background-repeat: no-repeat;
+
+  /* บังคับความสูงขั้นต่ำให้เต็มหน้าจอเสมอ */
+  min-height: 100vh;
+  width: 100%;
 }
 
 .landing-stage {
@@ -680,35 +690,7 @@ select {
   background: radial-gradient(circle, rgba(255, 224, 145, 0.26), transparent 68%);
 }
 
-.landing-string-light {
-  position: absolute;
-  left: -5%;
-  width: 110%;
-  height: 110px;
-  border-top: 4px solid rgba(255, 202, 110, 0.58);
-  border-radius: 0 0 50% 50%;
-  z-index: 2;
-  opacity: 0.95;
-}
 
-.landing-string-light::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 4% 8px, #ff7161 0 7px, transparent 8px),
-    radial-gradient(circle at 12% 18px, #ffd55f 0 7px, transparent 8px),
-    radial-gradient(circle at 21% 12px, #7bf785 0 7px, transparent 8px),
-    radial-gradient(circle at 30% 23px, #68b9ff 0 7px, transparent 8px),
-    radial-gradient(circle at 40% 10px, #ff9f67 0 7px, transparent 8px),
-    radial-gradient(circle at 50% 20px, #ffe06f 0 7px, transparent 8px),
-    radial-gradient(circle at 60% 10px, #ff7eb3 0 7px, transparent 8px),
-    radial-gradient(circle at 70% 22px, #82ffdd 0 7px, transparent 8px),
-    radial-gradient(circle at 80% 12px, #ffcc62 0 7px, transparent 8px),
-    radial-gradient(circle at 89% 18px, #ff6f5e 0 7px, transparent 8px),
-    radial-gradient(circle at 97% 8px, #ffd95e 0 7px, transparent 8px);
-  filter: drop-shadow(0 0 7px rgba(255, 214, 108, 0.55));
-}
 
 .string-top {
   top: 18px;
@@ -810,20 +792,22 @@ select {
   border: 1px solid rgba(255, 224, 161, 0.18);
 }
 
+/* ค้นหาส่วนนี้ใน styles.css แล้วแก้ตามนี้ครับ */
 .festival-form-shell {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+  
+  /* แก้ไข 3 บรรทัดนี้ */
+  background: transparent !important;          /* เปลี่ยนจาก rgba(...) เป็นโปร่งใส */
+  border: none !important;                    /* เอาเส้นขอบออก */
+  backdrop-filter: none !important;           /* เอาเอฟเฟกต์เบลอออก */
+  -webkit-backdrop-filter: none !important;
+  
+  box-shadow: none !important;                /* มั่นใจว่าไม่มีเงาฟุ้งๆ */
   position: relative;
-  width: min(1120px, 100%);
-  min-height: min(88svh, 820px);
-  border-radius: 40px;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px;
-  background:
-    radial-gradient(circle at 50% 12%, rgba(255, 220, 130, 0.2), transparent 18%),
-    linear-gradient(180deg, rgba(20, 26, 75, 0.42), rgba(20, 10, 28, 0.48));
-  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.42);
+  z-index: 10;
 }
 
 .festival-form-card {

@@ -279,8 +279,8 @@ export default function RoomList({
   }, [roomSearch, rooms]);
 
   return (
-    <div className="home-root home-root-entry">
-      <section className="festival-page-shell">
+  <div className="home-root is-form"> {/* ใช้ class เดียวกับหน้า Home เพื่อให้พื้นหลังไม่ซูม */}
+    <section className="festival-form-shell">  กรอบนอ
         <div className="landing-string-light string-top" />
         <div className="landing-string-light string-mid" />
 

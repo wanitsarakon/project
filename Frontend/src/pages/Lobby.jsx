@@ -261,8 +261,8 @@ export default function Lobby({
   );
 
   return (
-    <div className="home-root home-root-entry">
-      <section className="festival-page-shell">
+  <div className="home-root is-form"> 
+    <section className="festival-form-shell"> 
         <div className="landing-string-light string-top" />
         <div className="landing-string-light string-mid" />
 

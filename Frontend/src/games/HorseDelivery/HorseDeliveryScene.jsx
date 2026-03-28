@@ -108,7 +108,55 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     this.load.audio("horse-fair-bgm", FAIR_AMBIENCE);
   }
 
-  create() {
+create() {
+    const { width, height } = this.scale;
+
+    // เพิ่ม CSS สำหรับปุ่มสไตล์เกมตักปลา
+    const style = document.createElement('style');
+    style.innerHTML = `
+      .game-btn {
+        background: linear-gradient(to bottom, #ffd45b 0%, #ff6f18 100%);
+        color: white;
+        font-family: 'Kanit', sans-serif;
+        font-size: 28px;
+        font-weight: 900;
+        padding: 12px 40px;
+        border: 6px solid white;
+        border-radius: 40px;
+        cursor: pointer;
+        box-shadow: 0 6px 0 #7f2500, 0 10px 20px rgba(0,0,0,0.3);
+        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        user-select: none;
+        min-width: 200px;
+        transition: transform 0.1s;
+        position: relative;
+        overflow: hidden;
+      }
+      .game-btn:hover { transform: scale(1.05); }
+      .game-btn:active { transform: scale(0.95); }
+      
+      /* เอฟเฟกต์แสงวิ่ง (Shine) เหมือนเกมตักปลา */
+      .game-btn:after {
+        content: "";
+        position: absolute;
+        top: -50%; left: -60%;
+        width: 20%; height: 200%;
+        background: rgba(255, 255, 255, 0.4);
+        transform: rotate(30deg);
+        animation: button-shine 3s infinite;
+      }
+      @keyframes button-shine {
+        0% { left: -60%; }
+        20% { left: 120%; }
+        100% { left: 120%; }
+      }
+    `;
+    document.head.appendChild(style);
+    
     this.createPlayerAnimations();
     this.createSkyTexture();
     this.createGroundTexture();
@@ -268,52 +316,97 @@ export default class HorseDeliveryScene extends Phaser.Scene {
     this.rulePanel.add([ruleBg, ruleText]);
   }
 
-  createOverlayButton(label, onClick) {
+createOverlayButton(label, onClick) {
     const button = this.add.container(0, 0);
     const width = 246;
     const height = 76;
+
+    // 1. ส่วนเงาด้านล่าง (Shadow) - แยกไว้ชั้นล่างสุด ไม่ต้องขยับตามปุ่ม
     const shadow = this.add.graphics();
-    shadow.fillStyle(0x7f2500, 0.95);
+    shadow.fillStyle(0x7f2500, 0.8);
     shadow.fillRoundedRect(-width / 2, -height / 2 + 8, width, height, 30);
+
+    // --- สร้าง Container ย่อยสำหรับตัวปุ่ม (เพื่อใช้ทำ Effect ยกขึ้น-กดลง) ---
+    const buttonContent = this.add.container(0, 0);
+
+    // 2. ขอบนอกสีเหลืองทอง (Outer)
     const outer = this.add.graphics();
     outer.fillStyle(0xffca33, 1);
     outer.fillRoundedRect(-width / 2, -height / 2, width, height, 30);
+
+    // 3. ตัวปุ่มไล่เฉดสี (Inner Gradient) - ส้มเหลืองแบบเกมตักปลา
     const inner = this.add.graphics();
     inner.fillGradientStyle(0xffd45b, 0xffd45b, 0xff6f18, 0xff6f18, 1);
     inner.fillRoundedRect(-(width - 14) / 2, -(height - 14) / 2 - 1, width - 14, height - 14, 26);
+
+    // 4. แสงสะท้อนด้านบน (Gloss) - เพิ่มความวาว
     const gloss = this.add.graphics();
-    gloss.fillStyle(0xffef99, 0.38);
-    gloss.fillRoundedRect(-(width - 48) / 2, -(height - 40) / 2 - 9, width - 48, height - 40, 18);
-    const labelText = this.add.text(0, 1, label, {
+    gloss.fillStyle(0xffef99, 0.4);
+    gloss.fillRoundedRect(-(width - 48) / 2, -height / 2 + 8, width - 48, 20, 15);
+
+    // 5. ตัวอักษร (Label)
+    const labelText = this.add.text(0, 0, label, {
       fontFamily: "Kanit",
-      fontSize: "30px",
+      fontSize: "32px",
       fontStyle: "bold",
-      color: "#fff8ea",
+      color: "#ffffff",
       stroke: "#7a2f00",
-      strokeThickness: 5,
-      shadow: { offsetX: 0, offsetY: 3, color: "#6a2200", blur: 2, fill: true },
+      strokeThickness: 6,
+      shadow: { offsetX: 0, offsetY: 3, color: "#441100", blur: 2, fill: true },
     }).setOrigin(0.5);
-    const hitArea = this.add.rectangle(0, 4, width, height, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
-    hitArea.on("pointerover", () => button.setScale(1.04));
-    hitArea.on("pointerout", () => button.setScale(1));
-    hitArea.on("pointerdown", () => {
-      button.setScale(0.97);
-      onClick?.();
+
+    buttonContent.add([outer, inner, gloss, labelText]);
+
+    // 6. พื้นที่รับการคลิก (Hit Area)
+    const hitArea = this.add.rectangle(0, 0, width, height, 0xffffff, 0.0001)
+        .setInteractive({ useHandCursor: true });
+
+    // รวมทุกอย่างเข้าใน Container หลัก
+    button.add([shadow, buttonContent, hitArea]);
+
+    // --- ระบบ Interactive (การโต้ตอบ) ---
+    hitArea.on("pointerover", () => {
+      buttonContent.setScale(1.05); // ขยายเล็กน้อย
+      buttonContent.y = -4;         // ยกตัวปุ่มขึ้นจากเงา
     });
-    hitArea.on("pointerup", () => button.setScale(1.04));
-    button.add([shadow, outer, inner, gloss, labelText, hitArea]);
+
+    hitArea.on("pointerout", () => {
+      buttonContent.setScale(1);    // กลับขนาดปกติ
+      buttonContent.y = 0;          // กลับที่เดิม
+    });
+
+    hitArea.on("pointerdown", () => {
+      buttonContent.setScale(0.95); // ยุบตัวลง
+      buttonContent.y = 4;          // กดลงไปหาเงา
+    });
+
+    hitArea.on("pointerup", () => {
+      buttonContent.setScale(1.05);
+      buttonContent.y = -4;
+      onClick?.(); // เรียกฟังก์ชันเมื่อปล่อยคลิก
+    });
+
     button.setSize(width, height);
     return button;
-  }
-
-  createStartOverlay() {
+}
+createStartOverlay() {
     const { width, height } = this.scale;
     this.startOverlay = this.add.container(0, 0).setDepth(40).setScrollFactor(0);
     this.startDim = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.56);
+
+    // 1. ลดขนาดป้ายลง (จาก 0.92 เหลือประมาณ 0.65 - 0.7)
+    // ปรับ 920 เป็น 650 และ 680 เป็น 480 เพื่อจำกัดขนาดสูงสุด
+    const cardWidth = Math.min(width * 0.7, 650);
+    const cardHeight = Math.min(height * 0.6, 480);
+
     this.startCard = this.add.image(width / 2, height / 2, "horse-start-sign")
-      .setDisplaySize(Math.min(width * 0.92, 920), Math.min(height * 0.82, 680));
-    this.startButton = this.createOverlayButton("\u0e40\u0e23\u0e34\u0e48\u0e21\u0e40\u0e01\u0e21", () => this.startCountdown());
-    this.startButton.setPosition(width / 2, height / 2 + 178);
+      .setDisplaySize(cardWidth, cardHeight);
+
+    // 2. ปรับตำแหน่งปุ่มเริ่มเกมให้ขยับขึ้นมา (จาก +178 เป็นประมาณ +120)
+    // เพื่อให้ปุ่มยังคงอยู่ในขอบเขตของป้ายที่ย่อขนาดลง
+    this.startButton = this.createOverlayButton("เริ่มเกม", () => this.startCountdown());
+    this.startButton.setPosition(width / 2, height / 2 + 50);
+
     this.startOverlay.add([this.startDim, this.startCard, this.startButton]);
   }
 

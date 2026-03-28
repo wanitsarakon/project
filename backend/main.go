@@ -25,25 +25,23 @@ func main() {
 	/* =========================
 	   DATABASE
 	========================= */
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		dbURL = "postgres://postgres:1111@localhost:5432/thai_festival?sslmode=disable"
-	}
+dbURL := os.Getenv("DATABASE_URL")
+if dbURL == "" {
+    dbURL = "postgres://postgres:Ammikayoha18@localhost:5433/projectthai_festival?sslmode=disable"
+}
 
-	db, err := sql.Open("postgres", dbURL)
-	if err != nil {
-		log.Fatal("❌ Open DB error:", err)
-	}
+db, err := sql.Open("postgres", dbURL)
+if err != nil {
+    log.Fatal("❌ Open DB error:", err)
+}
 
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(10)
-	db.SetConnMaxLifetime(30 * time.Minute)
+db.SetMaxOpenConns(25)
+db.SetMaxIdleConns(5)
+db.SetConnMaxLifetime(30 * time.Minute)
 
-	if err := db.Ping(); err != nil {
-		log.Fatal("❌ Cannot ping DB:", err)
-	}
-
-	log.Println("✅ Connected to PostgreSQL")
+if err := db.Ping(); err != nil {
+    log.Fatal("❌ Cannot ping DB:", err)
+}
 
 	/* =========================
 	   RESET STALE STATE (BOOT)
